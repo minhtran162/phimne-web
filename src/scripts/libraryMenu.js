@@ -49,7 +49,6 @@ function renderHeader() {
     html += '<button is="paper-icon-button-light" class="headerSyncButton syncButton headerButton headerButtonRight hide"><span class="material-icons groups" aria-hidden="true"></span></button>';
     html += '<span class="headerSelectedPlayer"></span>';
     html += '<button is="paper-icon-button-light" class="headerAudioPlayerButton audioPlayerButton headerButton headerButtonRight hide"><span class="material-icons music_note" aria-hidden="true"></span></button>';
-    html += '<button is="paper-icon-button-light" class="headerCastButton castButton headerButton headerButtonRight hide"><span class="material-icons cast" aria-hidden="true"></span></button>';
     html += '<button type="button" is="paper-icon-button-light" class="headerButton headerButtonRight headerSearchButton hide"><span class="material-icons search" aria-hidden="true"></span></button>';
     html += '<button is="paper-icon-button-light" class="headerButton headerButtonRight headerUserButton hide"><span class="material-icons person" aria-hidden="true"></span></button>';
     html += '<div class="currentTimeText hide"></div>';
@@ -68,7 +67,6 @@ function renderHeader() {
     headerHomeButton = skinHeader.querySelector('.headerHomeButton');
     mainDrawerButton = skinHeader.querySelector('.mainDrawerButton');
     headerUserButton = skinHeader.querySelector('.headerUserButton');
-    headerCastButton = skinHeader.querySelector('.headerCastButton');
     headerAudioPlayerButton = skinHeader.querySelector('.headerAudioPlayerButton');
     headerSearchButton = skinHeader.querySelector('.headerSearchButton');
     headerSyncButton = skinHeader.querySelector('.headerSyncButton');
@@ -77,7 +75,6 @@ function renderHeader() {
     retranslateUi();
     lazyLoadViewMenuBarImages();
     bindMenuEvents();
-    updateCastIcon();
     updateClock();
 }
 
@@ -120,10 +117,6 @@ function retranslateUi() {
         headerAudioPlayerButton.title = globalize.translate('ButtonPlayer');
     }
 
-    if (headerCastButton) {
-        headerCastButton.title = globalize.translate('ButtonCast');
-    }
-
     if (headerSearchButton) {
         headerSearchButton.title = globalize.translate('Search');
     }
@@ -163,10 +156,6 @@ function updateUserInHeader(user) {
             headerSearchButton.classList.remove('hide');
         }
 
-        if (!layoutManager.tv) {
-            headerCastButton.classList.remove('hide');
-        }
-
         const policy = user.Policy ? user.Policy : user.localUser.Policy;
 
         if (
@@ -181,7 +170,6 @@ function updateUserInHeader(user) {
         }
     } else {
         headerHomeButton.classList.add('hide');
-        headerCastButton.classList.add('hide');
         headerSyncButton.classList.add('hide');
 
         if (headerSearchButton) {
@@ -244,10 +232,6 @@ function bindMenuEvents() {
 
     headerUserButton.addEventListener('click', onHeaderUserButtonClick);
     headerHomeButton.addEventListener('click', onHeaderHomeButtonClick);
-
-    if (!layoutManager.tv) {
-        headerCastButton.addEventListener('click', onCastButtonClicked);
-    }
 
     headerAudioPlayerButton.addEventListener('click', showAudioPlayer);
     headerSyncButton.addEventListener('click', onSyncButtonClicked);
@@ -349,10 +333,6 @@ function refreshLibraryInfoInDrawer(user) {
         html += globalize.translate('HeaderUser');
         html += '</h3>';
 
-        if (appHost.supports(AppFeature.MultiServer)) {
-            html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnSelectServer" data-itemid="selectserver" href="#"><span class="material-icons navMenuOptionIcon storage" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('SelectServer')}</span></a>`;
-        }
-
         html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnSettings" data-itemid="settings" href="#"><span class="material-icons navMenuOptionIcon settings" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('Settings')}</span></a>`;
         html += `<a is="emby-linkbutton" class="navMenuOption lnkMediaFolder btnLogout" data-itemid="logout" href="#"><span class="material-icons navMenuOptionIcon exit_to_app" aria-hidden="true"></span><span class="navMenuOptionText">${globalize.translate('ButtonSignOut')}</span></a>`;
 
@@ -365,11 +345,6 @@ function refreshLibraryInfoInDrawer(user) {
 
     // add buttons to navigation drawer
     navDrawerScrollContainer.innerHTML = html;
-
-    const btnSelectServer = navDrawerScrollContainer.querySelector('.btnSelectServer');
-    if (btnSelectServer) {
-        btnSelectServer.addEventListener('click', onSelectServerClick);
-    }
 
     const btnSettings = navDrawerScrollContainer.querySelector('.btnSettings');
     if (btnSettings) {
@@ -502,10 +477,6 @@ function onMainDrawerClick(e) {
     }
 }
 
-function onSelectServerClick() {
-    Dashboard.selectServer();
-}
-
 function onSettingsClick() {
     Dashboard.navigate('mypreferencesmenu');
 }
@@ -518,23 +489,6 @@ function onLogoutClick() {
     Dashboard.logout();
 }
 
-function updateCastIcon() {
-    const context = document;
-    const info = playbackManager.getPlayerInfo();
-    const icon = headerCastButton.querySelector('.material-icons');
-
-    icon.classList.remove('cast_connected', 'cast');
-
-    if (info && !info.isLocalPlayer) {
-        icon.classList.add('cast_connected');
-        headerCastButton.classList.add('castButton-active');
-        context.querySelector('.headerSelectedPlayer').innerText = info.deviceName || info.name;
-    } else {
-        icon.classList.add('cast');
-        headerCastButton.classList.remove('castButton-active');
-        context.querySelector('.headerSelectedPlayer').innerHTML = '';
-    }
-}
 
 function updateLibraryNavLinks(page) {
     const isLiveTvPage = page.classList.contains('liveTvPage');
@@ -691,12 +645,11 @@ let navDrawerInstance;
 let mainDrawerButton;
 let headerHomeButton;
 let currentDrawerType;
-let documentTitle = 'Jellyfin';
+let documentTitle = 'Phim Nè';
 let pageTitleElement;
 let headerBackButton;
 let headerUserButton;
 let currentUser;
-let headerCastButton;
 let headerSearchButton;
 let headerAudioPlayerButton;
 let headerSyncButton;
@@ -748,7 +701,7 @@ function setDefaultTitle () {
         pageTitleElement.innerHTML = '';
     }
 
-    document.title = documentTitle;
+    document.title = 'Phim Nè';
 }
 
 function setTitle (title) {
@@ -774,7 +727,7 @@ function setTitle (title) {
         pageTitleElement.innerText = html || '';
     }
 
-    document.title = title || documentTitle;
+    document.title = title || 'Phim Nè';
 }
 
 function setTransparentMenu (transparent) {
@@ -848,8 +801,6 @@ Events.on(ServerConnections, 'localusersignedout', function () {
     currentUser = {};
     updateUserInHeader();
 });
-
-Events.on(playbackManager, 'playerchange', updateCastIcon);
 
 fetchServerName(getCurrentApiClient());
 loadNavDrawer();

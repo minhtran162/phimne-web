@@ -1,8 +1,8 @@
 {
-    "name": "Jellyfin",
-    "description": "The Free Software Media System",
+    "name": "Phim Nè",
+    "description": "The Enhanced Jellyfin Front-end",
     "lang": "en-US",
-    "short_name": "Jellyfin",
+    "short_name": "Phim Nè",
     "start_url": "index.html#/home",
     "theme_color": "#101010",
     "background_color": "#101010",

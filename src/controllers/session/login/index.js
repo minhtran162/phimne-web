@@ -182,6 +182,11 @@ function loadUserList(context, apiClient, users) {
         html += '</button>';
     }
 
+    if (users.length > 3) {
+        context.querySelector('#divUsers').classList.remove('centered');
+        context.querySelector('#divUsers').classList.add('started');
+    }
+
     context.querySelector('#divUsers').innerHTML = html;
 }
 

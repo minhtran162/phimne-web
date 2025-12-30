@@ -214,11 +214,6 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
     if (userId === loggedInUserId && (user.Policy.EnableVideoPlaybackTranscoding || user.Policy.EnableAudioPlaybackTranscoding)) {
         context.querySelector('.qualitySections').classList.remove('hide');
 
-        if (appHost.supports(AppFeature.Chromecast) && user.Policy.EnableVideoPlaybackTranscoding) {
-            context.querySelector('.fldChromecastQuality').classList.remove('hide');
-        } else {
-            context.querySelector('.fldChromecastQuality').classList.add('hide');
-        }
     } else {
         context.querySelector('.qualitySections').classList.add('hide');
         context.querySelector('.fldChromecastQuality').classList.add('hide');

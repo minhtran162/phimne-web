@@ -7,7 +7,7 @@ import globalize from '../lib/globalize';
 import profileBuilder from '../scripts/browserDeviceProfile';
 import { AppFeature } from 'constants/appFeature';
 
-const appName = 'Jellyfin Web';
+const appName = 'Phim Ne';
 
 const BrowserName = {
     tizen: 'Samsung Smart TV',
@@ -284,10 +284,6 @@ const supportedFeatures = function () {
 
     if (!browser.tv && !browser.ps4 && !browser.xboxOne) {
         features.push(AppFeature.FileInput);
-    }
-
-    if (browser.chrome || browser.edgeChromium) {
-        features.push(AppFeature.Chromecast);
     }
 
     return features;

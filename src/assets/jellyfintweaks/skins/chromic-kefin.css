@@ -1,0 +1,63 @@
+#indexPage, #moviesPage, #tvRecommendedPage, #musicRecommendedPage {
+    overflow-y: visible !important;
+}
+
+.layout-mobile .cardOverlayButton {
+    padding: 0em;
+}
+
+.layout-mobile .cardOverlayButton-br:not([data-action="menu"])>.cardOverlayButtonIcon {
+    font-size: 16px !important;
+}
+
+.layout-mobile #itemDetailPage .listItemImageButton {
+    width: 55px !important;
+    height: 55px !important;
+}
+
+.layout-mobile .listItemImageButton-icon {
+    position: relative !important;
+    top: inherit !important;
+    right: inherit !important;
+}
+
+.layout-mobile .playedIndicator {
+    position: relative !important;
+    top: 5px !important;
+}
+
+.layout-mobile .listItem-bottomoverview.secondary {
+    display: none;
+}
+
+.layout-mobile #itemDetailPage .listItem {
+    min-height: 150px;
+    justify-content: flex-end;
+}
+
+.layout-mobile .listViewUserDataButtons {
+    display: none;
+}
+
+.layout-mobile  .listItemBody {
+    background-color: #00000045;
+    border-radius: 4px;
+    width: 100%;
+    display: flex;
+}
+.layout-mobile .listItemBody>.listItemBodyText:not(.secondary) {
+    -webkit-line-clamp: 1 !important;
+}
+
+.layout-mobile .listItemBodyText {
+    max-width: unset !important;
+}
+
+@media only screen and (max-width: 767px) and (orientation: portrait) {
+    .slide-info-container .button-container {
+        top: unset;
+        left: unset;
+        transform: unset;
+        padding-right: unset;
+    }
+}

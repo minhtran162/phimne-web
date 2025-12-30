@@ -22,6 +22,10 @@ function isTv(userAgent) {
         return true;
     }
 
+    if (userAgent.includes('smart-tv')) {
+        return true;
+    }
+
     return isWeb0s(userAgent);
 }
 

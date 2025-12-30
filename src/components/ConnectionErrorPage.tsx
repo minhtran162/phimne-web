@@ -79,15 +79,6 @@ const ConnectionErrorPage: FC<ConnectionErrorPageProps> = ({
                     </p>
                 )}
 
-                {appHost.supports(AppFeature.MultiServer) && (
-                    <LinkButton
-                        className='raised'
-                        href='/selectserver'
-                    >
-                        {globalize.translate('ButtonChangeServer')}
-                    </LinkButton>
-                )}
-
                 {state === ConnectionState.ServerMismatch && (
                     <LinkButton
                         onClick={onForceConnect}

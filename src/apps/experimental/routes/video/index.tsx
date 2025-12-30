@@ -49,10 +49,7 @@ const VideoPage: FC = () => {
                         isBackButtonAvailable
                         isUserMenuAvailable={false}
                         buttons={
-                            <>
-                                <SyncPlayButton />
-                                <RemotePlayButton />
-                            </>
+                            <SyncPlayButton />
                         }
                     />
                 </Box>

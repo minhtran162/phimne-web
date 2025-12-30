@@ -47,13 +47,6 @@ import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
 async function init() {
-    // Log current version to console to help out with issue triage and debugging
-    console.info(
-        `[${__PACKAGE_JSON_NAME__}]
-version: ${__PACKAGE_JSON_VERSION__}
-commit: ${__COMMIT_SHA__}
-build: ${__JF_BUILD_VERSION__}`);
-
     // Register globals used in plugins
     window.Events = Events;
     window.TaskButton = taskButton;
@@ -73,7 +66,7 @@ build: ${__JF_BUILD_VERSION__}`);
     }
 
     // Initialize automatic (default) cast target
-    initializeAutoCast();
+    // initializeAutoCast();
 
     // Load the translation dictionary
     await loadCoreDictionary();
@@ -120,31 +113,20 @@ build: ${__JF_BUILD_VERSION__}`);
 
 function loadFonts() {
     if (browser.tv && !browser.android) {
-        console.debug('using system fonts with explicit sizes');
         import('./styles/fonts.sized.scss');
     } else if (__USE_SYSTEM_FONTS__) {
-        console.debug('using system fonts');
         import('./styles/fonts.scss');
     } else {
-        console.debug('using default fonts');
         import('./styles/fonts.scss');
         import('./styles/fonts.noto.scss');
     }
 }
 
 async function loadPlugins() {
-    console.groupCollapsed('loading installed plugins');
-    console.dir(pluginManager);
-
     let list = await getPlugins();
-    if (!appHost.supports(AppFeature.RemoteControl)) {
-        // Disable remote player plugins if not supported
-        list = list.filter(plugin => !plugin.startsWith('sessionPlayer')
-            && !plugin.startsWith('chromecastPlayer'));
-    } else if (!browser.chrome && !browser.edgeChromium && !browser.opera) {
-        // Disable chromecast player in unsupported browsers
-        list = list.filter(plugin => !plugin.startsWith('chromecastPlayer'));
-    }
+
+    // remove built-in plugins related to remote control
+    list = list.filter(plugin => !plugin.startsWith('sessionPlayer') && !plugin.startsWith('chromecastPlayer'));
 
     // add any native plugins
     if (window.NativeShell) {
@@ -153,22 +135,21 @@ async function loadPlugins() {
 
     try {
         await Promise.all(list.map(plugin => pluginManager.loadPlugin(plugin)));
-        console.debug('finished loading plugins');
     } catch (e) {
         console.warn('failed loading plugins', e);
     }
-
-    console.groupEnd('loading installed plugins');
 }
 
 function loadPlatformFeatures() {
-    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
-        import('./components/nowPlayingBar/nowPlayingBar');
+    if (browser.tizen) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/gh/lscambo13/ElegantFin@main/Theme/ElegantFin-jellyfin-theme-build-latest-minified.css';
+        document.head.appendChild(link);
     }
 
-    if (appHost.supports(AppFeature.RemoteControl)) {
-        import('./components/playback/playerSelectionMenu');
-        import('./components/playback/remotecontrolautoplay');
+    if (!browser.tv && !browser.xboxOne && !browser.ps4) {
+        import('./components/nowPlayingBar/nowPlayingBar');
     }
 
     if (!appHost.supports(AppFeature.PhysicalVolumeControl) || browser.touch) {
@@ -190,7 +171,7 @@ function registerServiceWorker() {
         navigator.serviceWorker.register('serviceworker.js').then(() =>
             console.log('serviceWorker registered')
         ).catch(error =>
-            console.log('error registering serviceWorker: ' + error)
+            console.warn('error registering serviceWorker: ' + error)
         );
     } else {
         console.warn('serviceWorker unsupported');

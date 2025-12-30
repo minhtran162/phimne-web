@@ -30,21 +30,17 @@ export async function serverAddress() {
         return Promise.resolve(apiClient.serverAddress());
     }
 
-    // Use servers specified in config.json
     const urls = await webSettings.getServers();
 
     if (urls.length === 0) {
-        // Otherwise use computed base URL
         let url;
         const index = window.location.href.toLowerCase().lastIndexOf('/web');
         if (index != -1) {
             url = window.location.href.substring(0, index);
         } else {
-            // fallback to location without path
             url = window.location.origin;
         }
 
-        // Don't use bundled app URL (file:) as server URL
         if (url.startsWith('file:')) {
             return Promise.resolve();
         }
@@ -52,39 +48,41 @@ export async function serverAddress() {
         urls.push(url);
     }
 
-    console.debug('URL candidates:', urls);
-
-    const promises = urls.map(url => {
-        return fetch(`${url}/System/Info/Public`, { cache: 'no-cache' })
-            .then(async resp => {
-                if (!resp.ok) {
-                    return;
-                }
-
-                let config;
-                try {
-                    config = await resp.json();
-                } catch {
-                    return;
-                }
-
-                return {
-                    url,
-                    config
-                };
-            }).catch(error => {
-                console.error(error);
+    async function fetchWithTimeout(resource, options = {}, timeout = 10000) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+        try {
+            const response = await fetch(resource, {
+                ...options,
+                signal: controller.signal
             });
-    });
+            return response;
+        } finally {
+            clearTimeout(id);
+        }
+    }
 
-    return Promise.all(promises).then(responses => {
-        return responses.filter(obj => obj?.config);
-    }).then(configs => {
-        const selection = configs.find(obj => !obj.config.StartupWizardCompleted) || configs[0];
-        return selection?.url;
-    }).catch(error => {
-        console.error(error);
-    });
+    const configs = [];
+    for (const url of urls) {
+        try {
+            const resp = await fetchWithTimeout(`${url}/System/Info/Public`, { cache: 'no-cache' });
+            if (!resp.ok) continue;
+
+            const config = await resp.json().catch(() => null);
+            if (!config) continue;
+            configs.push({ url, config });
+            break;
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                console.warn(`Request to ${url} timed out`);
+            } else {
+                console.error(err);
+            }
+        }
+    }
+
+    const selection = configs.find(obj => !obj.config.StartupWizardCompleted) || configs[0];
+    return selection?.url;
 }
 
 export function getCurrentUserId() {
@@ -206,14 +204,14 @@ export function showLoadingMsg() {
 }
 
 export function confirm(message, title, callback) {
-    baseConfirm(message, title).then(function() {
+    baseConfirm(message, title).then(function () {
         callback(true);
-    }).catch(function() {
+    }).catch(function () {
         callback(false);
     });
 }
 
-export const pageClassOn = function(eventName, className, fn) {
+export const pageClassOn = function (eventName, className, fn) {
     document.addEventListener(eventName, function (event) {
         const target = event.target;
 
@@ -223,7 +221,7 @@ export const pageClassOn = function(eventName, className, fn) {
     });
 };
 
-export const pageIdOn = function(eventName, id, fn) {
+export const pageIdOn = function (eventName, id, fn) {
     document.addEventListener(eventName, function (event) {
         const target = event.target;
 

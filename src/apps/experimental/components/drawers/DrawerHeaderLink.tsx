@@ -6,7 +6,7 @@ import React from 'react';
 import { useSystemInfo } from 'hooks/useSystemInfo';
 import ListItemLink from 'components/ListItemLink';
 
-import appIcon from '@jellyfin/ux-web/icon-transparent.png';
+import appIcon from '@/assets/img/icon-transparent.png';
 
 const DrawerHeaderLink = () => {
     const { data: systemInfo } = useSystemInfo();
@@ -21,7 +21,8 @@ const DrawerHeaderLink = () => {
                 />
             </ListItemIcon>
             <ListItemText
-                primary={systemInfo?.ServerName || 'Jellyfin'}
+                primary={'Phim Nè'}
+                primaryTypographyProps={{ variant: 'h6' }}
                 secondary={systemInfo?.Version}
                 slotProps={{
                     primary: { variant: 'h6' }

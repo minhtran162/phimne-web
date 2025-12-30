@@ -190,48 +190,6 @@ const UserSettingsPage: FC = () => {
                             </div>
                         </LinkButton>
 
-                        {appHost.supports(AppFeature.DownloadManagement) && (
-                            <LinkButton
-                                onClick={shell.openDownloadManager}
-                                className='downloadManager listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent download' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('DownloadManager')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-                        )}
-
-                        {appHost.supports(AppFeature.ClientSettings) && (
-                            <LinkButton
-                                onClick={shell.openClientSettings}
-                                className='clientSettings listItem-border'
-                                style={{
-                                    display: 'block',
-                                    margin: 0,
-                                    padding: 0
-                                }}
-                            >
-                                <div className='listItem'>
-                                    <span className='material-icons listItemIcon listItemIcon-transparent devices_other' aria-hidden='true' />
-                                    <div className='listItemBody'>
-                                        <div className='listItemBodyText'>
-                                            {globalize.translate('ClientSettings')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </LinkButton>
-                        )}
-
                         {isLoggedInUser && !browser.mobile && !isControlsPageEmpty && (
                             <LinkButton
                                 href={`#/mypreferencescontrols?userId=${userId}`}
@@ -315,27 +273,6 @@ const UserSettingsPage: FC = () => {
                             >
                                 {globalize.translate('HeaderUser')}
                             </h2>
-
-                            {appHost.supports(AppFeature.MultiServer) && (
-                                <LinkButton
-                                    onClick={Dashboard.selectServer}
-                                    className='selectServer listItem-border'
-                                    style={{
-                                        display: 'block',
-                                        margin: 0,
-                                        padding: 0
-                                    }}
-                                >
-                                    <div className='listItem'>
-                                        <span className='material-icons listItemIcon listItemIcon-transparent storage' aria-hidden='true' />
-                                        <div className='listItemBody'>
-                                            <div className='listItemBodyText'>
-                                                {globalize.translate('SelectServer')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </LinkButton>
-                            )}
 
                             <LinkButton
                                 onClick={Dashboard.logout}

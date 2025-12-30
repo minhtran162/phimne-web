@@ -207,7 +207,7 @@ export default tseslint.config(
                 // Dependency globals
                 '$': false,
                 'jQuery': false,
-                // Jellyfin globals
+                // Phim Nè globals
                 'ApiClient': true,
                 'Events': true,
                 'chrome': true,

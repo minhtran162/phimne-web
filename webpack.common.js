@@ -48,6 +48,9 @@ const config = {
         ...THEMES_BY_ID
     },
     resolve: {
+        alias: {
+            '@': path.resolve(__dirname, 'src')
+        },
         extensions: ['.tsx', '.ts', '.js'],
         modules: [
             path.resolve(__dirname, 'src'),

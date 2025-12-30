@@ -10,6 +10,50 @@ import '../guide/programs.scss';
 import '../../elements/emby-button/emby-button';
 import * as userSettings from '../../scripts/settings/userSettings';
 
+const languages = [
+    { code: 'eng', name: 'English' },
+    { code: 'kor', name: 'Korean' },
+    { code: 'vie', name: 'Vietnamese' },
+    { code: 'jpn', name: 'Japanese' },
+    { code: 'zho', name: 'Chinese' },
+    { code: 'fra', name: 'French' },
+    { code: 'deu', name: 'German' },
+    { code: 'spa', name: 'Spanish' },
+    { code: 'por', name: 'Portuguese' },
+    { code: 'ita', name: 'Italian' },
+    { code: 'rus', name: 'Russian' },
+    { code: 'ara', name: 'Arabic' },
+    { code: 'hin', name: 'Hindi' },
+    { code: 'ben', name: 'Bengali' },
+    { code: 'tha', name: 'Thai' },
+    { code: 'ind', name: 'Indonesian' },
+    { code: 'msa', name: 'Malay' },
+    { code: 'tam', name: 'Tamil' },
+    { code: 'tel', name: 'Telugu' },
+    { code: 'urd', name: 'Urdu' },
+    { code: 'fas', name: 'Persian' },
+    { code: 'tur', name: 'Turkish' },
+    { code: 'pol', name: 'Polish' },
+    { code: 'nld', name: 'Dutch' },
+    { code: 'swe', name: 'Swedish' },
+    { code: 'nor', name: 'Norwegian' },
+    { code: 'fin', name: 'Finnish' },
+    { code: 'dan', name: 'Danish' },
+    { code: 'ukr', name: 'Ukrainian' },
+    { code: 'ces', name: 'Czech' },
+    { code: 'slk', name: 'Slovak' },
+    { code: 'hun', name: 'Hungarian' },
+    { code: 'ron', name: 'Romanian' },
+    { code: 'bul', name: 'Bulgarian' },
+    { code: 'srp', name: 'Serbian' },
+    { code: 'hrv', name: 'Croatian' },
+    { code: 'ell', name: 'Greek' },
+    { code: 'heb', name: 'Hebrew' },
+    { code: 'kat', name: 'Georgian' },
+    { code: 'khm', name: 'Khmer' },
+    { code: 'lao', name: 'Lao' }
+];
+
 function getTimerIndicator(item) {
     let status;
 
@@ -573,6 +617,15 @@ export function getMediaInfoStats(item) {
     return list;
 }
 
+export function getAudioText(i) {
+    const audioLang = i.Language;
+
+    if (!audioLang) {
+        return 'Unknown';
+    }
+    return languages.filter(l => l.code === audioLang)[0].name;
+}
+
 export default {
     getMediaInfoHtml: getPrimaryMediaInfoHtml,
     getEndsAt: getEndsAt,
@@ -582,5 +635,6 @@ export default {
     fillPrimaryMediaInfo: fillPrimaryMediaInfo,
     fillSecondaryMediaInfo: fillSecondaryMediaInfo,
     getMediaInfoStats: getMediaInfoStats,
-    getResolutionText: getResolutionText
+    getResolutionText: getResolutionText,
+    getAudioText: getAudioText
 };

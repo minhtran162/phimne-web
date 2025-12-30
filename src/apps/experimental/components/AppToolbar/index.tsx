@@ -41,7 +41,6 @@ const ExperimentalAppToolbar: FC<AppToolbarProps> = ({
             buttons={!isPublicPath && (
                 <>
                     <SyncPlayButton />
-                    <RemotePlayButton />
                     <SearchButton />
                 </>
             )}

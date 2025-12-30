@@ -249,7 +249,7 @@ function renderVideoSelections(page, mediaSources) {
             titleParts.push(v.Codec.toUpperCase());
         }
 
-        return '<option value="' + v.Index + '" ' + selected + '>' + (v.DisplayTitle || titleParts.join(' ')) + '</option>';
+        return '<option value="' + v.Index + '" ' + selected + '>' + (titleParts.join(' ')) + '</option>';
     }).join('');
     select.setAttribute('disabled', 'disabled');
 
@@ -271,8 +271,9 @@ function renderAudioSelections(page, mediaSources) {
     select.setLabel(globalize.translate('Audio'));
     const selectedId = mediaSource.DefaultAudioStreamIndex;
     select.innerHTML = tracks.map(function (v) {
+        const title = mediaInfo.getAudioText(v);
         const selected = v.Index === selectedId ? ' selected' : '';
-        return '<option value="' + v.Index + '" ' + selected + '>' + v.DisplayTitle + '</option>';
+        return `<option value="${v.Index}" selected>${title} - ${(v.ChannelLayout).toUpperCase()} - ${(v.Codec).toUpperCase()}</option>`;
     }).join('');
 
     if (tracks.length > 1) {

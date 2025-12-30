@@ -55,8 +55,6 @@ function sortByAccess(a, b) {
 
 export default class ConnectionManager {
     constructor(credentialProvider, appName, appVersion, deviceName, deviceId, capabilities) {
-        console.log('Begin ConnectionManager constructor');
-
         const self = this;
         this._apiClients = [];
 
@@ -126,8 +124,6 @@ export default class ConnectionManager {
         };
 
         self.clearData = () => {
-            console.log('connection manager clearing data');
-
             const credentials = credentialProvider.credentials();
             credentials.Servers = [];
             credentialProvider.credentials(credentials);
@@ -150,7 +146,6 @@ export default class ConnectionManager {
                 events.trigger(self, 'apiclientcreated', [apiClient]);
             }
 
-            console.log('returning instance from getOrAddApiClient');
             return apiClient;
         };
 
@@ -206,8 +201,6 @@ export default class ConnectionManager {
             apiClient.enableAutomaticBitrateDetection = options.enableAutomaticBitrateDetection;
 
             if (options.enableWebSocket !== false) {
-                console.log('calling apiClient.ensureWebSocket');
-
                 apiClient.ensureWebSocket();
             }
         }
@@ -355,8 +348,6 @@ export default class ConnectionManager {
         };
 
         self.getAvailableServers = () => {
-            console.debug('[ConnectionManager] Begin getAvailableServers');
-
             // Clone the array
             const credentials = credentialProvider.credentials();
 
@@ -420,13 +411,10 @@ export default class ConnectionManager {
         }
 
         self.connectToServers = (servers, options) => {
-            console.log(`Begin connectToServers, with ${servers.length} servers`);
-
             const firstServer = servers.length ? servers[0] : null;
             // See if we have any saved credentials and can auto sign in
             if (firstServer) {
                 return self.connectToServer(firstServer, options).then((result) => {
-                    console.log('resolving connectToServers with result.State: ' + result.State);
                     return result;
                 });
             }
@@ -438,8 +426,6 @@ export default class ConnectionManager {
         };
 
         function getTryConnectPromise(url, connectionMode, state, resolve, reject) {
-            console.log('getTryConnectPromise ' + url);
-
             ajax({
                 url: `${url}/System/Info/Public`,
                 timeout: DEFAULT_CONNECTION_TIMEOUT,
@@ -450,7 +436,6 @@ export default class ConnectionManager {
                     if (!state.resolved) {
                         state.resolved = true;
 
-                        console.log('Reconnect succeeded to ' + url);
                         resolve({
                             url: url,
                             connectionMode: connectionMode,
@@ -459,8 +444,6 @@ export default class ConnectionManager {
                     }
                 },
                 () => {
-                    console.log('Reconnect failed to ' + url);
-
                     if (!state.resolved) {
                         state.rejects++;
                         if (state.rejects >= state.numAddresses) {
@@ -511,8 +494,6 @@ export default class ConnectionManager {
                 addressesStrings.push(addresses[addresses.length - 1].url);
             }
 
-            console.info('[ConnectionManager] tryReconnect addresses', addressesStrings);
-
             return new Promise((resolve, reject) => {
                 const state = {};
                 state.numAddresses = addresses.length;
@@ -529,8 +510,6 @@ export default class ConnectionManager {
         };
 
         self.connectToServer = (server, options) => {
-            console.debug('[ConnectionManager] begin connectToServer');
-
             return new Promise((resolve) => {
                 options = options || {};
 
@@ -674,8 +653,6 @@ export default class ConnectionManager {
             let i = 0;
 
             function onFail() {
-                console.log(`connectToAddress ${urls[i]} failed`);
-
                 if (++i < urls.length) {
                     return tryConnectToAddress(urls[i], options).catch(onFail);
                 }
@@ -714,8 +691,6 @@ export default class ConnectionManager {
     }
 
     connect(options) {
-        console.log('Begin connect');
-
         return this.getAvailableServers().then((servers) => {
             return this.connectToServers(servers, options);
         });
@@ -730,7 +705,7 @@ export default class ConnectionManager {
                     try {
                         msg.Data = JSON.parse(msg.Data);
                     } catch (err) {
-                        console.log('unable to parse json content: ' + err);
+                        console.error('unable to parse json content: ' + err);
                     }
                 }
 

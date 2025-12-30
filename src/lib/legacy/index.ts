@@ -17,3 +17,5 @@ import './htmlMediaElement';
 import './keyboardEvent';
 import './patchHeaders';
 import './vendorStyles';
+
+import './kefinTweaks-plugin';

@@ -52,6 +52,9 @@ export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
         case 'Jellyfin Android':
         case 'AndroidTV':
         case 'Android TV':
+        case 'Phim Ne Android':
+        case 'Phim Ne TV Android':
+        case 'Phim Ne Android TV':
             return BASE_DEVICE_IMAGE_URL + 'android.svg';
         case 'Jellyfin Mobile (iOS)':
         case 'Jellyfin Mobile (iPadOS)':
@@ -64,6 +67,9 @@ export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
         case 'Infuse':
         case 'Infuse-Direct':
         case 'Infuse-Library':
+        case 'Phim Ne iOS':
+        case 'Phim Ne iPadOS':
+        case 'Phim Ne tvOS':
             return BASE_DEVICE_IMAGE_URL + 'apple.svg';
         case 'Home Assistant':
             return BASE_DEVICE_IMAGE_URL + 'home-assistant.svg';
@@ -75,6 +81,8 @@ export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
         case 'Finamp':
             return BASE_DEVICE_IMAGE_URL + 'finamp.svg';
         case 'Jellyfin Web':
+            return getWebDeviceIcon((info as DeviceInfo).Name || (info as SessionInfo).DeviceName);
+        case 'Phim Ne':
             return getWebDeviceIcon((info as DeviceInfo).Name || (info as SessionInfo).DeviceName);
         default:
             if (info.Capabilities?.IconUrl) {

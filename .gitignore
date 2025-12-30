@@ -1,5 +1,6 @@
 # npm
 dist
+www
 web
 node_modules
 
@@ -21,3 +22,5 @@ config.json
 
 # environment related
 .envrc
+.DS_Store
+config.json

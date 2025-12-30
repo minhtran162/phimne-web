@@ -46,6 +46,13 @@ button::-moz-focus-inner {
     flex-wrap: wrap;
 }
 
+.vertical-wrap.started {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+}
+
 .vertical-wrap.centered {
     justify-content: center;
 }
@@ -599,6 +606,15 @@ button::-moz-focus-inner {
     .smallBackdropCard {
         width: 16.666666666666666666666666666667%;
     }
+
+
+    .vertical-wrap.started .squareCard {
+        width: 25%;
+    }
+
+    .vertical-wrap.centered .squareCard {
+        width: 20%;
+    }
 }
 
 @media (min-width: 87.5em) {
@@ -624,6 +640,14 @@ button::-moz-focus-inner {
     .squareCard,
     .portraitCard {
         width: 12.5%;
+    }
+
+    .vertical-wrap.started .squareCard {
+        width: 30%;
+    }
+
+    .vertical-wrap.centered .squareCard {
+        width: 25%;
     }
 }
 
