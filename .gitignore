@@ -3,7 +3,7 @@ dist
 www
 web
 node_modules
-
+*.zip
 # test coverage
 coverage
 

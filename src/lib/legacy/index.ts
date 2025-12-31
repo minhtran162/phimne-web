@@ -9,6 +9,7 @@ import 'whatwg-fetch';
 import 'abortcontroller-polyfill'; // requires fetch
 import 'resize-observer-polyfill';
 import 'proxy-polyfill';
+import browser from '../../scripts/browser';
 
 import './domParserTextHtml';
 import './elementAppendPrepend';
@@ -19,3 +20,9 @@ import './patchHeaders';
 import './vendorStyles';
 
 import './kefinTweaks-plugin';
+
+// Load config tweaks for developer and tizen
+const protocol = window.location.protocol;
+if (browser.tizen || protocol === 'http:') {
+    import('./config.js');
+}

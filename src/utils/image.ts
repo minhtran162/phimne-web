@@ -41,6 +41,7 @@ function getWebDeviceIcon(browser: string | null | undefined) {
 export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
     switch ((info as DeviceInfo).AppName || (info as SessionInfo).Client) {
         case 'Samsung Smart TV':
+        case 'Phim Ne for Tizen':
             return BASE_DEVICE_IMAGE_URL + 'samsungtv.svg';
         case 'Xbox One':
             return BASE_DEVICE_IMAGE_URL + 'xbox.svg';
@@ -75,6 +76,8 @@ export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
             return BASE_DEVICE_IMAGE_URL + 'home-assistant.svg';
         case 'Jellyfin for WebOS':
         case 'LG Smart TV':
+        case 'Phim Ne for WebOS':
+        case 'Phim Ne TV for WebOS':
             return BASE_DEVICE_IMAGE_URL + 'webos.svg';
         case 'Jellyfin Roku':
             return BASE_DEVICE_IMAGE_URL + 'roku.svg';

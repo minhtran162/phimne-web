@@ -193,6 +193,9 @@
         }
     };
 
+    // Check if TV layout
+    const isTVLayout = document.querySelector('.preload').classList.contains('layout-tv');
+
     /**
      * Creates a Jellyfin card element from an item
      * @param {Object} item - The Jellyfin item object
@@ -244,8 +247,8 @@
         }
 
         // Create the main card container
-        const card = document.createElement('div');
-        card.className = `card ${cardClass} card-hoverable card-withuserdata`;
+        const card = isTVLayout ? document.createElement('button') : document.createElement('div');
+        card.className = `card ${cardClass}${isTVLayout ? ' show-focus show-animation ' : ' card-hoverable '}card-withuserdata itemAction`;
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', item.Type === 'MusicAlbum' || item.Type === 'Artist' ? 'true' : 'false');
         card.setAttribute('data-serverid', serverId);
