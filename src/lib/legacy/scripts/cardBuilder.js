@@ -193,9 +193,6 @@
         }
     };
 
-    // Check if TV layout
-    const isTVLayout = document.querySelector('.preload').classList.contains('layout-tv');
-
     /**
      * Creates a Jellyfin card element from an item
      * @param {Object} item - The Jellyfin item object
@@ -205,6 +202,9 @@
      * @returns {HTMLElement} - The constructed card element
      */
     function createJellyfinCardElement(item, overflowCard = false, cardFormat = null, customFooterText = null) {
+        // Check if TV layout dynamically
+        const isTVLayout = document.documentElement.classList.contains('layout-tv');
+        
         const serverId = ApiClient.serverId();
         const serverAddress = ApiClient.serverAddress();
 
@@ -257,6 +257,11 @@
         card.setAttribute('data-mediatype', item.MediaType || 'Video');
         card.setAttribute('data-prefix', item.Name?.startsWith('The ') ? 'THE' : '');
 
+        // For TV layout, the main card button needs to identify as a link action
+        if (isTVLayout) {
+            card.setAttribute('data-action', 'link');
+        }
+
         // Card box container
         const cardBox = document.createElement('div');
         cardBox.className = 'cardBox cardBox-bottompadded';
@@ -300,10 +305,13 @@
         blurhashCanvas.className = 'blurhash-canvas lazy-hidden';
 
         // Card image container
-        const cardImageContainer = document.createElement('a');
-        cardImageContainer.href = `${ApiClient._serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
-        cardImageContainer.className = 'cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast';
-        cardImageContainer.setAttribute('data-action', 'link');
+        const cardImageContainer = isTVLayout ? document.createElement('div') : document.createElement('a');
+        !isTVLayout && (cardImageContainer.href = `${ApiClient._serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`);
+        isTVLayout && (cardImageContainer.setAttribute('data-src', `${ApiClient._serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`));
+        cardImageContainer.className = `cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast${!isTVLayout ? ' itemAction' : ''}`;
+        if (!isTVLayout) {
+            cardImageContainer.setAttribute('data-action', 'link');
+        }
         cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
 
         // Force specific image if card format is specified
@@ -417,84 +425,89 @@
             cardImageContainer.appendChild(cardIndicators);
         }
 
-        // Card overlay container
-        const cardOverlayContainer = document.createElement('div');
-        cardOverlayContainer.className = 'cardOverlayContainer itemAction';
-        cardOverlayContainer.setAttribute('data-action', 'link');
+    // Card overlay container
+        // On TV, we don't want overlay buttons inside the main card button
+        if (!isTVLayout) {
+            const cardOverlayContainer = document.createElement('div');
+            cardOverlayContainer.className = 'cardOverlayContainer itemAction';
+            cardOverlayContainer.setAttribute('data-action', 'link');
 
-        // Overlay link
-        const overlayLink = document.createElement('a');
-        overlayLink.href = `${ApiClient._serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
-        overlayLink.className = 'cardImageContainer';
+            // Overlay link
+            const overlayLink = document.createElement('a');
+            overlayLink.href = `${ApiClient._serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
+            overlayLink.className = 'cardImageContainer';
 
-        // Play button
-        const playButton = document.createElement('button');
-        playButton.setAttribute('is', 'paper-icon-button-light');
-        playButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light cardOverlayFab-primary';
-        playButton.setAttribute('data-action', 'resume');
+            // Play button
+            const playButton = document.createElement('button');
+            playButton.setAttribute('is', 'paper-icon-button-light');
+            playButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light cardOverlayFab-primary';
+            playButton.setAttribute('data-action', 'resume');
 
-        const playIcon = document.createElement('span');
-        playIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover play_arrow';
-        playIcon.setAttribute('aria-hidden', 'true');
-        playButton.appendChild(playIcon);
+            const playIcon = document.createElement('span');
+            playIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover play_arrow';
+            playIcon.setAttribute('aria-hidden', 'true');
+            playButton.appendChild(playIcon);
 
-        // Button container for additional overlay buttons (watchlist, etc.)
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'cardOverlayButton-br flex';
+            // Button container for additional overlay buttons (watchlist, etc.)
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'cardOverlayButton-br flex';
 
-        // Watched button
-        const watchedButton = document.createElement('button');
-        watchedButton.setAttribute('is', 'emby-playstatebutton');
-        watchedButton.type = 'button';
-        watchedButton.setAttribute('data-action', 'none');
-        watchedButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
-        watchedButton.setAttribute('data-id', item.Id);
-        watchedButton.setAttribute('data-serverid', serverId);
-        watchedButton.setAttribute('data-itemtype', item.Type);
-        watchedButton.setAttribute('data-played', item.UserData?.Played || 'false');
-        watchedButton.title = 'Mark played';
+            // Watched button
+            const watchedButton = document.createElement('button');
+            watchedButton.setAttribute('is', 'emby-playstatebutton');
+            watchedButton.type = 'button';
+            watchedButton.setAttribute('data-action', 'none');
+            watchedButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
+            watchedButton.setAttribute('data-id', item.Id);
+            watchedButton.setAttribute('data-serverid', serverId);
+            watchedButton.setAttribute('data-itemtype', item.Type);
+            watchedButton.setAttribute('data-played', item.UserData?.Played || 'false');
+            watchedButton.title = 'Mark played';
 
-        const watchedIcon = document.createElement('span');
-        watchedIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover check playstatebutton-icon-unplayed';
-        watchedIcon.setAttribute('aria-hidden', 'true');
-        watchedButton.appendChild(watchedIcon);
-        buttonContainer.appendChild(watchedButton);
+            const watchedIcon = document.createElement('span');
+            watchedIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover check playstatebutton-icon-unplayed';
+            watchedIcon.setAttribute('aria-hidden', 'true');
+            watchedButton.appendChild(watchedIcon);
+            buttonContainer.appendChild(watchedButton);
 
-        // Favorite button
-        const favoriteButton = document.createElement('button');
-        favoriteButton.setAttribute('is', 'emby-ratingbutton');
-        favoriteButton.type = 'button';
-        favoriteButton.setAttribute('data-action', 'none');
-        favoriteButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
-        favoriteButton.setAttribute('data-id', item.Id);
-        favoriteButton.setAttribute('data-serverid', serverId);
-        favoriteButton.setAttribute('data-itemtype', item.Type);
-        favoriteButton.setAttribute('data-likes', '');
-        favoriteButton.setAttribute('data-isfavorite', item.UserData?.IsFavorite || 'false');
-        favoriteButton.title = 'Add to favorites';
+            // Favorite button
+            const favoriteButton = document.createElement('button');
+            favoriteButton.setAttribute('is', 'emby-ratingbutton');
+            favoriteButton.type = 'button';
+            favoriteButton.setAttribute('data-action', 'none');
+            favoriteButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
+            favoriteButton.setAttribute('data-id', item.Id);
+            favoriteButton.setAttribute('data-serverid', serverId);
+            favoriteButton.setAttribute('data-itemtype', item.Type);
+            favoriteButton.setAttribute('data-likes', '');
+            favoriteButton.setAttribute('data-isfavorite', item.UserData?.IsFavorite || 'false');
+            favoriteButton.title = 'Add to favorites';
 
-        const favoriteIcon = document.createElement('span');
-        favoriteIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover favorite';
-        favoriteIcon.setAttribute('aria-hidden', 'true');
-        favoriteButton.appendChild(favoriteIcon);
-        buttonContainer.appendChild(favoriteButton);
+            const favoriteIcon = document.createElement('span');
+            favoriteIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover favorite';
+            favoriteIcon.setAttribute('aria-hidden', 'true');
+            favoriteButton.appendChild(favoriteIcon);
+            buttonContainer.appendChild(favoriteButton);
 
-        const moreButton = document.createElement('button');
-        moreButton.setAttribute('is', 'paper-icon-button-light');
-        moreButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light';
-        moreButton.setAttribute('data-action', 'menu');
-        moreButton.title = 'More';
-        const moreIcon = document.createElement('span');
-        moreIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover more_vert';
-        moreIcon.setAttribute('aria-hidden', 'true');
-        moreButton.appendChild(moreIcon);
+            const moreButton = document.createElement('button');
+            moreButton.setAttribute('is', 'paper-icon-button-light');
+            moreButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light';
+            moreButton.setAttribute('data-action', 'menu');
+            moreButton.title = 'More';
+            const moreIcon = document.createElement('span');
+            moreIcon.className = 'material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover more_vert';
+            moreIcon.setAttribute('aria-hidden', 'true');
+            moreButton.appendChild(moreIcon);
 
-        buttonContainer.appendChild(moreButton);
+            buttonContainer.appendChild(moreButton);
 
-        // Assemble overlay
-        cardOverlayContainer.appendChild(overlayLink);
-        cardOverlayContainer.appendChild(playButton);
-        cardOverlayContainer.appendChild(buttonContainer);
+            // Assemble overlay
+            cardOverlayContainer.appendChild(overlayLink);
+            cardOverlayContainer.appendChild(playButton);
+            cardOverlayContainer.appendChild(buttonContainer);
+            
+            cardScalable.appendChild(cardOverlayContainer);
+        }
 
         // Card text container - different structure for episodes
         const cardTextContainer = document.createElement('div');
@@ -569,7 +582,6 @@
         cardScalable.appendChild(cardPadder);
         cardScalable.appendChild(blurhashCanvas);
         cardScalable.appendChild(cardImageContainer);
-        cardScalable.appendChild(cardOverlayContainer);
 
         cardBox.appendChild(cardScalable);
         cardBox.appendChild(cardTextContainer);

@@ -46,15 +46,15 @@ button::-moz-focus-inner {
     flex-wrap: wrap;
 }
 
-.vertical-wrap.started {
-    justify-content: flex-start;
+#divUsers.vertical-wrap.started {
+    justify-content: flex-start !important;
     flex-wrap: nowrap;
     width: 100%;
     overflow-x: auto;
 }
 
-.vertical-wrap.centered {
-    justify-content: center;
+#divUsers.vertical-wrap.centered {
+    justify-content: center !important;
 }
 
 .cardScalable {

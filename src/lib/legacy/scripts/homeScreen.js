@@ -204,11 +204,11 @@
      * Small, transparent function that runs automatically
      */
     async function migrateHomeScreenConfig() {
-        if (!window.KefinTweaksConfig || !window.KefinTweaksConfig.homeScreen) {
+        if (localStorage.getItem('KefinTweaksConfig') || !localStorage.getItem('KefinTweaksConfig')?.homeScreen) {
             return;
         }
 
-        const old = window.KefinTweaksConfig.homeScreen;
+        const old = localStorage.getItem('KefinTweaksConfig')?.homeScreen;
         const migrated = {};
         let needsMigration = false;
 
@@ -554,7 +554,7 @@
 
             // Add new sections that didn't exist in old format (use defaults if not already present)
             // These sections are new and won't be in old configs, so we add them with default values
-            if (!window.KefinTweaksConfig.homeScreen.upcoming) {
+            if (!localStorage.getItem('KefinTweaksConfig')?.homeScreen.upcoming) {
                 migrated.upcoming = {
                     enabled: true,
                     itemLimit: 48,
@@ -563,7 +563,7 @@
                 };
             }
 
-            if (!window.KefinTweaksConfig.homeScreen.imdbTop250) {
+            if (!localStorage.getItem('KefinTweaksConfig')?.homeScreen.imdbTop250) {
                 migrated.imdbTop250 = {
                     enabled: true,
                     itemLimit: 16,
@@ -574,7 +574,7 @@
                 };
             }
 
-            if (!window.KefinTweaksConfig.homeScreen.watchAgain) {
+            if (!localStorage.getItem('KefinTweaksConfig')?.homeScreen.watchAgain) {
                 migrated.watchAgain = {
                     enabled: false,
                     itemLimit: 16,
@@ -586,10 +586,13 @@
             }
 
             // Merge migrated config with existing (new format takes precedence)
-            window.KefinTweaksConfig.homeScreen = {
-                ...migrated,
-                ...window.KefinTweaksConfig.homeScreen
-            };
+            localStorage.setItem('KefinTweaksConfig', JSON.stringify({
+                ...JSON.parse(localStorage.getItem('KefinTweaksConfig') || '{}'),
+                homeScreen: {
+                    ...migrated,
+                    ...JSON.parse(localStorage.getItem('KefinTweaksConfig')?.homeScreen || '{}')
+                }
+            }));    
 
             // Save migrated config back to JS Injector plugin (async, don't block)
             if (window.KefinTweaksUtils && window.KefinTweaksUtils.saveConfigToJavaScriptInjector) {
@@ -607,7 +610,7 @@
         // 1. Ensure Recently Released date fields exist (Migration Logic)
         let configChanged = false;
         // Use the current config (which might have been just migrated)
-        const currentConfig = window.KefinTweaksConfig.homeScreen;
+        const currentConfig = localStorage.getItem('KefinTweaksConfig')?.homeScreen;
 
         if (currentConfig.recentlyReleased) {
             // Migrate movies config to minAgeInDays / maxAgeInDays

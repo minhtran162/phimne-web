@@ -11,7 +11,7 @@
     // ============================================================================
 
     const getKefinTweaksRoot = () => {
-        return window.KefinTweaksConfig?.kefinTweaksRoot || 'https://ranaldsgift.github.io/KefinTweaks/';
+        return localStorage.getItem('KefinTweaksConfig')?.kefinTweaksRoot || 'https://ranaldsgift.github.io/KefinTweaks/';
     };
 
     const KEFIN_TWEAKS_LEGACY_SKIN_DEFAULTS = {

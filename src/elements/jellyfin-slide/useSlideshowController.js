@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * - Manual prev/next that always follows movieList order
  * - Autoplay timer that never goes stale
  * - Preloading next slide images (backdrop + logo)
- * - Background prefetching of all slides after first load
  * - Lazy-loading by default (only fetch what you need)
  */
 export function useSlideshowController({
@@ -36,7 +35,6 @@ export function useSlideshowController({
     });
 
     const [imageCache, setImageCache] = useState({}); // { [id]: { backdrop, logo, hasBackdrop, hasLogo } }
-    const [movieCache, setMovieCache] = useState({}); // { [id]: movieData }
     const [favorites, setFavorites] = useState(new Set());
     const [isVisible, setIsVisible] = useState(false);
 
@@ -49,15 +47,11 @@ export function useSlideshowController({
     const timerRef = useRef(null);
     const mountedRef = useRef(false);
     const isTrailerPlayingRef = useRef(false); // true only when trailer is playing
-    const movieCacheRef = useRef({}); // Keep cache in ref to avoid stale closures
-    const imageCacheRef = useRef({});
 
     // ---------------------------
     useEffect(() => { jellyfinRef.current = state.jellyfinData; }, [state.jellyfinData]);
     useEffect(() => { listRef.current = state.movieList; }, [state.movieList]);
     useEffect(() => { indexRef.current = state.currentMovieIndex; }, [state.currentMovieIndex]);
-    useEffect(() => { movieCacheRef.current = movieCache; }, [movieCache]);
-    useEffect(() => { imageCacheRef.current = imageCache; }, [imageCache]);
 
     // ---------------------------
     // Utilities: Timer
@@ -169,61 +163,15 @@ export function useSlideshowController({
         const nextId = list[idx];
         if (!nextId) return;
 
-        // Skip if already cached (use ref for current values)
-        const cachedMovie = movieCacheRef.current[nextId];
-        const cachedImage = imageCacheRef.current[nextId];
-        if (cachedMovie && (cachedImage?.hasBackdrop !== undefined || cachedImage?.hasLogo !== undefined)) return;
+        // Skip if already cached with availability known
+        if (imageCache[nextId]?.hasBackdrop !== undefined || imageCache[nextId]?.hasLogo !== undefined) return;
 
-        const movie = await fetchItemById(nextId);
+        const movie = await fetchItemById(nextId); // optional metadata fetch for robustness
         if (!movie) return;
-
-        // Cache movie metadata
-        setMovieCache(prev => ({ ...prev, [nextId]: movie }));
 
         const result = await ensureImagesAndPreload(movie);
         setImageCache(prev => ({ ...prev, [nextId]: result }));
-    }, [fetchItemById, ensureImagesAndPreload]);
-
-    // Background prefetch all slides in the list
-    const prefetchAllSlides = useCallback(async () => {
-        const list = listRef.current;
-        if (!list?.length) return;
-        
-        // Process in batches to avoid overwhelming the server
-        const batchSize = 3;
-        for (let i = 0; i < list.length; i += batchSize) {
-            const batch = list.slice(i, i + batchSize);
-            
-            await Promise.all(
-                batch.map(async (id) => {
-                    // Skip if already cached (use ref for current values)
-                    const cachedMovie = movieCacheRef.current[id];
-                    const cachedImage = imageCacheRef.current[id];
-                    if (cachedMovie && (cachedImage?.hasBackdrop !== undefined || cachedImage?.hasLogo !== undefined)) {
-                        return;
-                    }
-
-                    try {
-                        const movie = await fetchItemById(id);
-                        if (!movie) return;
-
-                        // Cache movie metadata
-                        setMovieCache(prev => ({ ...prev, [id]: movie }));
-
-                        const imgInfo = await ensureImagesAndPreload(movie);
-                        setImageCache(prev => ({ ...prev, [id]: imgInfo }));
-                    } catch (err) {
-                        console.warn(`Failed to prefetch slide ${id}:`, err);
-                    }
-                })
-            );
-
-            // Small delay between batches to avoid rate limiting
-            if (i + batchSize < list.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        }
-    }, [fetchItemById, ensureImagesAndPreload]);
+    }, [imageCache, fetchItemById, ensureImagesAndPreload]);
 
     // ---------------------------
     // Slide creation and strict-order navigation
@@ -261,38 +209,24 @@ export function useSlideshowController({
 
         setState(prev => ({ ...prev, currentMovieIndex: normalized }));
 
-        // Check cache first before fetching (use ref for current value)
-        let movie = movieCacheRef.current[id];
-        
+        // Fetch metadata first
+        const movie = await fetchItemById(id);
         if (!movie) {
-            // Not in cache, fetch from server
-            movie = await fetchItemById(id);
-            
-            if (!movie) {
-                // If can't fetch, try next slide immediately instead of waiting
-                console.warn(`Failed to fetch item ${id}, advancing to next slide`);
-                const nextNormalized = ((normalized + 1) % list.length + list.length) % list.length;
-                showIndex(nextNormalized);
-                return;
-            }
-            
-            // Cache it for next time
-            setMovieCache(prev => ({ ...prev, [id]: movie }));
+            const nextNormalized = ((normalized + 1) % list.length + list.length) % list.length;
+            showIndex(nextNormalized);
+            return;
         }
 
-        // Check if images are cached, if not fetch them (use ref for current value)
-        const cachedImage = imageCacheRef.current[id];
-        if (!cachedImage || cachedImage.hasBackdrop === undefined) {
-            const imgInfo = await ensureImagesAndPreload(movie);
-            setImageCache(prev => ({ ...prev, [id]: imgInfo }));
-        }
+        // Ensure images and put in cache (and preload)
+        const imgInfo = await ensureImagesAndPreload(movie);
+        setImageCache(prev => ({ ...prev, [id]: imgInfo }));
 
         // Show slide
         createSlide(movie);
 
         // Preload upcoming slide assets
         preloadNextIndexImages(normalized + 1);
-    }, [clearTimer, fetchItemById, ensureImagesAndPreload, createSlide, preloadNextIndexImages]);
+    }, [clearTimer, fetchItemById, ensureImagesAndPreload, createSlide, preloadNextIndexImages, startTimer]);
 
     // Always try strict list → fallback to random when list = empty
     const advanceBy = useCallback((delta) => {
@@ -413,7 +347,7 @@ export function useSlideshowController({
 
         // Error 153 = playback blocked by YouTube (copyright, embedding, TV restrictions)
         if (event?.data === 153) {
-            console.warn('Trailer blocked (Error 153) → Skipping to slideshow');
+            console.log('Trailer blocked (Error 153) → Skipping to slideshow');
             resumeAutoplay(); // resume normal slideshow
             return;
         }
@@ -434,67 +368,70 @@ export function useSlideshowController({
     }, [clearTimer]);
 
     useEffect(() => {
-        let interval = null;
+        if (state.slideshow.hasInitialized) return;
 
-        const checkLogin = async () => {
-            try {
-                const api = window.ApiClient;
-                const isLoggedIn =
-                    api
-                    && (typeof api.getCurrentUserId === 'function' ? api.getCurrentUserId() : api._currentUser?.Id)
-                    && (api._serverInfo?.AccessToken || api._serverInfo);
+        let intervalId;
 
-                if (isLoggedIn && !state.slideshow.hasInitialized) {
-                    // Save Phim Nè data
-                    setState(prev => ({
-                        ...prev,
-                        jellyfinData: {
-                            userId: typeof api.getCurrentUserId === 'function' ? api.getCurrentUserId() : api._currentUser?.Id || null,
-                            appName: api._appName || null,
-                            appVersion: api._appVersion || null,
-                            deviceName: api._deviceName || null,
-                            deviceId: api._deviceId || null,
-                            accessToken: api._serverInfo?.AccessToken || null,
-                            serverAddress: api._serverInfo?.Address || api._serverAddress || api._serverInfo?.LocalAddress || null,
-                            serverId: api._serverInfo?.Id || null
-                        },
-                        slideshow: { ...prev.slideshow, hasInitialized: true }
-                    }));
+        const checkReady = () => {
+            // Ultra-cheap guards first
+            const api = window.ApiClient;
+            if (!api) return;
 
-                    // Load list file: keep your path as needed
-                    const listFileFromServer = window.slideShowItems;
+            const userId =
+                typeof api.getCurrentUserId === 'function'
+                    ? api.getCurrentUserId()
+                    : api._currentUser?.Id;
 
-                    if (listFileFromServer.length > 0) {
-                        const ids = listFileFromServer;
-                        
-                        setState(prev => ({ ...prev, movieList: ids, currentMovieIndex: 0 }));
-                        listRef.current = ids;
+            if (!userId) return;
+            if (!window.slideShowItems || window.slideShowItems.length === 0) return;
 
-                        // Show first slide strictly by order
-                        await showIndex(0);
-                        // Preload second
-                        preloadNextIndexImages(1);
-                        
-                        // Start background prefetch for all remaining slides
-                        setTimeout(() => {
-                            prefetchAllSlides();
-                        }, 1000); // Delay slightly to let first slide render smoothly
-                        
-                        return;
-                    }
-                    // If list empty or fetch failed: fallback random
-                    await fetchRandomMovie();
-                }
-            } catch {
-                // ignore
-            }
+            // Everything is ready → stop polling immediately
+            clearInterval(intervalId);
+
+            const serverInfo = api._serverInfo || {};
+
+            const ids = window.slideShowItems.slice(); // shallow copy, cheap
+
+            setState(prev => ({
+                ...prev,
+                jellyfinData: {
+                    userId,
+                    appName: api._appName || null,
+                    appVersion: api._appVersion || null,
+                    deviceName: api._deviceName || null,
+                    deviceId: api._deviceId || null,
+                    accessToken: serverInfo.AccessToken || null,
+                    serverAddress:
+                        serverInfo.Address ||
+                        api._serverAddress ||
+                        serverInfo.LocalAddress ||
+                        null,
+                    serverId: serverInfo.Id || null
+                },
+                slideshow: { ...prev.slideshow, hasInitialized: true },
+                movieList: ids,
+                currentMovieIndex: 0
+            }));
+
+            listRef.current = ids;
+
+            // Defer heavy work so UI thread can breathe
+            setTimeout(() => {
+                showIndex(0);
+                preloadNextIndexImages(1);
+            }, 0);
         };
 
-        interval = setInterval(checkLogin, 500);
-        checkLogin();
+        // Slower interval = happier old CPUs
+        intervalId = setInterval(checkReady, 1000);
+        checkReady();
 
-        return () => clearInterval(interval);
-    }, [state.slideshow.hasInitialized, showIndex, preloadNextIndexImages, fetchRandomMovie, prefetchAllSlides]);
+        return () => clearInterval(intervalId);
+    }, [
+        state.slideshow.hasInitialized,
+        showIndex,
+        preloadNextIndexImages
+    ]);
 
     // ---------------------------
     // Visibility follows init
@@ -509,7 +446,6 @@ export function useSlideshowController({
     return {
         state,
         imageCache,
-        movieCache,
         favorites,
         setFavorites,
         isVisible,
@@ -521,9 +457,6 @@ export function useSlideshowController({
 
         // if you still call this somewhere, it respects strict order fallback
         fetchRandomMovie,
-        
-        // background prefetch
-        prefetchAllSlides,
 
         // config needed by UI
         plotMaxLength,

@@ -53,7 +53,7 @@
      * @param {Function} callback - Function to call when page view changes
      * @param {Object} options - Options for the handler
      */
-    function onViewPage(callback, options = {}) {
+    function onViewPage(callback, options = {}) {        
         if (typeof callback !== 'function') {
             ERR('Callback must be a function');
             return;
@@ -348,148 +348,20 @@
      * @param {number} options.loginWaitTime - Maximum time to wait for login in ms (default: 10000)
      * @returns {Promise<boolean>} - Success status
      */
-    async function saveConfigToJavaScriptInjector(config = null, options = {}) {
+    async function saveConfigToJavaScriptInjector(configToSave) {
         try {
-            const { waitForLogin: shouldWaitForLogin = true, loginWaitTime = 10000 } = options;
-
-            // Check if ApiClient is available
-            if (!window.ApiClient) {
-                if (shouldWaitForLogin) {
-                    const loggedIn = await waitForLogin(loginWaitTime);
-                    if (!loggedIn) {
-                        WARN('ApiClient not available after waiting, cannot save config');
-                        return false;
-                    }
-                } else {
-                    throw new Error('ApiClient not available');
-                }
-            }
-
-            // Check if user is logged in
-            const isLoggedIn = window.ApiClient._loggedIn
-                               && window.ApiClient.accessToken
-                               && window.ApiClient.serverAddress;
-
-            if (!isLoggedIn) {
-                if (shouldWaitForLogin) {
-                    const loggedIn = await waitForLogin(loginWaitTime);
-                    if (!loggedIn) {
-                        WARN('User not logged in after waiting, cannot save config');
-                        return false;
-                    }
-                } else {
-                    throw new Error('User not logged in');
-                }
-            }
-
-            // Use provided config or fall back to window.KefinTweaksConfig
-            const configToSave = config || window.KefinTweaksConfig;
-            if (!configToSave) {
-                throw new Error('No config provided and window.KefinTweaksConfig is not available');
-            }
-
-            // Find JavaScript Injector plugin
-            const server = window.ApiClient.serverAddress();
-            const token = window.ApiClient.accessToken();
-
-            if (!server || !token) {
-                throw new Error('Server address or access token not available');
-            }
-
-            let pluginsResponse = await fetch(`${server}/Plugins`, {
-                headers: { 'X-Emby-Token': token }
-            });
-
-            // Handle 401 Unauthorized - retry once after waiting if waitForLogin is enabled
-            if (pluginsResponse.status === 401 && shouldWaitForLogin) {
-                WARN('Received 401 Unauthorized, waiting for login and retrying...');
-                const loggedIn = await waitForLogin(5000); // Wait up to 5 more seconds
-                if (loggedIn) {
-                    // Retry with fresh token
-                    const freshToken = window.ApiClient.accessToken();
-                    pluginsResponse = await fetch(`${server}/Plugins`, {
-                        headers: { 'X-Emby-Token': freshToken }
-                    });
-                }
-            }
-
-            if (!pluginsResponse.ok) {
-                if (pluginsResponse.status === 401) {
-                    throw new Error('Unauthorized - user may not be logged in or session expired');
-                }
-                throw new Error(`Failed to get plugins: ${pluginsResponse.status} ${pluginsResponse.statusText}`);
-            }
-
-            const pluginsData = await pluginsResponse.json();
-            const pluginsList = Array.isArray(pluginsData) ? pluginsData : (pluginsData.Items || []);
-
-            const plugin = pluginsList.find(p => p.Name === 'JavaScript Injector' || p.Name === 'JS Injector');
-            if (!plugin) {
-                WARN('JavaScript Injector plugin not found, cannot save config');
-                return false;
-            }
-
-            const pluginId = plugin.Id;
-
-            // Get current injector config
-            const configUrl = `${server}/Plugins/${pluginId}/Configuration`;
-            const configResponse = await fetch(configUrl, {
-                headers: { 'X-Emby-Token': token }
-            });
-
-            if (!configResponse.ok) {
-                throw new Error(`Failed to get plugin config: ${configResponse.statusText}`);
-            }
-
-            const injectorConfig = await configResponse.json();
-
-            // Ensure CustomJavaScripts array exists
-            if (!injectorConfig.CustomJavaScripts) {
-                injectorConfig.CustomJavaScripts = [];
-            }
-
-            // Create the script content
-            const scriptContent = `// KefinTweaks Configuration
-// This file is automatically generated by KefinTweaks Configuration UI
-// Do not edit manually unless you know what you're doing
-
-window.KefinTweaksConfig = ${JSON.stringify(configToSave, null, 2)};`;
-
-            // Find or create KefinTweaks-Config script
-            const existingScriptIndex = injectorConfig.CustomJavaScripts.findIndex(
-                script => script.Name === 'KefinTweaks-Config'
-            );
-
-            if (existingScriptIndex !== -1) {
-                // Update existing script
-                injectorConfig.CustomJavaScripts[existingScriptIndex].Script = scriptContent;
-            } else {
-                // Add new script
-                injectorConfig.CustomJavaScripts.push({
-                    Name: 'KefinTweaks-Config',
-                    Script: scriptContent,
-                    Enabled: true,
-                    RequiresAuthentication: false
-                });
-            }
-
-            // Save the updated configuration
-            const saveResponse = await fetch(configUrl, {
-                method: 'POST',
-                headers: {
-                    'X-Emby-Token': token,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(injectorConfig)
-            });
-
-            if (!saveResponse.ok) {
-                throw new Error(`Failed to save plugin config: ${saveResponse.statusText}`);
-            }
-
+            // Save to localStorage for persistence
+            localStorage.setItem('KefinTweaksConfig', JSON.stringify(configToSave));
+            console.log("save done")
+            // Update global variable
+            window.KefinTweaksConfig = configToSave;
+            
+            // Dispatch event for other components
+            window.dispatchEvent(new CustomEvent('KefinTweaksConfigChanged', { detail: configToSave }));
+            
             return true;
         } catch (err) {
-            ERR('Error saving config to JS Injector:', err);
+            ERR('Error saving config to localStorage:', err);
             return false;
         }
     }
@@ -560,26 +432,19 @@ window.KefinTweaksConfig = ${JSON.stringify(configToSave, null, 2)};`;
             return _watchlistTabIndex;
         }
 
-        // Fetch the tab index as we do in addCustomMenuLink
-        try {
-            const response = await fetch(`${ApiClient._serverAddress}/CustomTabs/Config`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Emby-Token': ApiClient._serverInfo.AccessToken || ApiClient.accessToken()
-                }
-            });
-            const data = await response.json();
-            data.forEach((tab, index) => {
-                if (tab.ContentHtml.indexOf('sections watchlist') !== -1) {
-                    _watchlistTabIndex = index + 2;
-                }
-            });
-        } catch (err) {
-            ERR('Failed to fetch watchlist tab index:', err);
+        // Try to find in DOM
+        // Since this might be called before tabs are rendered, we might need to retry or return null
+        // But legacy scripts usually call this when they are setting up the view or handling navigation
+        const tabs = document.querySelectorAll('.homeLibraryTabs .headerTabButton');
+        for (let i = 0; i < tabs.length; i++) {
+            if (tabs[i].dataset.kefintweaksWatchlist || 
+                (tabs[i].textContent && tabs[i].textContent.trim() === 'Watchlist')) {
+                _watchlistTabIndex = i;
+                return i;
+            }
         }
 
-        return _watchlistTabIndex;
+        return null;
     }
 
     // Expose utilities to global scope

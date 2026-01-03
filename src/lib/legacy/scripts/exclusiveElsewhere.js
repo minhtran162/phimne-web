@@ -34,7 +34,7 @@
             return;
         }
 
-        const serverName = config.hideServerName ? '' : ApiClient.serverName();
+        const serverName = config.hideServerName ? '' : window.ApiClient.serverId();
 
         const link = document.querySelector('.itemDetailPage:not(.hide) .streaming-lookup-container>div>div:first-child a');
         if (link && !link.classList.contains('exclusive')) {

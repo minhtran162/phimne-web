@@ -18,11 +18,10 @@ import './htmlMediaElement';
 import './keyboardEvent';
 import './patchHeaders';
 import './vendorStyles';
-
-import './kefinTweaks-plugin';
+import('./config');
 
 // Load config tweaks for developer and tizen
 const protocol = window.location.protocol;
 if (browser.tizen || protocol === 'http:') {
-    import('./config.js');
+    import('./config-slide');
 }

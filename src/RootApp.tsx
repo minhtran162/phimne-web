@@ -9,6 +9,7 @@ import browser from 'scripts/browser';
 import { queryClient } from 'utils/query/queryClient';
 
 import RootAppRouter from 'RootAppRouter';
+import KefinTweaksLoader from 'components/KefinTweaks/KefinTweaksLoader';
 
 const useReactQueryDevtools = window.Proxy // '@tanstack/query-devtools' requires 'Proxy', which cannot be polyfilled for legacy browsers
     && !browser.tv; // Don't use devtools on the TV as the navigation is weird
@@ -18,6 +19,7 @@ const RootApp = () => (
         <ApiProvider>
             <UserSettingsProvider>
                 <WebConfigProvider>
+                    <KefinTweaksLoader />
                     <RootAppRouter />
                 </WebConfigProvider>
             </UserSettingsProvider>
