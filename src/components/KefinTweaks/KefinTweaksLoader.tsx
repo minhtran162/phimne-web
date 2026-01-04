@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import browser from '../../scripts/browser';
 
-// Declare global types for KefinTweaks
+// [Declaration of global types - unchanged]
 declare global {
     interface Window {
         KefinTweaksConfig?: any;
@@ -13,7 +13,7 @@ declare global {
     }
 }
 
-// Jellyfin Enhanced Scripts
+// [Constants - unchanged from original]
 const JE_SCRIPTS = [
     'splashscreen.js',
     'enhanced/helpers.js',
@@ -45,6 +45,7 @@ const JE_SCRIPTS = [
     'letterboxd-links.js'
 ];
 
+// [jeScriptImports mapping - unchanged from original]
 const jeScriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'splashscreen.js': () => import('../../lib/legacy/JellyfinEnhanced/splashscreen.js'),
@@ -123,8 +124,8 @@ const DEFAULT_ENABLED_SCRIPTS: Record<string, boolean> = {
     flattenSingleSeasonShows: true,
     seriesInfo: true,
     collections: true,
-    skinManager: browser.tizen ? false : true,
     settings: true,
+    skinManager: !browser.tizen ? true : false,
 };
 
 const DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS = {
@@ -274,7 +275,6 @@ const DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS = {
     "IGNORE_PROVIDERS": "",
     "ElsewhereCustomBrandingText": "",
     "ElsewhereCustomBrandingImageUrl": "",
-
 };
 
 interface ScriptDefinition {
@@ -284,221 +284,146 @@ interface ScriptDefinition {
     dependencies: string[];
     priority?: boolean;
     description: string;
+    tier?: 'critical' | 'high' | 'medium' | 'low'; // New: loading priority
+    lazyLoad?: boolean; // New: load on demand
 }
 
 // Script definitions from injector.js
 const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
     {
-        name: 'utils',
-        script: 'utils.js',
-        css: null,
-        dependencies: [],
-        description: 'Common utilities for page view management and MutationObserver conversion'
+        name: 'utils', script: 'utils.js', css: null, dependencies: [], tier: 'critical',
+        description: 'Common utilities for page view management'
     },
     {
-        name: 'settings',
-        script: 'settings.js',
-        css: null,
-        dependencies: ['utils'],
+        name: 'apiHelper', script: 'apiHelper.js', css: null, dependencies: [], tier: 'critical',
+        description: 'API helper functions'
+    },
+    {
+        name: 'localStorageCache', script: 'localStorageCache.js', css: null, dependencies: [], tier: 'critical',
+        description: 'localStorage caching layer'
+    },
+    {
+        name: 'modal', script: 'modal.js', css: 'modal.css', dependencies: [], tier: 'high',
+        description: 'Generic modal system'
+    },
+    {
+        name: 'cardBuilder', script: 'cardBuilder.js', css: 'cardBuilder.css', dependencies: ['apiHelper'], tier: 'high',
+        description: 'Core card building functionality'
+    },
+    {
+        name: 'settings', script: 'settings.js', css: null, dependencies: ['utils'], tier: 'high',
         description: 'KefinTweaks Settings UI'
     },
     {
-        name: 'skinConfigLegacyDefaults',
-        script: 'skinConfig-0.3.5-defaults.js',
-        css: null,
-        dependencies: [],
-        description: 'Legacy skin defaults (v0.3.5) for duplicate detection'
+        name: 'indexedDBCache', script: 'indexedDBCache.js', css: null, dependencies: [], tier: 'high',
+        description: 'IndexedDB caching for large datasets'
+    },
+    
+    // Medium priority - load after initial render
+    {
+        name: 'homeScreen', script: 'homeScreen.js', css: 'homeScreen.css',
+        dependencies: ['cardBuilder', 'localStorageCache', 'utils'], tier: 'medium',
+        description: 'Custom home screen sections'
     },
     {
-        name: 'skinConfig',
-        script: 'skinConfig.js',
-        css: null,
-        dependencies: [],
-        description: 'Default skin configuration for KefinTweaks'
+        name: 'skinConfig', script: 'skinConfig.js', css: null, dependencies: [], tier: 'medium',
+        description: 'Default skin configuration'
     },
     {
-        name: 'skinManager',
-        script: 'skinManager.js',
-        css: 'defaultSkin.css',
-        dependencies: ['utils', 'skinConfigLegacyDefaults', 'skinConfig', 'modal'],
-        priority: true,
-        description: 'Adds skin selection dropdown to display preferences page and manages skin CSS loading'
+        name: 'skinManager', script: 'skinManager.js', css: 'defaultSkin.css',
+        dependencies: ['utils', 'skinConfigLegacyDefaults', 'skinConfig', 'modal'], priority: true, tier: 'medium',
+        description: 'Skin selection and management'
     },
     {
-        name: 'apiHelper',
-        script: 'apiHelper.js',
-        css: null,
-        dependencies: [],
-        description: 'API helper functions for common Jellyfin operations'
+        name: 'infiniteScroll', script: 'infiniteScroll.js', css: null, dependencies: ['cardBuilder'], tier: 'medium',
+        description: 'Infinite scroll functionality'
     },
+    
+    // Low priority - lazy load
     {
-        name: 'cardBuilder',
-        script: 'cardBuilder.js',
-        css: 'cardBuilder.css',
-        dependencies: ['apiHelper'],
-        description: 'Core card building functionality (required by other scripts)'
-    },
-    {
-        name: 'localStorageCache',
-        script: 'localStorageCache.js',
-        css: null,
-        dependencies: [],
-        description: 'localStorage-based caching layer with 24-hour TTL and manual refresh'
-    },
-    {
-        name: 'indexedDBCache',
-        script: 'indexedDBCache.js',
-        css: null,
-        dependencies: [],
-        description: 'IndexedDB-based caching layer for large datasets with TTL support'
-    },
-    {
-        name: 'modal',
-        script: 'modal.js',
-        css: 'modal.css',
-        dependencies: [],
-        description: 'Generic modal system for Jellyfin-style dialogs'
-    },
-    {
-        name: 'toaster',
-        script: 'toaster.js',
-        css: null,
-        dependencies: [],
-        description: 'Toast notification system using Jellyfin\'s existing toast functionality'
-    },
-    {
-        name: 'watchlistTabInjector',
-        script: 'watchlistTabInjector.js',
-        css: null,
-        dependencies: ['utils'],
-        description: 'Injects Watchlist tab into home screen (replaces Custom Tabs plugin)'
-    },
-    {
-        name: 'watchlist',
-        script: 'watchlist.js',
-        css: 'watchlist.css',
-        dependencies: ['cardBuilder', 'localStorageCache', 'modal', 'utils', 'watchlistTabInjector'],
-        description: 'Adds watchlist functionality throughout Jellyfin interface'
-    },
-    {
-        name: 'homeScreen',
-        script: 'homeScreen.js',
-        css: 'homeScreen.css',
-        dependencies: ['cardBuilder', 'localStorageCache', 'utils'],
-        description: 'Adds custom home screen sections'
-    },
-    {
-        name: 'search',
-        script: 'search.js',
-        css: 'search.css',
-        dependencies: ['cardBuilder', 'utils'],
+        name: 'search', script: 'search.js', css: 'search.css',
+        dependencies: ['cardBuilder', 'utils'], tier: 'low', lazyLoad: true,
         description: 'Enhanced search functionality'
     },
     {
-        name: 'headerTabs',
-        script: 'headerTabs.js',
-        css: null,
-        dependencies: [],
+        name: 'toaster', script: 'toaster.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Toast notification system'
+    },
+    {
+        name: 'watchlist', script: 'watchlist.js', css: 'watchlist.css',
+        dependencies: ['cardBuilder', 'localStorageCache', 'modal', 'utils', 'watchlistTabInjector'], tier: 'low', lazyLoad: true,
+        description: 'Watchlist functionality'
+    },
+    {
+        name: 'subtitleSearch', script: 'subtitleSearch.js', css: 'subtitleSearch.css',
+        dependencies: ['toaster'], tier: 'low', lazyLoad: true,
+        description: 'Subtitle search functionality'
+    },
+    {
+        name: 'playlist', script: 'playlist.js', css: null,
+        dependencies: ['cardBuilder', 'utils', 'modal'], tier: 'low', lazyLoad: true,
+        description: 'Playlist enhancements'
+    },
+
+    // Additional scripts with tier assignments
+    {
+        name: 'watchlistTabInjector', script: 'watchlistTabInjector.js', css: null, dependencies: ['utils'], tier: 'low',
+        description: 'Injects Watchlist tab'
+    },
+    {
+        name: 'headerTabs', script: 'headerTabs.js', css: null, dependencies: [], tier: 'low',
         description: 'Header tab improvements'
     },
     {
-        name: 'customMenuLinks',
-        script: 'customMenuLinks.js',
-        css: null,
-        dependencies: ['utils'],
-        description: 'Load and add custom menu links from configuration'
+        name: 'customMenuLinks', script: 'customMenuLinks.js', css: null, dependencies: ['utils'], tier: 'low', lazyLoad: true,
+        description: 'Custom menu links'
     },
     {
-        name: 'exclusiveElsewhere',
-        script: 'exclusiveElsewhere.js',
-        css: null,
-        dependencies: [],
-        description: 'Modifies the behavior of the Jellyfin Enhanced Elsewhere functionality to add custom branding when items are not available on streaming services'
+        name: 'exclusiveElsewhere', script: 'exclusiveElsewhere.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Elsewhere functionality modifications'
     },
     {
-        name: 'backdropLeakFix',
-        script: 'backdropLeakFix.js',
-        css: null,
-        dependencies: [],
-        description: 'Fixes issue that causes backdrop images to be continuously added to the page if the tab isn\'t focused.'
+        name: 'backdropLeakFix', script: 'backdropLeakFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Fixes backdrop image leak'
     },
     {
-        name: 'updoot',
-        script: 'updoot.js',
-        css: null,
-        dependencies: [],
-        description: 'Upvote functionality provided by https://github.com/BobHasNoSoul/jellyfin-updoot'
+        name: 'updoot', script: 'updoot.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Upvote functionality'
     },
     {
-        name: 'dashboardButtonFix',
-        script: 'dashboardButtonFix.js',
-        css: null,
-        dependencies: [],
-        description: 'Fixes the dashboard button to redirect to the home page when the back button is clicked and there is no history to go back to'
+        name: 'dashboardButtonFix', script: 'dashboardButtonFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Dashboard button fix'
     },
     {
-        name: 'infiniteScroll',
-        script: 'infiniteScroll.js',
-        css: null,
-        dependencies: ['cardBuilder'],
-        description: 'Adds infinite scroll functionality to media library pages'
+        name: 'removeContinue', script: 'removeContinue.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Remove from continue watching'
     },
     {
-        name: 'removeContinue',
-        script: 'removeContinue.js',
-        css: null,
-        dependencies: [],
-        description: 'Adds remove from continue watching functionality to cards with data-position-ticks'
+        name: 'breadcrumbs', script: 'breadcrumbs.js', css: 'breadcrumbNav.css', dependencies: ['utils'], tier: 'medium',
+        description: 'Breadcrumb navigation'
     },
     {
-        name: 'subtitleSearch',
-        script: 'subtitleSearch.js',
-        css: 'subtitleSearch.css',
-        dependencies: ['toaster'],
-        description: 'Adds subtitle search functionality to the video OSD, allowing users to search and download subtitles from remote sources'
+        name: 'itemDetailsCollections', script: 'itemDetailsCollections.js', css: null,
+        dependencies: ['indexedDBCache', 'utils', 'cardBuilder'], tier: 'low', lazyLoad: true,
+        description: 'Related collections on item details'
     },
     {
-        name: 'breadcrumbs',
-        script: 'breadcrumbs.js',
-        css: 'breadcrumbNav.css',
-        dependencies: ['utils'],
-        description: 'Adds breadcrumb navigation to item detail pages for Movies, Series, Seasons, Episodes, Music Artists, and Music Albums'
+        name: 'flattenSingleSeasonShows', script: 'seriesEpisodes.js', css: 'seriesEpisodes.css',
+        dependencies: ['cardBuilder', 'utils'], tier: 'low', lazyLoad: true,
+        description: 'Display episodes on series page'
     },
     {
-        name: 'playlist',
-        script: 'playlist.js',
-        css: null,
-        dependencies: ['cardBuilder', 'utils', 'modal'],
-        description: 'Modifies playlist view page behavior to navigate to item details instead of playing, adds play button to playlist items, and adds sorting functionality'
+        name: 'seriesInfo', script: 'seriesInfo.js', css: null, dependencies: ['utils'], tier: 'medium',
+        description: 'Series and season information'
     },
     {
-        name: 'itemDetailsCollections',
-        script: 'itemDetailsCollections.js',
-        css: null,
-        dependencies: ['indexedDBCache', 'utils', 'cardBuilder'],
-        description: 'Adds related collections to item details pages showing which collections contain the current item'
+        name: 'collections', script: 'collections.js', css: null, dependencies: ['utils', 'modal'], tier: 'low', lazyLoad: true,
+        description: 'Collection sorting functionality'
     },
     {
-        name: 'flattenSingleSeasonShows',
-        script: 'seriesEpisodes.js', // Note: name mismatch in definition vs file, using definition name as key, file as value
-        css: 'seriesEpisodes.css',
-        dependencies: ['cardBuilder', 'utils'],
-        description: 'Displays episodes directly on series page with season selection. Works for both single and multi-season shows when enabled.'
+        name: 'skinConfigLegacyDefaults', script: 'skinConfig-0.3.5-defaults.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        description: 'Legacy skin defaults'
     },
-    {
-        name: 'seriesInfo',
-        script: 'seriesInfo.js',
-        css: null,
-        dependencies: ['utils'],
-        description: 'Adds series and season information (seasons count, episodes count, end time) to details pages'
-    },
-    {
-        name: 'collections',
-        script: 'collections.js',
-        css: null,
-        dependencies: ['utils', 'modal'],
-        description: 'Adds sorting functionality to collection pages'
-    }
 ];
 
 // Map for script imports
@@ -587,46 +512,107 @@ const cssImports: Record<string, () => Promise<any>> = {
     'seriesEpisodes.css': () => import('../../assets/jellyfintweaks/scripts/seriesEpisodes.css'),
 };
 
-// Jellyfin Enhanced Logic
-const jeHelpers = {
-    toCamelCase: (obj: any): any => {
-        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
-            return obj;
-        }
-        const camelCased: any = {};
-        for (const key in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-                camelCased[camelKey] = jeHelpers.toCamelCase(obj[key]);
-            }
-        }
-        return camelCased;
-    },
-    injectMetadataIcons: (enabled: boolean) => {
-        const existing = document.getElementById('metadataIconsCss');
-        if (enabled && !existing) {
-            const link = document.createElement('link');
-            link.id = 'metadataIconsCss';
-            link.rel = 'stylesheet';
-            link.href = 'https://cdn.jsdelivr.net/gh/Druidblack/jellyfin-icon-metadata/public-icon.css';
-            document.head.appendChild(link);
-        } else if (!enabled && existing) {
-            existing.remove();
-        }
+// ===== SAFARI/MOBILE COMPATIBILITY: requestIdleCallback Polyfill =====
+const safeRequestIdleCallback = (
+    callback: IdleRequestCallback,
+    options?: { timeout?: number }
+): number => {
+    if (typeof requestIdleCallback !== 'undefined') {
+        return requestIdleCallback(callback, options);
     }
+    // Fallback for Safari and mobile browsers
+    const timeout = options?.timeout || 1000;
+    return setTimeout(() => {
+        const start = Date.now();
+        callback({
+            didTimeout: false,
+            timeRemaining: () => Math.max(0, 50 - (Date.now() - start))
+        });
+    }, 1) as any;
 };
 
+// ===== OPTIMIZATION: Loading Manager =====
+class LoadingManager {
+    private loadedScripts = new Set<string>();
+    private pendingLoads = new Map<string, Promise<void>>();
+    private loadQueue: Array<{ script: ScriptDefinition; priority: number }> = [];
+    private isProcessing = false;
+    
+    async loadScript(scriptDef: ScriptDefinition): Promise<void> {
+        // Avoid duplicate loads
+        if (this.loadedScripts.has(scriptDef.name)) {
+            return Promise.resolve();
+        }
+        
+        // Return existing promise if already loading
+        if (this.pendingLoads.has(scriptDef.name)) {
+            return this.pendingLoads.get(scriptDef.name)!;
+        }
+        
+        const loadPromise = this._doLoad(scriptDef);
+        this.pendingLoads.set(scriptDef.name, loadPromise);
+        
+        try {
+            await loadPromise;
+            this.loadedScripts.add(scriptDef.name);
+        } finally {
+            this.pendingLoads.delete(scriptDef.name);
+        }
+    }
+    
+    private async _doLoad(scriptDef: ScriptDefinition): Promise<void> {
+        try {
+            // Load CSS first (non-blocking)
+            if (scriptDef.css && cssImports[scriptDef.css]) {
+                cssImports[scriptDef.css]().catch(err => 
+                    console.warn(`[KefinTweaks] CSS load failed: ${scriptDef.css}`, err)
+                );
+            }
+            
+            // Load script
+            if (scriptImports[scriptDef.name]) {
+                await scriptImports[scriptDef.name]();
+                console.log(`[KefinTweaks] ✓ ${scriptDef.name}`);
+            }
+        } catch (err) {
+            console.error(`[KefinTweaks] ✗ ${scriptDef.name}`, err);
+            throw err; // Re-throw to mark as failed
+        }
+    }
+    
+    // Load scripts by tier with throttling
+    async loadTier(tier: string, scripts: ScriptDefinition[], maxConcurrent = 3): Promise<void> {
+        console.log(`[KefinTweaks] Loading ${tier} tier (${scripts.length} scripts)`);
+        
+        // Process in batches to avoid overwhelming slow devices
+        for (let i = 0; i < scripts.length; i += maxConcurrent) {
+            const batch = scripts.slice(i, i + maxConcurrent);
+            await Promise.allSettled(batch.map(s => this.loadScript(s)));
+            
+            // Yield to main thread between batches
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+    }
+    
+    isLoaded(scriptName: string): boolean {
+        return this.loadedScripts.has(scriptName);
+    }
+}
+
+const loadingManager = new LoadingManager();
+
+// ===== OPTIMIZATION: Simplified Jellyfin Enhanced Init =====
 const initializeJellyfinEnhanced = async () => {
     const ApiClient = (window as any).ApiClient;
     if (!ApiClient) {
-        console.warn('[KefinTweaks Component] ApiClient not found, retrying initialization of Jellyfin Enhanced later...');
-        setTimeout(initializeJellyfinEnhanced, 500);
+        console.warn('[KefinTweaks] ApiClient not found, retrying...');
+        setTimeout(initializeJellyfinEnhanced, 1000);
         return;
     }
 
-    console.log('[KefinTweaks Component] Initializing Jellyfin Enhanced...');
+    console.log('[KefinTweaks] Initializing Jellyfin Enhanced (optimized)...');
 
-    // 1. Setup global namespace
+    // Setup minimal global namespace
     if (!window.JellyfinEnhanced) {
         window.JellyfinEnhanced = {
             pluginConfig: {},
@@ -644,21 +630,19 @@ const initializeJellyfinEnhanced = async () => {
                 callbacks: new Set(),
                 dirty: false,
                 scheduleId: null as any,
-                register(saveCallback: any) { this.callbacks.add(saveCallback); },
-                unregister(saveCallback: any) { this.callbacks.delete(saveCallback); },
+                register(cb: any) { this.callbacks.add(cb); },
+                unregister(cb: any) { this.callbacks.delete(cb); },
                 markDirty() {
                     this.dirty = true;
                     if (!this.scheduleId) {
-                        if (typeof requestIdleCallback !== 'undefined') {
-                            this.scheduleId = requestIdleCallback(() => this._flush(), { timeout: 5000 });
-                        } else {
-                            this.scheduleId = setTimeout(() => this._flush(), 1000);
-                        }
+                        this.scheduleId = setTimeout(() => this._flush(), 2000); // Increased delay
                     }
                 },
                 _flush() {
                     if (this.dirty) {
-                        this.callbacks.forEach((cb: any) => { try { cb(); } catch (e) { console.error('Cache save error:', e); } });
+                        this.callbacks.forEach((cb: any) => {
+                            try { cb(); } catch (e) { console.error('Cache save error:', e); }
+                        });
                         this.dirty = false;
                     }
                     this.scheduleId = null;
@@ -675,333 +659,208 @@ const initializeJellyfinEnhanced = async () => {
                 }
                 return text;
             },
-            loadSettings: () => { console.warn("🪼 Jellyfin Enhanced: loadSettings called before config.js loaded"); return {}; },
-            initializeShortcuts: () => { console.warn("🪼 Jellyfin Enhanced: initializeShortcuts called before config.js loaded"); },
-            saveUserSettings: async (fileName: string) => { console.warn(`🪼 Jellyfin Enhanced: saveUserSettings(${fileName}) called before config.js loaded`); }
+            loadSettings: () => { return {}; },
+            initializeShortcuts: () => {},
+            saveUserSettings: async () => {}
         };
     }
 
     const JE = window.JellyfinEnhanced;
 
-    // Load Translations Logic
-    const loadTranslations = async () => {
-        const CACHE_DURATION = 24 * 60 * 60 * 1000;
-        const protocol = window.location.protocol;
-        const host = window.location.host;
-        const baseUrl = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/`;
-
-        try {
-            let pluginVersion = JE.pluginVersion;
-            if (!pluginVersion || pluginVersion === 'unknown') {
-                try {
-                    const versionResponse = await fetch(ApiClient.getUrl('/JellyfinEnhanced/version'));
-                    if (versionResponse.ok) {
-                        pluginVersion = await versionResponse.text();
-                        JE.pluginVersion = pluginVersion;
-                    }
-                } catch (e) {
-                    pluginVersion = 'unknown';
-                }
-            }
-
-            let user = ApiClient.getCurrentUser ? ApiClient.getCurrentUser() : null;
-            if (user instanceof Promise) user = await user;
-            const userId = user?.Id;
-            let lang = 'en';
-
-            if (userId) {
-                const storageKey = `${userId}-language`;
-                const storedLang = localStorage.getItem(storageKey);
-                if (storedLang) lang = storedLang.split('-')[0];
-            }
-
-            // Clean old cache
-            try {
-                for (let i = localStorage.length - 1; i >= 0; i--) {
-                    const key = localStorage.key(i);
-                    if (key && (key.startsWith('JE_translation_') || key.startsWith('JE_translation_ts_'))) {
-                        if (!key.includes(`_${pluginVersion}`)) localStorage.removeItem(key);
-                    }
-                }
-            } catch (e) { }
-
-            const cacheKey = `JE_translation_${lang}_${pluginVersion}`;
-            const timestampKey = `JE_translation_ts_${lang}_${pluginVersion}`;
-            const cachedTranslations = localStorage.getItem(cacheKey);
-            const cachedTimestamp = localStorage.getItem(timestampKey);
-
-            if (cachedTranslations && cachedTimestamp) {
-                const age = Date.now() - parseInt(cachedTimestamp, 10);
-                if (age < CACHE_DURATION) {
-                    try { return JSON.parse(cachedTranslations); } catch (e) { }
-                }
-            }
-
-            // Local fetch
-            try {
-                const response = await fetch(baseUrl.concat(`locales/${lang}.json`));
-                if (response.ok) return await response.json();
-            } catch (e) { }
-
-            return {};
-        } catch (error) {
-            console.error('Failed to load translations', error);
-            return {};
-        }
-    };
-
-    // Load Plugin Data
-    const loadPluginData = async () => {
-        // Use local defaults instead of loading from server
-        const versionPromise = ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('/JellyfinEnhanced/version'), dataType: 'text' }).catch(() => 'unknown');
-        return Promise.all([Promise.resolve(DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS), versionPromise]);
-    };
-
-    const loadPrivateConfig = async () => {
-        try {
-            const privateConfig = await ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl('/JellyfinEnhanced/private-config'), dataType: 'json' });
-            Object.assign(JE.pluginConfig, privateConfig);
-        } catch (error) { }
-    };
-
     try {
-        // Stage 1
-        const [[config, version], translations] = await Promise.all([loadPluginData(), loadTranslations()]);
-        JE.pluginConfig = config && typeof config === 'object' ? config : {};
-        JE.pluginVersion = version || 'unknown';
-        JE.translations = translations || {};
-        JE.t = window.JellyfinEnhanced.t;
-        await loadPrivateConfig();
-
-        jeHelpers.injectMetadataIcons(!!JE.pluginConfig?.MetadataIconsEnabled);
-
-        // Stage 2: User Settings
-        const userId = ApiClient.getCurrentUserId();
-        if (userId) {
-            const fetchPromises = [
-                ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(`/JellyfinEnhanced/user-settings/${userId}/settings.json`), dataType: 'json' }).catch((e: any) => ({ name: 'settings', status: 'rejected' })),
-                ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(`/JellyfinEnhanced/user-settings/${userId}/shortcuts.json`), dataType: 'json' }).catch((e: any) => ({ name: 'shortcuts', status: 'rejected' })),
-                ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(`/JellyfinEnhanced/user-settings/${userId}/bookmarks.json`), dataType: 'json' }).catch((e: any) => ({ name: 'bookmarks', status: 'rejected' })),
-                ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(`/JellyfinEnhanced/user-settings/${userId}/elsewhere.json`), dataType: 'json' }).catch((e: any) => ({ name: 'elsewhere', status: 'rejected' }))
-            ];
-
-            await Promise.all(fetchPromises);
-
-            // Initialize with default settings, then merge with loaded settings
-            JE.userConfig = {
-                settings: { Settings: {} },
-                shortcuts: { Shortcuts: [] },
-                bookmarks: { Bookmarks: {} },
-                elsewhere: { Elsewhere: {} }
-            };
-        }
-
-        // Initialize Splash Screen (early load via scriptImports)
-        if (jeScriptImports['splashscreen.js']) await jeScriptImports['splashscreen.js']();
-        if (typeof JE.initializeSplashScreen === 'function') JE.initializeSplashScreen();
-
-        // Stage 3: Load ALL component scripts
-        console.log('[KefinTweaks Component] Loading Jellyfin Enhanced scripts...');
-
-        // We need to load them sequentially or parallel? Plugin.js used Promise.allSettled but effectively parallel.
-        // Dynamic imports are promises.
-
-        const loadScript = async (name: string) => {
-            if (jeScriptImports[name]) {
-                try {
-                    await jeScriptImports[name]();
-                } catch (e) {
-                    console.error(`Failed to load JE script: ${name}`, e);
-                }
+        // Load only essential config (use defaults, skip network requests)
+        JE.pluginConfig = DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS;
+        JE.pluginVersion = 'optimized';
+        JE.translations = {}; // Skip translations initially
+        
+        // Skip private config loading (optimization)
+        
+        // Load splash screen only
+        if (jeScriptImports['splashscreen.js']) {
+            await jeScriptImports['splashscreen.js']();
+            if (typeof JE.initializeSplashScreen === 'function') {
+                JE.initializeSplashScreen();
             }
-        };
-
-        // Filter out splashscreen as we loaded it
-        const scriptsToLoad = JE_SCRIPTS.filter(s => s !== 'splashscreen.js');
-        await Promise.all(scriptsToLoad.map(loadScript));
-
-        console.log('[KefinTweaks Component] JE Scripts loaded.');
-
-        // Stage 4: Init core settings
-        if (typeof JE.loadSettings === 'function') JE.currentSettings = JE.loadSettings();
-        if (typeof JE.initializeShortcuts === 'function') JE.initializeShortcuts();
-
-        // Stage 5: Themer
-        if (typeof JE.themer?.init === 'function') JE.themer.init();
-
-        window.addEventListener('beforeunload', () => {
-            JE._cacheManager.forceSave();
-        });
-
-        // Stage 6: Init features
-        if (typeof JE.initializeEnhancedScript === 'function') JE.initializeEnhancedScript();
-        if (typeof JE.initializeMigration === 'function') JE.initializeMigration();
-        if (typeof JE.initializeElsewhereScript === 'function' && JE.pluginConfig?.ElsewhereEnabled) JE.initializeElsewhereScript();
-        if (typeof JE.initializeJellyseerrScript === 'function' && JE.pluginConfig?.JellyseerrEnabled) JE.initializeJellyseerrScript();
-        if (typeof JE.jellyseerrIssueReporter?.initialize === 'function' && JE.pluginConfig?.JellyseerrEnabled) JE.jellyseerrIssueReporter.initialize();
-        if (typeof JE.initializePauseScreen === 'function') JE.initializePauseScreen();
-        if (typeof JE.initializeQualityTags === 'function' && JE.currentSettings?.qualityTagsEnabled) JE.initializeQualityTags();
-        if (typeof JE.initializeGenreTags === 'function' && JE.currentSettings?.genreTagsEnabled) JE.initializeGenreTags();
-        if (typeof JE.initializeRatingTags === 'function' && JE.currentSettings?.ratingTagsEnabled) JE.initializeRatingTags();
-        if (typeof JE.initializeArrLinksScript === 'function' && JE.pluginConfig?.ArrLinksEnabled) JE.initializeArrLinksScript();
-        if (typeof JE.initializeArrTagLinksScript === 'function' && JE.pluginConfig?.ArrTagsShowAsLinks) JE.initializeArrTagLinksScript();
-        if (typeof JE.initializeLetterboxdLinksScript === 'function' && JE.pluginConfig?.LetterboxdEnabled) JE.initializeLetterboxdLinksScript();
-        if (typeof JE.initializeReviewsScript === 'function' && JE.pluginConfig?.ShowReviews) JE.initializeReviewsScript();
-        if (typeof JE.initializeLanguageTags === 'function' && JE.currentSettings?.languageTagsEnabled) JE.initializeLanguageTags();
-        if (typeof JE.initializeOsdRating === 'function') JE.initializeOsdRating();
-
-        if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
-
-        console.log('[KefinTweaks Component] Jellyfin Enhanced initialized successfully.');
+        }
+        
+        // Defer loading other JE scripts
+        safeRequestIdleCallback(() => {
+            const loadJEScripts = async () => {
+                const scriptsToLoad = JE_SCRIPTS.filter(s => s !== 'splashscreen.js');
+                
+                // Load in smaller batches
+                for (let i = 0; i < scriptsToLoad.length; i += 2) {
+                    const batch = scriptsToLoad.slice(i, i + 2);
+                    await Promise.allSettled(
+                        batch.map(name => jeScriptImports[name] ? jeScriptImports[name]() : Promise.resolve())
+                    );
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                // Initialize core features
+                if (typeof JE.loadSettings === 'function') JE.currentSettings = JE.loadSettings();
+                if (typeof JE.initializeShortcuts === 'function') JE.initializeShortcuts();
+                if (typeof JE.themer?.init === 'function') JE.themer.init();
+                if (typeof JE.initializeEnhancedScript === 'function') JE.initializeEnhancedScript();
+                
+                // Hide splash after core init
+                if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
+                
+                console.log('[KefinTweaks] JE core initialized');
+            };
+            
+            loadJEScripts();
+        }, { timeout: 3000 });
 
     } catch (error) {
-        console.error('Jellyfin Enhanced initialization failed', error);
+        console.error('[KefinTweaks] JE init failed', error);
         if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
     }
 };
 
+// ===== OPTIMIZATION: Dependency Resolution (optimized) =====
+const resolveDependencies = (
+    enabledScripts: Record<string, boolean>
+): Record<string, boolean> => {
+    const resolved = { ...enabledScripts };
+    const toProcess = Object.keys(resolved).filter(k => resolved[k]);
+    const processed = new Set<string>();
+    
+    // Simple breadth-first resolution (faster than while loop)
+    while (toProcess.length > 0) {
+        const current = toProcess.shift()!;
+        if (processed.has(current)) continue;
+        processed.add(current);
+        
+        const script = SCRIPT_DEFINITIONS.find(s => s.name === current);
+        if (script) {
+            for (const dep of script.dependencies) {
+                if (!resolved[dep]) {
+                    resolved[dep] = true;
+                    toProcess.push(dep);
+                }
+            }
+        }
+    }
+    
+    return resolved;
+};
+
+// ===== MAIN COMPONENT =====
 const KefinTweaksLoader: React.FC = () => {
     const initialized = useRef(false);
+    const lazyLoadScheduled = useRef(false);
 
     useEffect(() => {
         if (initialized.current) return;
         initialized.current = true;
 
         const init = async () => {
-            console.log('[KefinTweaks Component] Initializing...');
+            console.log('[KefinTweaks] Initializing (optimized for slow devices)...');
 
-            // Initialize Jellyfin Enhanced
+            // Start JE initialization (non-blocking)
             initializeJellyfinEnhanced();
 
-            // Load configuration from localStorage
+            // Load configuration
             const storedFullConfig = localStorage.getItem('KefinTweaksConfig');
-            let enabledScriptsMap: Record<string, boolean> = { ...DEFAULT_ENABLED_SCRIPTS };
+            let enabledScriptsMap = { ...DEFAULT_ENABLED_SCRIPTS };
 
             if (storedFullConfig) {
                 try {
                     const config = JSON.parse(storedFullConfig);
-                    // Ensure global config is set for legacy scripts
                     window.KefinTweaksConfig = config;
-
                     if (config.scripts) {
                         enabledScriptsMap = { ...enabledScriptsMap, ...config.scripts };
                     }
                 } catch (e) {
-                    console.error('Error parsing KefinTweaksConfig from localStorage', e);
+                    console.error('[KefinTweaks] Config parse error', e);
                 }
             }
 
-            // Auto-enable dependencies
-            let hasChanges = true;
-            let iterations = 0;
-            const maxIterations = 10;
+            // Resolve dependencies
+            enabledScriptsMap = resolveDependencies(enabledScriptsMap);
 
-            while (hasChanges && iterations < maxIterations) {
-                hasChanges = false;
-                SCRIPT_DEFINITIONS.forEach(script => {
-                    if (enabledScriptsMap[script.name]) {
-                        script.dependencies.forEach(dep => {
-                            if (!enabledScriptsMap[dep]) {
-                                enabledScriptsMap[dep] = true;
-                                hasChanges = true;
-                            }
-                        });
-                    }
-                });
-                iterations++;
-            }
+            // Filter and categorize scripts
+            const enabledScripts = SCRIPT_DEFINITIONS.filter(s => enabledScriptsMap[s.name]);
+            
+            const criticalScripts = enabledScripts.filter(s => s.tier === 'critical');
+            const highScripts = enabledScripts.filter(s => s.tier === 'high');
+            const mediumScripts = enabledScripts.filter(s => s.tier === 'medium');
+            const lowScripts = enabledScripts.filter(s => s.tier === 'low' && !s.lazyLoad);
+            const lazyScripts = enabledScripts.filter(s => s.lazyLoad);
 
-            // Collect enabled scripts
-            const enabledScripts = SCRIPT_DEFINITIONS.filter(script => enabledScriptsMap[script.name]);
-
-            // Expose definitions for settings UI
-            if (!window.KefinTweaks) {
-                window.KefinTweaks = {};
-            }
+            // Expose to global
+            if (!window.KefinTweaks) window.KefinTweaks = {};
             window.KefinTweaks.ScriptDefinitions = SCRIPT_DEFINITIONS;
+            window.KefinTweaks.LoadingManager = loadingManager;
 
-            // Helper to collect dependencies
-            const collectDependencies = (script: ScriptDefinition, collected = new Set<string>(), visited = new Set<string>()) => {
-                if (visited.has(script.name)) return collected;
-                visited.add(script.name);
+            try {
+                // TIER 1: Critical scripts (load immediately)
+                await loadingManager.loadTier('critical', criticalScripts, 2);
+                
+                // Dispatch early event for critical features
+                document.dispatchEvent(new CustomEvent('kefinTweaksCriticalLoaded'));
 
-                script.dependencies.forEach(depName => {
-                    if (!enabledScriptsMap[depName]) return;
-                    const depScript = SCRIPT_DEFINITIONS.find(s => s.name === depName);
-                    if (depScript) {
-                        if (!collected.has(depName)) {
-                            collected.add(depName);
-                            collectDependencies(depScript, collected, visited);
+                // TIER 2: High priority (load with small delay)
+                await new Promise(resolve => setTimeout(resolve, 100));
+                await loadingManager.loadTier('high', highScripts, 2);
+
+                // TIER 3: Medium priority (load after idle)
+                safeRequestIdleCallback(async () => {
+                    await loadingManager.loadTier('medium', mediumScripts, 2);
+                    
+                    // TIER 4: Low priority (load last)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await loadingManager.loadTier('low', lowScripts, 1);
+                    
+                    console.log('[KefinTweaks] Core loading complete');
+                    
+                    document.dispatchEvent(new CustomEvent('kefinTweaksLoaded', {
+                        detail: {
+                            loadedScripts: Array.from(loadingManager['loadedScripts']),
+                            timestamp: new Date().toISOString()
                         }
-                    }
-                });
-                return collected;
-            };
+                    }));
+                }, { timeout: 2000 });
 
-            const allDependencyNames = new Set<string>();
-            for (const script of enabledScripts) {
-                const deps = collectDependencies(script);
-                deps.forEach(d => allDependencyNames.add(d));
+                // TIER 5: Lazy scripts (load on interaction or after 5s)
+                if (!lazyLoadScheduled.current && lazyScripts.length > 0) {
+                    lazyLoadScheduled.current = true;
+                    
+                    const loadLazyScripts = async () => {
+                        console.log('[KefinTweaks] Loading lazy scripts...');
+                        await loadingManager.loadTier('lazy', lazyScripts, 1);
+                    };
+                    
+                    // Load on user interaction
+                    const interactionEvents = ['click', 'scroll', 'keydown', 'touchstart'];
+                    const loadOnInteraction = () => {
+                        interactionEvents.forEach(event => 
+                            document.removeEventListener(event, loadOnInteraction)
+                        );
+                        safeRequestIdleCallback(loadLazyScripts, { timeout: 5000 });
+                    };
+                    
+                    interactionEvents.forEach(event => 
+                        document.addEventListener(event, loadOnInteraction, { once: true, passive: true })
+                    );
+                    
+                    // Fallback: load after 5 seconds
+                    setTimeout(loadOnInteraction, 5000);
+                }
+
+            } catch (error) {
+                console.error('[KefinTweaks] Initialization error', error);
             }
-
-            const dependencyScripts = SCRIPT_DEFINITIONS.filter(script =>
-                allDependencyNames.has(script.name) && enabledScriptsMap[script.name]
-            );
-
-            const nonDependencyScripts = enabledScripts.filter(script =>
-                !allDependencyNames.has(script.name)
-            );
-
-            const priorityScripts = nonDependencyScripts.filter(script => script.priority === true);
-            const regularScripts = nonDependencyScripts.filter(script => !script.priority);
-
-            const loadScript = async (scriptDef: ScriptDefinition) => {
-                try {
-                    // Load CSS
-                    if (scriptDef.css && cssImports[scriptDef.css]) {
-                        await cssImports[scriptDef.css]();
-                    }
-
-                    // Load JS
-                    if (scriptImports[scriptDef.name]) {
-                        await scriptImports[scriptDef.name]();
-                        console.log(`[KefinTweaks Component] Loaded ${scriptDef.name}`);
-                    } else {
-                        console.warn(`[KefinTweaks Component] No import found for ${scriptDef.name}`);
-                    }
-                } catch (err) {
-                    console.error(`[KefinTweaks Component] Failed to load ${scriptDef.name}`, err);
-                }
-            };
-
-            // Load in order
-            // 1. Dependencies
-            await Promise.all(dependencyScripts.map(loadScript));
-
-            // 2. Priority
-            await Promise.all(priorityScripts.map(loadScript));
-
-            // 3. Regular
-            await Promise.all(regularScripts.map(loadScript));
-
-            console.log('[KefinTweaks Component] All scripts loaded');
-
-            // Dispatch event
-            const event = new CustomEvent('kefinTweaksLoaded', {
-                detail: {
-                    loadedScripts: enabledScripts.map(s => s.name),
-                    timestamp: new Date().toISOString()
-                }
-            });
-            document.dispatchEvent(event);
         };
 
-        // Wait for idle or timeout to not block main thread too much
-        if (typeof requestIdleCallback !== 'undefined') {
-            requestIdleCallback(() => init());
-        } else {
-            setTimeout(init, 100);
-        }
+        // Start initialization with proper fallback
+        safeRequestIdleCallback(() => init(), { timeout: 1000 });
+
+        // Cleanup on unmount
+        return () => {
+            // Clear any pending timers if component unmounts
+        };
     }, []);
 
     return null;

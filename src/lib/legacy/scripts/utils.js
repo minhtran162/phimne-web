@@ -424,9 +424,9 @@
     let _watchlistTabIndex = null;
 
     /**
-	 * Get watchlist tab index, fetching if not yet set
-	 * @returns {number|null} The watchlist tab index or null if not found
-	 */
+     * Get watchlist tab index, fetching if not yet set
+     * @returns {number|null} The watchlist tab index or null if not found
+     */
     async function getWatchlistTabIndex() {
         if (_watchlistTabIndex !== null) {
             return _watchlistTabIndex;
@@ -437,7 +437,7 @@
         // But legacy scripts usually call this when they are setting up the view or handling navigation
         const tabs = document.querySelectorAll('.homeLibraryTabs .headerTabButton');
         for (let i = 0; i < tabs.length; i++) {
-            if (tabs[i].dataset.kefintweaksWatchlist || 
+            if (tabs[i].dataset.kefintweaksWatchlist ||
                 (tabs[i].textContent && tabs[i].textContent.trim() === 'Watchlist')) {
                 _watchlistTabIndex = i;
                 return i;
