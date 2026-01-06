@@ -2114,7 +2114,8 @@ html {
     display: -webkit-flex;
     display: flex;
     gap: 12px;
-    width: 21.6em
+    font-size: 0 !important;
+    padding: 12px 0;
 }
 
 .layout-tv .itemExternalLinks.focuscontainer-x {
