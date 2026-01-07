@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import browser from '../../scripts/browser';
+import { loadCoreDictionary } from 'lib/globalize/loader';
+import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 
-// [Declaration of global types - unchanged]
 declare global {
     interface Window {
         KefinTweaksConfig?: any;
@@ -13,7 +14,6 @@ declare global {
     }
 }
 
-// [Constants - unchanged from original]
 const JE_SCRIPTS = [
     'splashscreen.js',
     'enhanced/helpers.js',
@@ -45,7 +45,7 @@ const JE_SCRIPTS = [
     'letterboxd-links.js'
 ];
 
-// [jeScriptImports mapping - unchanged from original]
+// [jeScriptImports mapping]
 const jeScriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'splashscreen.js': () => import('../../lib/legacy/JellyfinEnhanced/splashscreen.js'),
@@ -107,6 +107,7 @@ const jeScriptImports: Record<string, () => Promise<any>> = {
 
 // Configuration defaults
 const DEFAULT_ENABLED_SCRIPTS: Record<string, boolean> = {
+    config: true,
     watchlist: true,
     homeScreen: true,
     search: true,
@@ -291,6 +292,10 @@ interface ScriptDefinition {
 // Script definitions from injector.js
 const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
     {
+        name: 'config', script: 'config.js', css: null, dependencies: [], tier: 'critical',
+        description: 'Default configuration values'
+    },
+    {
         name: 'utils', script: 'utils.js', css: null, dependencies: [], tier: 'critical',
         description: 'Common utilities for page view management'
     },
@@ -318,7 +323,7 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         name: 'indexedDBCache', script: 'indexedDBCache.js', css: null, dependencies: [], tier: 'high',
         description: 'IndexedDB caching for large datasets'
     },
-    
+
     // Medium priority - load after initial render
     {
         name: 'homeScreen', script: 'homeScreen.js', css: 'homeScreen.css',
@@ -338,7 +343,7 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         name: 'infiniteScroll', script: 'infiniteScroll.js', css: null, dependencies: ['cardBuilder'], tier: 'medium',
         description: 'Infinite scroll functionality'
     },
-    
+
     // Low priority - lazy load
     {
         name: 'search', script: 'search.js', css: 'search.css',
@@ -429,6 +434,8 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
 // Map for script imports
 const scriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
+    'config': () => import('../../lib/legacy/config.js'),
+    // @ts-ignore
     'utils': () => import('../../lib/legacy/scripts/utils.js'),
     // @ts-ignore
     'settings': () => import('../../lib/legacy/scripts/settings.js'),
@@ -512,6 +519,20 @@ const cssImports: Record<string, () => Promise<any>> = {
     'seriesEpisodes.css': () => import('../../assets/jellyfintweaks/scripts/seriesEpisodes.css'),
 };
 
+// ===== TRANSLATION: Load Core Dictionary =====
+const ensureTranslationsLoaded = async () => {
+    try {
+        if (userSettings.language() === null) return
+        await loadCoreDictionary();
+        console.log('[KefinTweaks] Core translations loaded');
+        return true;
+    } catch (error) {
+        console.warn('[KefinTweaks] Translation loading failed, using fallbacks', error);
+        // Even if it fails, we can continue with fallback strings
+        return false;
+    }
+};
+
 // ===== SAFARI/MOBILE COMPATIBILITY: requestIdleCallback Polyfill =====
 const safeRequestIdleCallback = (
     callback: IdleRequestCallback,
@@ -537,21 +558,21 @@ class LoadingManager {
     private pendingLoads = new Map<string, Promise<void>>();
     private loadQueue: Array<{ script: ScriptDefinition; priority: number }> = [];
     private isProcessing = false;
-    
+
     async loadScript(scriptDef: ScriptDefinition): Promise<void> {
         // Avoid duplicate loads
         if (this.loadedScripts.has(scriptDef.name)) {
             return Promise.resolve();
         }
-        
+
         // Return existing promise if already loading
         if (this.pendingLoads.has(scriptDef.name)) {
             return this.pendingLoads.get(scriptDef.name)!;
         }
-        
+
         const loadPromise = this._doLoad(scriptDef);
         this.pendingLoads.set(scriptDef.name, loadPromise);
-        
+
         try {
             await loadPromise;
             this.loadedScripts.add(scriptDef.name);
@@ -559,16 +580,16 @@ class LoadingManager {
             this.pendingLoads.delete(scriptDef.name);
         }
     }
-    
+
     private async _doLoad(scriptDef: ScriptDefinition): Promise<void> {
         try {
             // Load CSS first (non-blocking)
             if (scriptDef.css && cssImports[scriptDef.css]) {
-                cssImports[scriptDef.css]().catch(err => 
+                cssImports[scriptDef.css]().catch(err =>
                     console.warn(`[KefinTweaks] CSS load failed: ${scriptDef.css}`, err)
                 );
             }
-            
+
             // Load script
             if (scriptImports[scriptDef.name]) {
                 await scriptImports[scriptDef.name]();
@@ -579,21 +600,21 @@ class LoadingManager {
             throw err; // Re-throw to mark as failed
         }
     }
-    
+
     // Load scripts by tier with throttling
     async loadTier(tier: string, scripts: ScriptDefinition[], maxConcurrent = 3): Promise<void> {
         console.log(`[KefinTweaks] Loading ${tier} tier (${scripts.length} scripts)`);
-        
+
         // Process in batches to avoid overwhelming slow devices
         for (let i = 0; i < scripts.length; i += maxConcurrent) {
             const batch = scripts.slice(i, i + maxConcurrent);
             await Promise.allSettled(batch.map(s => this.loadScript(s)));
-            
+
             // Yield to main thread between batches
             await new Promise(resolve => setTimeout(resolve, 50));
         }
     }
-    
+
     isLoaded(scriptName: string): boolean {
         return this.loadedScripts.has(scriptName);
     }
@@ -603,6 +624,8 @@ const loadingManager = new LoadingManager();
 
 // ===== OPTIMIZATION: Simplified Jellyfin Enhanced Init =====
 const initializeJellyfinEnhanced = async () => {
+    await loadCoreDictionary();
+
     const ApiClient = (window as any).ApiClient;
     if (!ApiClient) {
         console.warn('[KefinTweaks] ApiClient not found, retrying...');
@@ -660,8 +683,8 @@ const initializeJellyfinEnhanced = async () => {
                 return text;
             },
             loadSettings: () => { return {}; },
-            initializeShortcuts: () => {},
-            saveUserSettings: async () => {}
+            initializeShortcuts: () => { },
+            saveUserSettings: async () => { }
         };
     }
 
@@ -672,9 +695,9 @@ const initializeJellyfinEnhanced = async () => {
         JE.pluginConfig = DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS;
         JE.pluginVersion = 'optimized';
         JE.translations = {}; // Skip translations initially
-        
+
         // Skip private config loading (optimization)
-        
+
         // Load splash screen only
         if (jeScriptImports['splashscreen.js']) {
             await jeScriptImports['splashscreen.js']();
@@ -682,12 +705,12 @@ const initializeJellyfinEnhanced = async () => {
                 JE.initializeSplashScreen();
             }
         }
-        
+
         // Defer loading other JE scripts
         safeRequestIdleCallback(() => {
             const loadJEScripts = async () => {
                 const scriptsToLoad = JE_SCRIPTS.filter(s => s !== 'splashscreen.js');
-                
+
                 // Load in smaller batches
                 for (let i = 0; i < scriptsToLoad.length; i += 2) {
                     const batch = scriptsToLoad.slice(i, i + 2);
@@ -696,19 +719,19 @@ const initializeJellyfinEnhanced = async () => {
                     );
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
-                
+
                 // Initialize core features
                 if (typeof JE.loadSettings === 'function') JE.currentSettings = JE.loadSettings();
                 if (typeof JE.initializeShortcuts === 'function') JE.initializeShortcuts();
                 if (typeof JE.themer?.init === 'function') JE.themer.init();
                 if (typeof JE.initializeEnhancedScript === 'function') JE.initializeEnhancedScript();
-                
+
                 // Hide splash after core init
                 if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
-                
+
                 console.log('[KefinTweaks] JE core initialized');
             };
-            
+
             loadJEScripts();
         }, { timeout: 3000 });
 
@@ -725,13 +748,13 @@ const resolveDependencies = (
     const resolved = { ...enabledScripts };
     const toProcess = Object.keys(resolved).filter(k => resolved[k]);
     const processed = new Set<string>();
-    
+
     // Simple breadth-first resolution (faster than while loop)
     while (toProcess.length > 0) {
         const current = toProcess.shift()!;
         if (processed.has(current)) continue;
         processed.add(current);
-        
+
         const script = SCRIPT_DEFINITIONS.find(s => s.name === current);
         if (script) {
             for (const dep of script.dependencies) {
@@ -742,7 +765,7 @@ const resolveDependencies = (
             }
         }
     }
-    
+
     return resolved;
 };
 
@@ -750,13 +773,53 @@ const resolveDependencies = (
 const KefinTweaksLoader: React.FC = () => {
     const initialized = useRef(false);
     const lazyLoadScheduled = useRef(false);
+    const [userLanguage, setUserLanguage] = useState<string | null>(null);
+    const [languageReady, setLanguageReady] = useState(false);
+
+    // Listen for language changes
+    useEffect(() => {
+        let stopped = false;
+        const tryDetectLanguage = () => {
+            try {
+                const lang = userSettings.language();
+                if (lang !== null && !stopped) {
+                    console.log('[KefinTweaks] Language detected:', lang);
+                    setUserLanguage(lang);
+                    setLanguageReady(true);
+                    stopped = true;
+                }
+            } catch (e) {
+                console.warn('[KefinTweaks] error reading userSettings.language()', e);
+            }
+        };
+
+        // immediate check
+        tryDetectLanguage();
+
+        // fallback poll every 200ms until language appears (auto-clear)
+        const id = setInterval(() => {
+            if (stopped) {
+                clearInterval(id);
+                return;
+            }
+            tryDetectLanguage();
+        }, 200);
+
+        return () => {
+            stopped = true;
+            clearInterval(id);
+        };
+    }, []);
 
     useEffect(() => {
-        if (initialized.current) return;
+        if (!languageReady || initialized.current) return;
         initialized.current = true;
 
         const init = async () => {
             console.log('[KefinTweaks] Initializing (optimized for slow devices)...');
+
+            // FIRST: Ensure translations are loaded
+            await ensureTranslationsLoaded();
 
             // Start JE initialization (non-blocking)
             initializeJellyfinEnhanced();
@@ -782,7 +845,7 @@ const KefinTweaksLoader: React.FC = () => {
 
             // Filter and categorize scripts
             const enabledScripts = SCRIPT_DEFINITIONS.filter(s => enabledScriptsMap[s.name]);
-            
+
             const criticalScripts = enabledScripts.filter(s => s.tier === 'critical');
             const highScripts = enabledScripts.filter(s => s.tier === 'high');
             const mediumScripts = enabledScripts.filter(s => s.tier === 'medium');
@@ -797,7 +860,7 @@ const KefinTweaksLoader: React.FC = () => {
             try {
                 // TIER 1: Critical scripts (load immediately)
                 await loadingManager.loadTier('critical', criticalScripts, 2);
-                
+
                 // Dispatch early event for critical features
                 document.dispatchEvent(new CustomEvent('kefinTweaksCriticalLoaded'));
 
@@ -808,13 +871,13 @@ const KefinTweaksLoader: React.FC = () => {
                 // TIER 3: Medium priority (load after idle)
                 safeRequestIdleCallback(async () => {
                     await loadingManager.loadTier('medium', mediumScripts, 2);
-                    
+
                     // TIER 4: Low priority (load last)
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await loadingManager.loadTier('low', lowScripts, 1);
-                    
+
                     console.log('[KefinTweaks] Core loading complete');
-                    
+
                     document.dispatchEvent(new CustomEvent('kefinTweaksLoaded', {
                         detail: {
                             loadedScripts: Array.from(loadingManager['loadedScripts']),
@@ -826,25 +889,25 @@ const KefinTweaksLoader: React.FC = () => {
                 // TIER 5: Lazy scripts (load on interaction or after 5s)
                 if (!lazyLoadScheduled.current && lazyScripts.length > 0) {
                     lazyLoadScheduled.current = true;
-                    
+
                     const loadLazyScripts = async () => {
                         console.log('[KefinTweaks] Loading lazy scripts...');
                         await loadingManager.loadTier('lazy', lazyScripts, 1);
                     };
-                    
+
                     // Load on user interaction
                     const interactionEvents = ['click', 'scroll', 'keydown', 'touchstart'];
                     const loadOnInteraction = () => {
-                        interactionEvents.forEach(event => 
+                        interactionEvents.forEach(event =>
                             document.removeEventListener(event, loadOnInteraction)
                         );
                         safeRequestIdleCallback(loadLazyScripts, { timeout: 5000 });
                     };
-                    
-                    interactionEvents.forEach(event => 
+
+                    interactionEvents.forEach(event =>
                         document.addEventListener(event, loadOnInteraction, { once: true, passive: true })
                     );
-                    
+
                     // Fallback: load after 5 seconds
                     setTimeout(loadOnInteraction, 5000);
                 }
@@ -854,14 +917,22 @@ const KefinTweaksLoader: React.FC = () => {
             }
         };
 
-        // Start initialization with proper fallback
-        safeRequestIdleCallback(() => init(), { timeout: 1000 });
-
-        // Cleanup on unmount
-        return () => {
-            // Clear any pending timers if component unmounts
+        const start = async () => {
+            try {
+                console.log('[KefinTweaks] Starting init because user Language is loaded');
+                await init();
+            } catch (err) {
+                console.error('[KefinTweaks] init failed', err);
+                initialized.current = false;
+            }
         };
-    }, []);
+
+        if (typeof safeRequestIdleCallback === 'function') {
+            safeRequestIdleCallback(() => start(), { timeout: 1000 });
+        } else {
+            setTimeout(() => start(), 0);
+        }
+    }, [userLanguage, languageReady]);
 
     return null;
 };

@@ -18,7 +18,6 @@ import './htmlMediaElement';
 import './keyboardEvent';
 import './patchHeaders';
 import './vendorStyles';
-import('./config');
 
 // Load config tweaks for developer and tizen
 const protocol = window.location.protocol;
