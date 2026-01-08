@@ -71,6 +71,7 @@ export function getDeviceIcon(info: DeviceInfo | SessionInfo) {
         case 'Phim Ne iOS':
         case 'Phim Ne iPadOS':
         case 'Phim Ne tvOS':
+        case 'Phim Ne macOS':
             return BASE_DEVICE_IMAGE_URL + 'apple.svg';
         case 'Home Assistant':
             return BASE_DEVICE_IMAGE_URL + 'home-assistant.svg';
