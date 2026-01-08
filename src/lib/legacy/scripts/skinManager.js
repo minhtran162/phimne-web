@@ -44,33 +44,125 @@
                 return cachedServerVersion;
             }
 
-            if (!window.ApiClient || !window.ApiClient._appName || !window.ApiClient._appVersion) {
-                return null;
-            }
-
-            // Jellyfin Web and Phim Ne
-            if ((window.ApiClient && (window.ApiClient._appName === 'Jellyfin Web' || window.ApiClient._appName === 'Phim Ne')) && window.ApiClient._appVersion) {
-                cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
-                return cachedServerVersion;
-            }
-
-            // Check the server version instead of app version
-            if (window.ApiClient && !window.ApiClient._appVersion) {
-                // Wait 10s to see if it becomes ready, check every 500ms
-                const startTime = Date.now();
-                while (Date.now() - startTime < 10000) {
-                    if (window.ApiClient._serverVersion) {
-                        break;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
+            // Try multiple methods to get the server version
+            // Method 1: Check if we can get version directly from ApiClient
+            if (window.ApiClient && window.ApiClient._serverVersion) {
                 cachedServerVersion = getMajorServerVersion(window.ApiClient._serverVersion);
+                if (cachedServerVersion !== null) {
+                    return cachedServerVersion;
+                }
             }
 
+            // Method 2: Check app version (for Jellyfin Web)
+            if (window.ApiClient && window.ApiClient._appVersion) {
+                const appName = window.ApiClient._appName;
+                if (appName === 'Jellyfin Web' || appName === 'Phim Ne' || appName === 'Jellyfin Web (Mobile)') {
+                    cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
+                    if (cachedServerVersion !== null) {
+                        return cachedServerVersion;
+                    }
+                }
+            }
+
+            // Method 3: Try to fetch from System/Info endpoint (for Android WebView)
+            if (window.ApiClient && window.ApiClient.serverAddress && window.ApiClient.accessToken) {
+                try {
+                    const server = window.ApiClient.serverAddress();
+                    const token = window.ApiClient.accessToken();
+
+                    if (server && token) {
+                        const response = await fetch(`${server}/System/Info`, {
+                            headers: { 'X-Emby-Token': token }
+                        });
+
+                        if (response.ok) {
+                            const systemInfo = await response.json();
+                            if (systemInfo && systemInfo.Version) {
+                                cachedServerVersion = getMajorServerVersion(systemInfo.Version);
+                                if (cachedServerVersion !== null) {
+                                    return cachedServerVersion;
+                                }
+                            }
+                        }
+                    }
+                } catch (fetchError) {
+                    // Silent fail, try next method
+                }
+            }
+
+            // Method 4: Try to extract from the current page (Android WebView fallback)
+            // Check for server version in meta tags or scripts
+            const versionMeta = document.querySelector('meta[name="jellyfin-server-version"]');
+            if (versionMeta && versionMeta.content) {
+                cachedServerVersion = getMajorServerVersion(versionMeta.content);
+                if (cachedServerVersion !== null) {
+                    return cachedServerVersion;
+                }
+            }
+
+            // Method 5: Look for version in any script tags (common pattern)
+            const scripts = document.getElementsByTagName('script');
+            for (let script of scripts) {
+                if (script.src) {
+                    const versionMatch = script.src.match(/serverVersion=([0-9.]+)/i);
+                    if (versionMatch && versionMatch[1]) {
+                        cachedServerVersion = getMajorServerVersion(versionMatch[1]);
+                        if (cachedServerVersion !== null) {
+                            return cachedServerVersion;
+                        }
+                    }
+                }
+            }
+
+            // Method 6: Check localStorage or sessionStorage for cached version
+            try {
+                const storedVersion = localStorage.getItem('jellyfin_server_version') ||
+                    sessionStorage.getItem('jellyfin_server_version');
+                if (storedVersion) {
+                    cachedServerVersion = getMajorServerVersion(storedVersion);
+                    if (cachedServerVersion !== null) {
+                        return cachedServerVersion;
+                    }
+                }
+            } catch (e) {
+                // Ignore storage errors
+            }
+
+            // Method 7: Wait and retry (for Android WebView async initialization)
+            if (!versionPollingStarted) {
+                versionPollingStarted = true;
+
+                // Start polling in background
+                setTimeout(async () => {
+                    for (let i = 0; i < 10; i++) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        // Re-try the detection methods
+                        if (window.ApiClient && window.ApiClient._serverVersion) {
+                            cachedServerVersion = getMajorServerVersion(window.ApiClient._serverVersion);
+                            return;
+                        }
+
+                        if (window.ApiClient && window.ApiClient._appVersion) {
+                            const appName = window.ApiClient._appName;
+                            if (appName === 'Jellyfin Web' || appName === 'Phim Ne') {
+                                cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
+                                return;
+                            }
+                        }
+                    }
+                }, 0);
+            }
+
+            // Final fallback: Default to version 10 (most common for Android WebView)
+            WARN('Could not determine server version, defaulting to version 10');
+            cachedServerVersion = 10;
             return cachedServerVersion;
         } catch (error) {
             WARN('Error getting server version:', error);
-            return null;
+            // Default to version 10 as fallback
+            cachedServerVersion = 10;
+            return cachedServerVersion;
         }
     }
 
@@ -89,17 +181,47 @@
 
         // New structure: array of objects with majorServerVersions and urls
         if (Array.isArray(skin.url) && skin.url.length > 0 && typeof skin.url[0] === 'object' && skin.url[0].majorServerVersions) {
+            // If we couldn't determine version, use first available URL set as fallback
+            if (currentMajorVersion === null) {
+                WARN(`Could not determine server version for skin ${skin.name}, using first available version`);
+                const firstUrlObj = skin.url[0];
+                if (firstUrlObj && firstUrlObj.urls) {
+                    return Array.isArray(firstUrlObj.urls) ? firstUrlObj.urls : [firstUrlObj.urls];
+                }
+                return null;
+            }
+
             // Find all URL objects that match the current server version
             const matchingUrlObjects = skin.url.filter(urlObj => {
                 if (!urlObj.majorServerVersions || !Array.isArray(urlObj.majorServerVersions)) {
                     return false;
                 }
-                return currentMajorVersion !== null && urlObj.majorServerVersions.includes(currentMajorVersion);
+                return urlObj.majorServerVersions.includes(currentMajorVersion);
             });
 
             if (matchingUrlObjects.length === 0) {
-                if (currentMajorVersion !== null) {
+                // If no match, try to find a URL object that doesn't specify versions (catch-all)
+                const catchAllUrlObjects = skin.url.filter(urlObj =>
+                    !urlObj.majorServerVersions ||
+                    !Array.isArray(urlObj.majorServerVersions) ||
+                    urlObj.majorServerVersions.length === 0
+                );
+
+                if (catchAllUrlObjects.length > 0) {
+                    WARN(`No version-specific URLs found for skin ${skin.name} and version ${currentMajorVersion}, using catch-all URLs`);
+                    // Use catch-all URLs
+                    const allUrls = [];
+                    catchAllUrlObjects.forEach(urlObj => {
+                        if (Array.isArray(urlObj.urls)) {
+                            allUrls.push(...urlObj.urls);
+                        } else if (urlObj.urls) {
+                            allUrls.push(urlObj.urls);
+                        }
+                    });
+                    return allUrls.length > 0 ? allUrls : null;
                 }
+
+                WARN(`No matching URLs found for skin ${skin.name} and server version ${currentMajorVersion}`);
                 return null;
             }
 
@@ -1191,24 +1313,30 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         loadSelectedTheme();
         loadSelectedColorScheme();
 
-        // Verify skin application after a short delay to allow CSS to load
+        // Verify skin application after a longer delay for Android WebView
         setTimeout(() => {
             if (!verifySkinApplication()) {
                 if (retryCount < MAX_RETRIES) {
                     WARN(`Skin application verification failed, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
                     setTimeout(() => {
                         initialize(retryCount + 1);
-                    }, 500); // Wait 500ms before retry
+                    }, 1000); // Wait 1s before retry for Android WebView
                 } else {
-                    ERR(`Skin application verification failed after ${MAX_RETRIES} attempts - giving up`);
-                    // Register handlers even if verification failed (give up case)
+                    ERR(`Skin application verification failed after ${MAX_RETRIES} attempts - applying fallback`);
+                    // Apply fallback: load default skin
+                    const defaultSkinName = getDefaultSkinName();
+                    const defaultSkin = SKINS_CONFIG.find(skin => skin.name === defaultSkinName);
+                    if (defaultSkin) {
+                        loadSkin(defaultSkin);
+                    }
+                    // Register handlers anyway
                     registerHandlers();
                 }
             } else {
                 // Register handlers after successful verification
                 registerHandlers();
             }
-        }, 200); // Wait 200ms for CSS to load before verification
+        }, 500); // Wait 500ms for CSS to load before verification (longer for Android)
     }
 
     /**
@@ -2744,7 +2872,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
      * Load a specific skin
      * @param {Object} skin - The skin configuration object
      */
-    function loadSkin(skin) {
+    async function loadSkin(skin) {
         // Check if this skin is already loaded by looking at the DOM
         const currentSkinLink = document.querySelector('link[data-kefin-skin="true"]');
         const currentSkinName = currentSkinLink ? currentSkinLink.getAttribute('data-skin') : null;
@@ -2762,14 +2890,51 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             }
         });
 
-        // Performance optimization: Load new CSS first, then remove old CSS
-        // This prevents the double-reflow/recalc that causes UI freezing
-
         // Step 1: Load the new CSS first (gets cached and starts loading)
         requestAnimationFrame(async () => {
             const cssUrls = await getSkinUrlsForCurrentVersion(skin);
 
             if (!cssUrls || cssUrls.length === 0) {
+                // If no URLs found, try to load any available URLs (fallback)
+                WARN(`No URLs found for skin ${skin.name}, attempting fallback`);
+
+                if (skin.url) {
+                    // Try to extract URLs directly
+                    if (Array.isArray(skin.url) && skin.url.length > 0) {
+                        const fallbackUrls = [];
+
+                        // Handle both new and old format
+                        for (const urlEntry of skin.url) {
+                            if (typeof urlEntry === 'string') {
+                                fallbackUrls.push(urlEntry);
+                            } else if (urlEntry && urlEntry.urls) {
+                                if (Array.isArray(urlEntry.urls)) {
+                                    fallbackUrls.push(...urlEntry.urls);
+                                } else {
+                                    fallbackUrls.push(urlEntry.urls);
+                                }
+                            }
+                        }
+
+                        if (fallbackUrls.length > 0) {
+                            fallbackUrls.forEach(url => {
+                                if (url) { // Skip null/empty URLs
+                                    loadSkinCSS(url, skin.name);
+                                }
+                            });
+                            // Load optional includes for this skin
+                            loadOptionalIncludes(skin);
+                            return;
+                        }
+                    } else if (typeof skin.url === 'string') {
+                        loadSkinCSS(skin.url, skin.name);
+                        // Load optional includes for this skin
+                        loadOptionalIncludes(skin);
+                        return;
+                    }
+                }
+
+                ERR(`Could not load any CSS for skin ${skin.name}`);
                 return;
             }
 

@@ -248,7 +248,7 @@
 
         // Create the main card container
         const card = isTVLayout ? document.createElement('button') : document.createElement('div');
-        card.className = `card ${cardClass}${isTVLayout ? ' show-focus show-animation ' : ' card-hoverable '}card-withuserdata itemAction`;
+        card.className = `card ${cardClass}${isTVLayout ? ' show-focus ' : ' card-hoverable '}card-withuserdata itemAction`;
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', item.Type === 'MusicAlbum' || item.Type === 'Artist' ? 'true' : 'false');
         card.setAttribute('data-serverid', serverId);

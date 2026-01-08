@@ -780,9 +780,11 @@ const KefinTweaksLoader: React.FC = () => {
     useEffect(() => {
         let stopped = false;
         const tryDetectLanguage = () => {
+            if (stopped) return;
             try {
                 const lang = userSettings.language();
-                if (lang !== null && !stopped) {
+                // Check if lang is present
+                if (lang !== null) {
                     console.log('[KefinTweaks] Language detected:', lang);
                     setUserLanguage(lang);
                     setLanguageReady(true);
@@ -793,21 +795,33 @@ const KefinTweaksLoader: React.FC = () => {
             }
         };
 
-        // immediate check
+        // 1. Immediate check
         tryDetectLanguage();
 
-        // fallback poll every 200ms until language appears (auto-clear)
-        const id = setInterval(() => {
+        // 2. Poll every 200ms
+        const intervalId = setInterval(() => {
             if (stopped) {
-                clearInterval(id);
+                clearInterval(intervalId);
                 return;
             }
             tryDetectLanguage();
         }, 200);
 
+        // This fixes the Android Webview deadlock
+        const timeoutId = setTimeout(() => {
+            if (!stopped && !languageReady) {
+                console.warn('[KefinTweaks] Language detection timed out or is null (System Default). Forcing start.');
+                setUserLanguage('en'); // Default fallback
+                setLanguageReady(true);
+                stopped = true;
+                clearInterval(intervalId);
+            }
+        }, 1500);
+
         return () => {
             stopped = true;
-            clearInterval(id);
+            clearInterval(intervalId);
+            clearTimeout(timeoutId);
         };
     }, []);
 
