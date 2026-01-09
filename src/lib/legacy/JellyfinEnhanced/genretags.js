@@ -1,9 +1,17 @@
 // /js/genretags.js
-(function(JE) {
+(function (JE) {
     'use strict';
 
-    JE.initializeGenreTags = function() {
+    JE.initializeGenreTags = function () {
         if (!JE.currentSettings.genreTagsEnabled) {
+            return;
+        }
+
+        const isVideoPage = () => {
+            if (typeof JE.isVideoPage === 'function') return JE.isVideoPage();
+            return !!document.querySelector('.videoPlayerContainer');
+        };
+        if (isVideoPage()) {
             return;
         }
 
@@ -147,7 +155,7 @@
             // Remove old version-based cache keys and legacy cache keys
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && (key.startsWith('genreTagsCache-') || key === 'genreTagsCache' || key === 'genreTagsCacheTimestamp') && key !== CACHE_KEY && key !== CACHE_TIMESTAMP_KEY) {     
+                if (key && (key.startsWith('genreTagsCache-') || key === 'genreTagsCache' || key === 'genreTagsCacheTimestamp') && key !== CACHE_KEY && key !== CACHE_TIMESTAMP_KEY) {
                     localStorage.removeItem(key);
                 }
             }
@@ -245,25 +253,25 @@
                 const promises = batch.map(async ({ element, itemId, userId }) => {
                     try {
                         const genres = await fetchItemGenres(userId, itemId);
-                    if (genres) {
-                        insertGenreTags(element, genres);
+                        if (genres) {
+                            insertGenreTags(element, genres);
+                        }
+                    } catch (error) { }
+                    finally {
+                        queuedItemIds.delete(itemId);
                     }
-                } catch (error) {}
-                finally {
-                    queuedItemIds.delete(itemId);
-                }
-            });
+                });
 
-            await Promise.allSettled(promises);
-            isProcessingQueue = false;
+                await Promise.allSettled(promises);
+                isProcessingQueue = false;
 
-            if (requestQueue.length > 0) {
-                if (typeof requestIdleCallback !== 'undefined') {
-                    requestIdleCallback(() => processRequestQueue(), { timeout: 400 });
-                } else {
-                    setTimeout(processRequestQueue, 400);
+                if (requestQueue.length > 0) {
+                    if (typeof requestIdleCallback !== 'undefined') {
+                        requestIdleCallback(() => processRequestQueue(), { timeout: 400 });
+                    } else {
+                        setTimeout(processRequestQueue, 400);
+                    }
                 }
-            }
             };
 
             if (typeof requestIdleCallback !== 'undefined') {
@@ -399,6 +407,7 @@
         }
 
         function scanAndProcess() {
+            if (isVideoPage()) return;
             const elements = Array.from(document.querySelectorAll(
                 '.cardImageContainer, div.listItemImage'
             ));
@@ -580,9 +589,7 @@
      * Re-initializes the Genre Tags feature
      * Cleans up existing state and re-applies tags.
      */
-    JE.reinitializeGenreTags = function() {
-        const logPrefix = '🪼 Jellyfin Enhanced: Genre Tags:';
-
+    JE.reinitializeGenreTags = function () {
         // Always remove existing tags first
         document.querySelectorAll('.genre-overlay-container').forEach(el => el.remove());
 

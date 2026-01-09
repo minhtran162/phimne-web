@@ -548,7 +548,7 @@
             let filteredServices = [];
             if (hasServices) {
                 filteredServices = regionData.flatrate;
-                
+
                 // Apply DEFAULT_PROVIDERS filter
                 if (DEFAULT_PROVIDERS.length > 0) {
                     filteredServices = filteredServices.filter(service =>
@@ -675,7 +675,6 @@
             const settingsIcon = createMaterialIcon('settings', '16px');
             settingsButton.appendChild(settingsIcon);
 
-            settingsButton.title = JE.t('elsewhere_panel_settings_tooltip');
             settingsButton.style.cssText = `
                 display: flex;
                 align-items: center;
@@ -986,7 +985,6 @@
             const closeButton = document.createElement('button');
             const closeIcon = createMaterialIcon('close', '16px');
             closeButton.appendChild(closeIcon);
-            closeButton.title = JE.t('elsewhere_panel_close_tooltip');
             closeButton.style.cssText = `
                 display: flex;
                 align-items: center;
@@ -1090,14 +1088,14 @@
         // --- Initialization ---
         loadRegionsAndProviders();
         loadSettings();
-        
+
         // Use deferred initialization with requestIdleCallback
         if (typeof requestIdleCallback !== 'undefined') {
             requestIdleCallback(() => createSettingsModal(), { timeout: 2000 });
         } else {
             setTimeout(createSettingsModal, 2000);
         }
-        
+
         // Replace polling with MutationObserver for better performance
         let processingElsewhere = false;
         const elsewhereObserver = new MutationObserver(() => {
@@ -1116,14 +1114,14 @@
                 }
             }
         });
-        
+
         // Observe item detail pages for changes
         elsewhereObserver.observe(document.body, {
             childList: true,
             subtree: true,
             attributeFilter: ['class']
         });
-        
+
         // Initial check
         if (typeof requestIdleCallback !== 'undefined') {
             requestIdleCallback(() => addStreamingLookup(), { timeout: 1000 });

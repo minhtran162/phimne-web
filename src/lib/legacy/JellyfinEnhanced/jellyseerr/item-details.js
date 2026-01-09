@@ -137,7 +137,6 @@
     async function renderSimilarAndRecommended(itemId) {
         // Prevent duplicate renders
         if (processedItems.has(itemId)) {
-        
             return;
         }
 

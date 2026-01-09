@@ -5,6 +5,10 @@
 
   const logPrefix = '🪼 Jellyfin Enhanced: OSD Rating:';
   const CONTAINER_ID = 'je-osd-rating-container';
+  // Hot cache (per session) so each item is fetched once
+  const ratingCache = new Map();
+  const pendingRatings = new Map();
+  let scheduledUpdate = null;
 
   function isEnabled() {
     // Controlled by server config; default true unless explicitly disabled
@@ -71,7 +75,7 @@
     style.id = 'je-osd-rating-style';
     style.textContent = `
       #${CONTAINER_ID} { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; vertical-align: middle; }
-      #${CONTAINER_ID} .je-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.45); font-weight: 600; line-height: 1; }
+      #${CONTAINER_ID} .je-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-weight: 600; line-height: 1; }
       #${CONTAINER_ID} .je-chip.tmdb { color: #ffc107; }
       #${CONTAINER_ID} .je-chip.critic { color: #ffffff; }
       #${CONTAINER_ID} .je-star { font-family: 'Material Icons'; font-size: 16px; color: #ffc107; line-height: 1; }
@@ -145,13 +149,47 @@
     const itemId = getCurrentItemId();
     if (!userId || !itemId) return;
 
-    const rating = await fetchItemRatings(userId, itemId);
-    if (rating.tmdb || rating.critic !== null) injectRating(osdRoot, rating);
+    // Serve from cache if available (including null-rating to avoid refetch loops)
+    if (ratingCache.has(itemId)) {
+      const cached = ratingCache.get(itemId);
+      if (cached && (cached.tmdb || cached.critic !== null)) injectRating(osdRoot, cached);
+      return;
+    }
+
+    // Reuse in-flight fetch
+    if (pendingRatings.has(itemId)) {
+      const rating = await pendingRatings.get(itemId);
+      if (rating && (rating.tmdb || rating.critic !== null)) injectRating(osdRoot, rating);
+      return;
+    }
+
+    const promise = (async () => {
+      const rating = await fetchItemRatings(userId, itemId);
+      ratingCache.set(itemId, rating);
+      return rating;
+    })();
+
+    pendingRatings.set(itemId, promise);
+
+    try {
+      const rating = await promise;
+      if (rating && (rating.tmdb || rating.critic !== null)) injectRating(osdRoot, rating);
+    } finally {
+      pendingRatings.delete(itemId);
+    }
+  }
+
+  function scheduleUpdate() {
+    if (scheduledUpdate) return;
+    scheduledUpdate = setTimeout(() => {
+      scheduledUpdate = null;
+      if (JE.isVideoPage()) updateOsdRating();
+    }, 200);
   }
 
   function observeOsd() {
     const observer = new MutationObserver(() => {
-      if (JE.isVideoPage()) updateOsdRating();
+      scheduleUpdate();
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }

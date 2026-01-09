@@ -496,27 +496,8 @@
                 return false;
             }
 
-            const userId = ApiClient.getCurrentUserId();
-            if (!userId) {
-                console.warn(`${logPrefix} Could not get current user ID for watchlist`);
-                return false;
-            }
-
-            // Add to pending watchlist - it will be processed when the item appears in library
-            const response = await ApiClient.fetch({
-                type: 'POST',
-                url: ApiClient.getUrl(`JellyfinEnhanced/user-settings/${userId}/pending-watchlist/add`),
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    TmdbId: tmdbId,
-                    MediaType: mediaType
-                })
-            });
-
-            if (response && response.success) {
-                return true;
-            }
-            return false;
+            // WatchlistMonitor service automatically handles adding requested items to watchlist
+            return true;
         } catch (error) {
             console.error(`${logPrefix} Error queuing item for watchlist:`, error);
             return false;
@@ -672,7 +653,7 @@
      */
     api.resolveJellyseerrBaseUrl = function() {
         let baseUrl = '';
-        
+
         // Check if URL mappings are configured
         if (JE?.pluginConfig?.JellyseerrUrlMappings) {
             const serverAddress = (typeof ApiClient !== 'undefined' && ApiClient.serverAddress)

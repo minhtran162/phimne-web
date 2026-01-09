@@ -633,7 +633,7 @@
                         <div style="flex: 1; min-width: 400px;">
                             <h3 style="margin: 0 0 12px 0; font-size: 18px; color: ${primaryAccentColor}; font-family: inherit;">${JE.t('panel_shortcuts_player')}</h3>
                             <div style="display: grid; gap: 8px; font-size: 14px;">
-                                ${['CycleAspectRatio', 'ShowPlaybackInfo', 'SubtitleMenu', 'CycleSubtitleTracks', 'CycleAudioTracks', 'IncreasePlaybackSpeed', 'DecreasePlaybackSpeed', 'ResetPlaybackSpeed', 'BookmarkCurrentTime', 'GoToSavedBookmark', 'OpenEpisodePreview'].map(action => `
+                                ${['CycleAspectRatio', 'ShowPlaybackInfo', 'SubtitleMenu', 'CycleSubtitleTracks', 'CycleAudioTracks', 'IncreasePlaybackSpeed', 'DecreasePlaybackSpeed', 'ResetPlaybackSpeed', 'BookmarkCurrentTime', 'OpenEpisodePreview', 'SkipIntroOutro'].map(action => `
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <span class="shortcut-key" tabindex="0" data-action="${action}" style="background:${kbdBackground}; padding:2px 8px; border-radius:3px; cursor:pointer; transition: all 0.2s;">${JE.state.activeShortcuts[action]}</span>
                                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -854,17 +854,6 @@
         `;
 
         document.body.appendChild(help);
-
-        /**
-        * Remove this when removing support for Migration
-        */
-        // Hook for migrate.js to add its button
-        if (typeof JE.addMigrationButton === 'function') {
-            JE.addMigrationButton(help);
-        }
-        /**
-        * Remove this when removing support for Migration
-        */
 
         // --- Shortcut Key Binding Logic ---
         if (!JE.pluginConfig.DisableAllShortcuts) {
@@ -1202,9 +1191,10 @@
                 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
                 const protocol = window.location.protocol;
                 const host = window.location.hostname;
+
                 // Custom languages not in Jellyfin's official culture list
                 const CUSTOM_LANGUAGES = {
-                    'pr': { Name: 'Pirate', DisplayName: "Pirate", TwoLetterISOLanguageName: 'pr' }
+                    'pr': { Name: 'Pirate', DisplayName: "Pirate", TwoLetterISOLanguageName: 'pr' },
                 };
 
                 let supportedJELanguages = [];
@@ -1229,12 +1219,11 @@
                         dataType: 'json'
                     });
 
-
                     // Check which languages have translation files available on GitHub
                     const checkPromises = cultures.map(async (culture) => {
                         const langCode = culture.TwoLetterISOLanguageName;
                         try {
-                            const response = await fetch(`${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
+                            const response = await fetch(`${protocol}//${protocol === 'https:' ? host : `${host}:${window.location.port}`}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
                             if (response.ok) {
                                 supportedJELanguages.push(culture);
                             }
@@ -1248,7 +1237,7 @@
                     // Add custom languages that have translation files
                     for (const langCode in CUSTOM_LANGUAGES) {
                         try {
-                            const response = await fetch(`${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
+                            const response = await fetch(`${protocol}//${protocol === 'https:' ? host : `${host}:${window.location.port}`}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
                             if (response.ok) {
                                 supportedJELanguages.push(CUSTOM_LANGUAGES[langCode]);
                             }

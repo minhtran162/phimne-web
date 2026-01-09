@@ -25,6 +25,8 @@ const JE_SCRIPTS = [
     'enhanced/features.js',
     'enhanced/events.js',
     'enhanced/osd-rating.js',
+    'enhanced/bookmarks.js',
+    'enhanced/bookmarks-library.js',
     'migrate.js',
     'elsewhere.js',
     'jellyseerr/api.js',
@@ -57,6 +59,10 @@ const jeScriptImports: Record<string, () => Promise<any>> = {
     'enhanced/themer.js': () => import('../../lib/legacy/JellyfinEnhanced/enhanced/themer.js'),
     // @ts-ignore
     'enhanced/subtitles.js': () => import('../../lib/legacy/JellyfinEnhanced/enhanced/subtitles.js'),
+    // @ts-ignore
+    'enhanced/bookmarks.js': () => import('../../lib/legacy/JellyfinEnhanced/enhanced/bookmarks.js'),
+    // @ts-ignore
+    'enhanced/bookmarks-library.js': () => import('../../lib/legacy/JellyfinEnhanced/enhanced/bookmarks-library.js'),
     // @ts-ignore
     'enhanced/ui.js': () => import('../../lib/legacy/JellyfinEnhanced/enhanced/ui.js'),
     // @ts-ignore
@@ -634,7 +640,7 @@ const initializeJellyfinEnhanced = async () => {
     }
 
     console.log('[KefinTweaks] Initializing Jellyfin Enhanced (optimized)...');
-    
+
     const loadTranslations = async () => {
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
@@ -709,8 +715,6 @@ const initializeJellyfinEnhanced = async () => {
             // Fallback to bundled translations served by the plugin
             const protocol = window.location.protocol;
             const host = window.location.hostname;
-
-            console.log(host)
 
             let response = await fetch(`${protocol}//${protocol === 'https:' ? host : `${host}:${window.location.port}`}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${lang}.json`);
 

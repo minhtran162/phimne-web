@@ -119,7 +119,7 @@
                 // Cleanup stale links from any non-visible pages to prevent future conflicts
                 document.querySelectorAll('#itemDetailPage.hide .arr-link').forEach(staleLink => {
                     if (staleLink.previousSibling && staleLink.previousSibling.nodeType === Node.TEXT_NODE) {
-                        staleLink.previousSibling.remove();
+                       staleLink.previousSibling.remove();
                     }
                     staleLink.remove();
                 });
