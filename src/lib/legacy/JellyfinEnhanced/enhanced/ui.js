@@ -1,7 +1,7 @@
 /**
  * @file Manages all UI components for the Jellyfin Enhanced plugin.
  */
-(function(JE) {
+(function (JE) {
     'use strict';
 
     const GITHUB_REPO = 'n00bcodr/Jellyfin-Enhanced';
@@ -931,7 +931,7 @@
                                 keyElement.style.background = kbdBackground;
                             }
                         }, 500);
-                            // Reject the new keybinding and stop the function
+                        // Reject the new keybinding and stop the function
                         return;
                     }
 
@@ -984,9 +984,9 @@
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             const activeTabButton = help.querySelector(`.tab-button[data-tab="${lastTab}"]`);
-            if(activeTabButton) activeTabButton.classList.add('active');
+            if (activeTabButton) activeTabButton.classList.add('active');
             const activeTabContent = help.querySelector(`#${lastTab}-content`);
-            if(activeTabContent) activeTabContent.classList.add('active');
+            if (activeTabContent) activeTabContent.classList.add('active');
 
             tabButtons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -1082,15 +1082,15 @@
                         document.querySelectorAll('.language-overlay-container').forEach(el => el.remove());
                     }
                     requiresRefresh = false;
-                    } else if (id === 'ratingTagsToggle') {
-                        if (e.target.checked) {
-                            if (typeof JE.initializeRatingTags === 'function') {
-                                JE.initializeRatingTags();
-                            }
-                        } else {
-                            document.querySelectorAll('.rating-overlay-container').forEach(el => el.remove());
+                } else if (id === 'ratingTagsToggle') {
+                    if (e.target.checked) {
+                        if (typeof JE.initializeRatingTags === 'function') {
+                            JE.initializeRatingTags();
                         }
-                        requiresRefresh = false;
+                    } else {
+                        document.querySelectorAll('.rating-overlay-container').forEach(el => el.remove());
+                    }
+                    requiresRefresh = false;
                 }
 
                 if (requiresRefresh) {
@@ -1120,7 +1120,7 @@
         addSettingToggleListener('genreTagsToggle', 'genreTagsEnabled', 'feature_genre_tags', true);
         addSettingToggleListener('pauseScreenToggle', 'pauseScreenEnabled', 'feature_custom_pause_screen', true);
         addSettingToggleListener('languageTagsToggle', 'languageTagsEnabled', 'feature_language_tags', true);
-            addSettingToggleListener('ratingTagsToggle', 'ratingTagsEnabled', 'feature_rating_tags', true);
+        addSettingToggleListener('ratingTagsToggle', 'ratingTagsEnabled', 'feature_rating_tags', true);
         addSettingToggleListener('disableCustomSubtitleStyles', 'disableCustomSubtitleStyles', 'feature_disable_custom_subtitle_styles', true);
         addSettingToggleListener('longPress2xEnabled', 'longPress2xEnabled', 'feature_long_press_2x_speed');
 
@@ -1173,10 +1173,10 @@
                     if (typeof JE.reinitializeLanguageTags === 'function') {
                         JE.reinitializeLanguageTags();
                     }
-                    } else if (settingKey === 'ratingTagsPosition' && JE.currentSettings.ratingTagsEnabled) {
-                        if (typeof JE.reinitializeRatingTags === 'function') {
-                            JE.reinitializeRatingTags();
-                        }
+                } else if (settingKey === 'ratingTagsPosition' && JE.currentSettings.ratingTagsEnabled) {
+                    if (typeof JE.reinitializeRatingTags === 'function') {
+                        JE.reinitializeRatingTags();
+                    }
                 }
 
                 JE.toast(`Position updated!`);
@@ -1197,11 +1197,11 @@
 
             // Populate language options from Jellyfin's cultures
             (async () => {
-                const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/n00bcodr/Jellyfin-Enhanced/main/Jellyfin.Plugin.JellyfinEnhanced/js/locales';
                 const AVAILABLE_LANGUAGES_CACHE_KEY = 'JE_available_languages';
                 const AVAILABLE_LANGUAGES_CACHE_TS_KEY = 'JE_available_languages_ts';
                 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-
+                const protocol = window.location.protocol;
+                const host = window.location.hostname;
                 // Custom languages not in Jellyfin's official culture list
                 const CUSTOM_LANGUAGES = {
                     'pr': { Name: 'Pirate', DisplayName: "Pirate", TwoLetterISOLanguageName: 'pr' }
@@ -1234,7 +1234,7 @@
                     const checkPromises = cultures.map(async (culture) => {
                         const langCode = culture.TwoLetterISOLanguageName;
                         try {
-                            const response = await fetch(`${GITHUB_RAW_BASE}/${langCode}.json`, { method: 'HEAD' });
+                            const response = await fetch(`${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
                             if (response.ok) {
                                 supportedJELanguages.push(culture);
                             }
@@ -1248,7 +1248,7 @@
                     // Add custom languages that have translation files
                     for (const langCode in CUSTOM_LANGUAGES) {
                         try {
-                            const response = await fetch(`${GITHUB_RAW_BASE}/${langCode}.json`, { method: 'HEAD' });
+                            const response = await fetch(`${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${langCode}.json`, { method: 'HEAD' });
                             if (response.ok) {
                                 supportedJELanguages.push(CUSTOM_LANGUAGES[langCode]);
                             }
@@ -1307,8 +1307,9 @@
                 let translationExists = true;
                 if (newLang) {
                     try {
-                        const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/n00bcodr/Jellyfin-Enhanced/main/Jellyfin.Plugin.JellyfinEnhanced/js/locales';
-                        const response = await fetch(`${GITHUB_RAW_BASE}/${newLang}.json`, { method: 'HEAD' });
+                        const protocol = window.location.protocol;
+                        const host = window.location.hostname;
+                        const response = await fetch(`${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/locales/${newLang}.json`, { method: 'HEAD' });
                         translationExists = response.ok;
                     } catch (err) {
                         // Assume it exists if we can't check (offline mode)

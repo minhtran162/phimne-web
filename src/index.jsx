@@ -141,12 +141,6 @@ async function loadPlugins() {
 }
 
 function loadPlatformFeatures() {
-    if (browser.tizen) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/gh/lscambo13/ElegantFin@main/Theme/ElegantFin-jellyfin-theme-build-latest-minified.css';
-        document.head.appendChild(link);
-    }
 
     if (!browser.tv && !browser.xboxOne && !browser.ps4) {
         import('./components/nowPlayingBar/nowPlayingBar');
