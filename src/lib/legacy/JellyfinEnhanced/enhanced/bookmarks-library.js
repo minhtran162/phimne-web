@@ -6,8 +6,45 @@
 (function () {
   'use strict';
 
-  if (!window.JellyfinEnhanced?.pluginConfig?.BookmarksEnabled) {
-    return;
+  if (typeof window.LocalStorageCache === 'undefined') {
+    return console.warn('LocalStorageCache not available');
+  }
+
+  const localStorageCache = new window.LocalStorageCache();
+
+  // FIX: Helper to get userId consistently
+  function getCurrentUserId() {
+    try {
+      const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+      return apiClient?.getCurrentUserId?.() || 'anonymous';
+    } catch (e) {
+      console.warn('Failed to get user ID', e);
+      return 'anonymous';
+    }
+  }
+
+  // FIX: Load bookmarks with proper userId
+  function loadBookmarksFromCache() {
+    const userId = getCurrentUserId();
+    const cached = localStorageCache.get('bookmarks', userId);
+
+    if (!cached) {
+      return {};
+    }
+
+    // Convert array back to object format
+    if (Array.isArray(cached)) {
+      const bookmarksObj = {};
+      cached.forEach(bm => {
+        if (bm.id) {
+          const { id, ...data } = bm;
+          bookmarksObj[id] = data;
+        }
+      });
+      return bookmarksObj;
+    }
+
+    return cached;
   }
 
   // Inject custom styles
@@ -912,6 +949,9 @@
       const je = getJE();
       const ready = !!(je && je.userConfig && je.bookmarks);
 
+      if (attempts % 10 === 0 || attempts <= 5) {
+      }
+
       if (ready) {
         clearInterval(checkReady);
         // If JE is available only on parent/top, make it accessible locally for this script
@@ -984,7 +1024,7 @@
    * Render bookmarks library content
    */
   async function renderBookmarksLibrary(container) {
-    const bookmarks = JE.userConfig.bookmark?.bookmarks || {};
+    const bookmarks = JE.userConfig.bookmark?.bookmarks || loadBookmarksFromCache();;
     const bookmarkEntries = Object.entries(bookmarks);
 
     // Group by item
@@ -1489,7 +1529,6 @@
       const startTicks = Math.floor(startTime * 10000000);
       const url = `Sessions/${sessionId}/Playing?playCommand=PlayNow&itemIds=${itemId}&startPositionTicks=${startTicks}`;
 
-
       await apiClient.ajax({
         type: 'POST',
         url: apiClient.getUrl(url)
@@ -1606,7 +1645,6 @@
       if (typeof response === 'string') {
         response = JSON.parse(response);
       }
-
 
       const items = response?.Items || [];
 
@@ -1812,29 +1850,29 @@
           <div class="je-modal-warning-box">
             <div class="je-modal-warning-label">Old Item (Missing)</div>
             <div class="je-modal-item-name">${escapeHtml(oldGroup.details.name)}</div>
-            <div class="je-modal-item-meta">TMDB: ${oldGroup.details.tmdbId || 'N/A'} • Item ID: ${oldGroup.details.itemId.substring(0,16)}...</div>
+            <div class="je-modal-item-meta">TMDB: ${oldGroup.details.tmdbId || 'N/A'} • Item ID: ${oldGroup.details.itemId.substring(0, 16)}...</div>
           </div>
 
           <div class="je-replacement-section-title">Select Replacement:</div>
           <div class="je-replacement-options">
             ${replacementItems.map((item, idx) => {
-              const posterUrl = apiClient.getImageUrl(item.Id, {
-                type: 'Primary',
-                maxWidth: 120,
-                tag: item.ImageTags?.Primary
-              });
-              return `
+      const posterUrl = apiClient.getImageUrl(item.Id, {
+        type: 'Primary',
+        maxWidth: 120,
+        tag: item.ImageTags?.Primary
+      });
+      return `
                 <div class="replacement-option" data-item-index="${idx}" style="display: flex; gap: 12px; background: rgba(76,175,80,0.05); border: 2px solid rgba(76,175,80,0.2); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; align-items: center;">
                   ${posterUrl ? `<img src="${posterUrl}" style="width: 60px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">` : '<div style="width: 60px; height: 90px; background: rgba(255,255,255,0.05); border-radius: 6px; flex-shrink: 0;"></div>'}
                   <div style="flex: 1;">
                     <div style="font-weight: 600; margin-bottom: 4px; color: #fff; font-size: 15px;">${escapeHtml(item.Name)}</div>
                     <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">${item.ProductionYear || ''}</div>
-                    <div style="font-size: 11px; color: #888;">Item ID: ${item.Id.substring(0,16)}...</div>
+                    <div style="font-size: 11px; color: #888;">Item ID: ${item.Id.substring(0, 16)}...</div>
                   </div>
                   <span class="material-icons" aria-hidden="true" style="color: #4caf50; font-size: 28px; display: none; flex-shrink: 0;">check_circle</span>
                 </div>
               `;
-            }).join('')}
+    }).join('')}
           </div>
         </div>
         <div class="je-modal-actions-padded">
@@ -2033,7 +2071,7 @@
                   </button>
                 </div>
                 <div class="je-orphaned-result-meta">
-                  TMDB: ${result.group.details.tmdbId || 'N/A'} • Item ID: ${result.group.details.itemId.substring(0,12)}...
+                  TMDB: ${result.group.details.tmdbId || 'N/A'} • Item ID: ${result.group.details.itemId.substring(0, 12)}...
                 </div>
               </div>
             `).join('')}
@@ -2139,18 +2177,18 @@
           </div>
           <div style="margin-top: 20px;">
             ${duplicates.map((dup, idx) => {
-              const itemIds = Object.keys(dup.itemGroups);
-              return `
+      const itemIds = Object.keys(dup.itemGroups);
+      return `
                 <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
                   <div style="font-weight: 600; margin-bottom: 12px; color: #ff9800;">${escapeHtml(dup.name)}</div>
                   <div style="font-size: 12px; color: #888; margin-bottom: 12px;">
                     ${JE.t('bookmark_split_versions')
-                      .replace('{count}', dup.totalBookmarks)
-                      .replace('{versions}', itemIds.length)}
+          .replace('{count}', dup.totalBookmarks)
+          .replace('{versions}', itemIds.length)}
                   </div>
                   ${itemIds.map((itemId, versionIdx) => {
-                    const bms = dup.itemGroups[itemId];
-                    return `
+            const bms = dup.itemGroups[itemId];
+            return `
                       <div style="background: rgba(255,255,255,0.02); border-left: 3px solid ${versionIdx === 0 ? '#4caf50' : '#ff9800'}; padding: 8px 12px; margin-bottom: 8px; border-radius: 4px;">
                         <div style="font-size: 11px; color: ${versionIdx === 0 ? '#4caf50' : '#ff9800'}; font-weight: 600; margin-bottom: 4px;">
                           ${versionIdx === 0 ? JE.t('bookmark_primary_version') : JE.t('bookmark_old_version')}
@@ -2167,14 +2205,14 @@
                         </button>
                       </div>
                     `;
-                  }).join('')}
+          }).join('')}
                   <button class="je-btn" data-dup-index="${idx}" style="margin-top: 8px; background: rgba(255, 152, 0, 0.15); border-color: #ff9800; color: #ff9800;">
                     <span class="material-icons" aria-hidden="true" style="font-size: 16px;">merge</span>
                     <span>${JE.t('bookmark_merge_primary')}</span>
                   </button>
                 </div>
               `;
-            }).join('')}
+    }).join('')}
           </div>
         </div>
         <div class="je-bookmark-modal-actions">

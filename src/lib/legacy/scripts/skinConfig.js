@@ -313,6 +313,12 @@
                     {
                         majorServerVersions: [11],
                         urls: ['https://cdn.jsdelivr.net/gh/tedhinklater/finimalism@main/finimalism10.11.css']
+                    },
+                    {
+                        majorServerVersions: [11],
+                        urls: [
+                            `${getKefinTweaksRoot()}skins/finimalism-kefin-10.11.css`
+                        ]
                     }
                 ],
                 colorSchemes: [],
@@ -729,7 +735,7 @@
                         ]
                     }
                 ],
-                optionalIncludes: [,
+                optionalIncludes: [
                     {
                         name: 'Dark',
                         url: 'https://cdn.jsdelivr.net/gh/CTalvio/Ultrachromic/type/dark.css'

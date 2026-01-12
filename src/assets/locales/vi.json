@@ -338,5 +338,8 @@
     "toast_api_client_unavailable": "API client không khả dụng",
     "toast_session_not_found": "Không tìm thấy phiên làm việc đang hoạt động",
     "toast_playing": "Đang phát...",
-    "toast_playback_failed": "Phát lại thất bại: {error}"
+    "toast_playback_failed": "Phát lại thất bại: {error}",
+    "panel_settings_browser_clear_cache_desc": "Xóa bộ nhớ cache để đảm bảo bạn đang sử dụng phiên bản mới nhất của ứng dụng.",
+    "panel_settings_browser_clear_cache": "Xóa Bộ nhớ Cache",
+    "toast_browser_cache_cleared": "✓ Bộ nhớ cache đã được xóa"
 }

@@ -9,7 +9,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
 </div>
 */
 
-(function() {
+(function () {
     'use strict';
 
     // Common logging function
@@ -27,6 +27,9 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
     // Store watchlist tab index
     let _watchlistTabIndex = null;
 
+    const bookmarksData = localStorageCache.get('bookmarks');
+
+    console.log("hehe: ", bookmarksData);
     // Data optimization functions for localStorage storage
     function optimizeProgressDataForStorage(progressDataArray) {
         return progressDataArray.map(progress => ({
@@ -593,8 +596,8 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             const start = ep.IndexNumber;
             const end = ep.IndexNumberEnd || ep.IndexNumber;
             return ep.ParentIndexNumber === parseInt(season)
-			       && parseInt(episode) >= start
-			       && parseInt(episode) <= end;
+                && parseInt(episode) >= start
+                && parseInt(episode) <= end;
         });
 
         if (matchingEpisode) {
@@ -981,7 +984,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         // Check if container has the right number of children
         // TODO - Improve this to check if the children are the same as the data
         const hasCorrectContent = container
-								&& children.length === data.length;
+            && children.length === data.length;
 
         // Skip if we have content and it's the same page/search/sort/data count
         return state.hasContent && isSamePage && isSameSearch && isSameSort && hasCorrectContent;
@@ -1159,8 +1162,8 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             const genres = (movie.Genres || []).join(' ').toLowerCase();
 
             return title.includes(term)
-				|| year.toString().includes(term)
-				|| genres.includes(term);
+                || year.toString().includes(term)
+                || genres.includes(term);
         });
     }
 
@@ -2413,7 +2416,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             // Filter series that have been started (UserData.PlayedPercentage > 0)
             const inProgressSeries = series.filter(series => {
                 return series.UserData
-					&& series.UserData.PlayedPercentage > 0;
+                    && series.UserData.PlayedPercentage > 0;
             });
 
             // Fetch progress data for all series in parallel
@@ -2487,7 +2490,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 .filter((ep, index, self) =>
                     index === self.findIndex(e =>
                         e.ParentIndexNumber === ep.ParentIndexNumber
-						&& e.IndexNumber === ep.IndexNumber
+                        && e.IndexNumber === ep.IndexNumber
                     )
                 );
 
@@ -4515,7 +4518,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 const originalHandler = socket.onmessage;
 
                 // Hook into onmessage
-                socket.onmessage = function(event) {
+                socket.onmessage = function (event) {
                     try {
                         // Pass it through so Jellyfin still works normally
                         if (originalHandler) {
@@ -4727,7 +4730,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 if (episodeIndex >= 0 && episodeIndex < seasonProgress.length) {
                     // Mark episode as watched (set to '1')
                     seriesProgress.binaryProgress[season] =
-						seasonProgress.substring(0, episodeIndex) + '1' + seasonProgress.substring(episodeIndex + 1);
+                        seasonProgress.substring(0, episodeIndex) + '1' + seasonProgress.substring(episodeIndex + 1);
 
                     // Save back to localStorage
                     localStorageCache.set('progress', cachedProgress);
@@ -4786,7 +4789,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 if (episodeIndex >= 0 && episodeIndex < seasonProgress.length) {
                     // Mark episode as unwatched (set to '0')
                     seriesProgress.binaryProgress[season] =
-						seasonProgress.substring(0, episodeIndex) + '0' + seasonProgress.substring(episodeIndex + 1);
+                        seasonProgress.substring(0, episodeIndex) + '0' + seasonProgress.substring(episodeIndex + 1);
 
                     // Save back to localStorage
                     localStorageCache.set('progress', cachedProgress);
@@ -5543,9 +5546,9 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
 					<div class="progress-stats">
 						<span>
 						${percentage === 100 ?
-        `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes - <strong>Series Complete!</strong>` :
-        `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes which leaves <strong>${remainingCount} episodes</strong> left to watch.`
-    }
+                `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes - <strong>Series Complete!</strong>` :
+                `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes which leaves <strong>${remainingCount} episodes</strong> left to watch.`
+            }
 						</span>
 					</div>
 					${lastWatchedInfo ? `<div class="progress-last-watched">${lastWatchedInfo}</div>` : ''}
@@ -5786,7 +5789,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 const season = chunk.getAttribute('data-season');
                 const episode = parseInt(chunk.getAttribute('data-episode'));
                 const isWatched = updatedProgress.binaryProgress[season]
-					&& updatedProgress.binaryProgress[season][episode - 1] === '1';
+                    && updatedProgress.binaryProgress[season][episode - 1] === '1';
 
                 chunk.dataset.isWatched = isWatched;
 
@@ -5841,7 +5844,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 .filter((ep, index, self) =>
                     index === self.findIndex(e =>
                         e.ParentIndexNumber === ep.ParentIndexNumber
-						&& e.IndexNumber === ep.IndexNumber
+                        && e.IndexNumber === ep.IndexNumber
                     )
                 );
 
@@ -5876,7 +5879,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             // Filter unwatched episodes
             const unwatchedEpisodes = episodes.filter(ep =>
                 ep.ParentIndexNumber !== 0
-				&& (!ep.UserData.Played || ep.UserData.Played === false)
+                && (!ep.UserData.Played || ep.UserData.Played === false)
             );
 
             if (unwatchedEpisodes.length === 0) {
@@ -6097,7 +6100,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         const episodes = await fetchEpisodesForSeries(seriesId);
         const unwatchedEpisodes = episodes.filter(ep =>
             ep.ParentIndexNumber !== 0
-			&& (!ep.UserData.Played || ep.UserData.Played === false)
+            && (!ep.UserData.Played || ep.UserData.Played === false)
         );
 
         if (unwatchedEpisodes.length === 0) {
@@ -6637,9 +6640,9 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             const actualEpisodes = episodesItemsContainer ? episodesItemsContainer.children.length : 0;
 
             const contentMatches = actualMovies === expectedMovies
-								&& actualSeries === expectedSeries
-								&& actualSeasons === expectedSeasons
-								&& actualEpisodes === expectedEpisodes;
+                && actualSeries === expectedSeries
+                && actualSeasons === expectedSeasons
+                && actualEpisodes === expectedEpisodes;
 
             if (!contentMatches) {
                 watchlistSection.dataset.htmlRendered = 'false';
@@ -7513,15 +7516,15 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
     monitorSlidesContainer();
 
     // Debug functions for troubleshooting (available in console)
-    window.debugWatchlistButtons = function() {
+    window.debugWatchlistButtons = function () {
         processExistingOverlayContainers();
     };
 
-    window.debugWatchlistRendering = function() {
+    window.debugWatchlistRendering = function () {
         renderWatchlist();
     };
 
-    window.debugWatchlistOptimization = function() {
+    window.debugWatchlistOptimization = function () {
         const watchlistSection = getWatchlistSection();
         if (!watchlistSection) {
             return;
@@ -7545,20 +7548,20 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         });
     };
 
-    window.debugDetailPageWatchlist = function() {
+    window.debugDetailPageWatchlist = function () {
         addDetailPageWatchlistButton();
     };
 
-    window.debugProgressTab = function() {
+    window.debugProgressTab = function () {
         renderProgressContent();
     };
 
-    window.debugFetchProgress = async function() {
+    window.debugFetchProgress = async function () {
         const progress = await fetchAllProgressData();
         return progress;
     };
 
-    window.debugFetchProgressWithMissing = async function() {
+    window.debugFetchProgressWithMissing = async function () {
         const apiClient = window.ApiClient;
         const userId = apiClient.getCurrentUserId();
         const serverUrl = apiClient.serverAddress();
@@ -7584,7 +7587,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         return progressData;
     };
 
-    window.debugSorting = function() {
+    window.debugSorting = function () {
         const apiClient = window.ApiClient;
         const userId = apiClient.getCurrentUserId();
         const serverUrl = apiClient.serverAddress();
@@ -7608,7 +7611,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             });
     };
 
-    window.debugPagination = function() {
+    window.debugPagination = function () {
         if (progressCache.data.length > 0) {
             for (let page = 1; page <= Math.min(3, progressCache.totalPages); page++) {
                 const { pageData } = progressPagination.getCachedPage(page);
@@ -7617,15 +7620,15 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         }
     };
 
-    window.debugCache = function() {
+    window.debugCache = function () {
     };
 
-    window.debugPageFetch = async function(page = 1) {
+    window.debugPageFetch = async function (page = 1) {
         const progress = await fetchProgressForPage(page);
         return progress;
     };
 
-    window.debugSeriesCache = function() {
+    window.debugSeriesCache = function () {
         // Show first few cached series
         const cachedSeries = progressCache.data;
         if (cachedSeries.length > 0) {
@@ -7634,16 +7637,16 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         }
     };
 
-    window.debugPreloading = function() {
+    window.debugPreloading = function () {
         // Test preloading
         preloadProgressData();
     };
 
-    window.debugHash = function() {
+    window.debugHash = function () {
         updateUrlParams('progress', 2);
     };
 
-    window.debugAllProgressData = async function() {
+    window.debugAllProgressData = async function () {
         const allData = await fetchAllProgressData();
         // Show first few items with their last watched dates
         if (allData.length > 0) {
@@ -7657,12 +7660,12 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         return allData;
     };
 
-    window.debugNewPagination = function(page = 1) {
+    window.debugNewPagination = function (page = 1) {
         const { pageData, totalPages, currentPage } = progressPagination.getCachedPage(page);
         return { pageData, totalPages, currentPage };
     };
 
-    window.debugStatistics = function() {
+    window.debugStatistics = function () {
         if (progressCache.allDataLoaded && progressCache.data.length > 0) {
             const stats = calculateProgressStatistics(progressCache.data);
             updateProgressStatistics(progressCache.data);
@@ -7672,7 +7675,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         }
     };
 
-    window.debugMovieHistory = async function() {
+    window.debugMovieHistory = async function () {
         const movies = await fetchWatchedMovies();
         if (movies.length > 0) {
             movies.slice(0, 3).forEach((movie, i) => {
@@ -7681,16 +7684,16 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
         return movies;
     };
 
-    window.debugRenderMovieHistory = function() {
+    window.debugRenderMovieHistory = function () {
         renderHistoryContent();
     };
 
-    window.debugMoviePagination = function(page = 1) {
+    window.debugMoviePagination = function (page = 1) {
         const { pageData, totalPages, currentPage } = moviePagination.getCachedPage(page);
         return { pageData, totalPages, currentPage };
     };
 
-    window.debugMovieCache = function() {
+    window.debugMovieCache = function () {
         if (movieCache.data.length > 0) {
             movieCache.data.slice(0, 3).forEach((movie, i) => {
                 const watchedDate = movie.UserData && movie.UserData.LastPlayedDate ?

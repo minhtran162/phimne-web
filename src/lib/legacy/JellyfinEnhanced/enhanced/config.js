@@ -44,8 +44,8 @@
 
             // Convert bookmark data back to PascalCase for server
             let dataToSave = settings;
-            if (fileName === 'bookmark.json' && typeof window.JellyfinEnhanced?.toPascalCase === 'function') {
-                dataToSave = window.JellyfinEnhanced.toPascalCase(settings);
+            if (fileName === 'bookmark.json' && typeof JE.helpers.toPascalCase === 'function') {
+                dataToSave = JE.helpers.toPascalCase(settings);
             }
 
             await ApiClient.ajax({

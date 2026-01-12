@@ -1,13 +1,22 @@
 // /js/enhanced/bookmarks.js
 // Enhanced bookmarks system with multi-bookmark support, TMDB/TVDB tracking, and visual markers
-(function(JE) {
+(function (JE) {
   'use strict';
 
-  if (!JE.pluginConfig?.BookmarksEnabled) {
-    return;
-  }
-
   const logPrefix = '🪼 Jellyfin Enhanced: Bookmarks:';
+
+  const BOOKMARK_CACHE_TTL = 5 * 60 * 1000;
+  const localStorageCache = new window.LocalStorageCache();
+
+  function getCurrentUserId() {
+    try {
+      const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+      return apiClient?.getCurrentUserId?.() || 'anonymous';
+    } catch (e) {
+      console.warn('Failed to get user ID', e);
+      return 'anonymous';
+    }
+  }
 
   // Notify other views (e.g., CustomTabs library) when bookmarks change
   function emitBookmarksUpdated(reason = 'updated') {
@@ -31,23 +40,6 @@
     div.textContent = text;
     return div.innerHTML;
   }
-
-  /**
-   * New bookmark data structure:
-   * {
-   *   "unique-bookmark-id": {
-   *     itemId: "jellyfin-item-id",
-   *     tmdbId: "12345",
-   *     tvdbId: "67890",
-   *     mediaType: "movie" | "tv",
-   *     name: "Item Name",
-   *     timestamp: 123.45,
-   *     label: "Epic scene" (optional),
-   *     createdAt: ISO date string,
-   *     updatedAt: ISO date string
-   *   }
-   * }
-   */
 
   /**
    * Get current video item data (similar to osd-rating.js)
@@ -134,7 +126,7 @@
         const tvdbId = sourceItem.ProviderIds?.Tvdb || null;
         const mediaType = item.Type === 'Movie' ? 'movie'
           : (item.Type === 'Series' || item.Type === 'Episode' || item.Type === 'Season') ? 'tv'
-          : (item.Type || '').toString().toLowerCase();
+            : (item.Type || '').toString().toLowerCase();
 
         const details = {
           itemId: item.Id,
@@ -205,7 +197,7 @@
   }
 
   /**
-   * Add a new bookmark
+   * Add a new bookmark with optimized cache update
    */
   async function addBookmark(timestamp, label = '') {
     const itemData = getCurrentItemData();
@@ -214,7 +206,6 @@
       return null;
     }
 
-    // Fetch full details
     const details = await fetchItemDetails(itemData.itemId);
     if (!details) {
       JE.toast(JE.t('toast_bookmark_fetch_failed'), 3000);
@@ -237,7 +228,6 @@
       syncedFrom: ''
     };
 
-    // Initialize bookmark structure if needed
     if (!JE.userConfig.bookmark) {
       JE.userConfig.bookmark = { bookmarks: {} };
     }
@@ -248,7 +238,18 @@
     JE.userConfig.bookmark.bookmarks[bookmarkId] = bookmark;
 
     try {
-      await JE.saveUserSettings('bookmark.json', JE.userConfig.bookmark);
+      // FIX: Get userId consistently
+      const userId = getCurrentUserId();
+
+      // Convert to array format for storage
+      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+        id,
+        ...bm
+      }));
+
+      // FIX: Use consistent cache key with userId
+      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
       emitBookmarksUpdated('add');
       return { id: bookmarkId, ...bookmark };
     } catch (e) {
@@ -259,7 +260,7 @@
   }
 
   /**
-   * Update an existing bookmark
+   * Update an existing bookmark with optimized cache update
    */
   async function updateBookmark(bookmarkId, updates) {
     if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
@@ -271,7 +272,17 @@
     Object.assign(bookmark, updates, { updatedAt: new Date().toISOString() });
 
     try {
-      await JE.saveUserSettings('bookmark.json', JE.userConfig.bookmark);
+      // FIX: Get userId consistently
+      const userId = getCurrentUserId();
+
+      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+        id,
+        ...bm
+      }));
+
+      // FIX: Use consistent cache key with userId
+      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
       emitBookmarksUpdated('update');
       return true;
     } catch (e) {
@@ -281,7 +292,7 @@
   }
 
   /**
-   * Delete a bookmark
+   * Delete a bookmark with optimized cache update
    */
   async function deleteBookmark(bookmarkId) {
     if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
@@ -292,7 +303,17 @@
     delete JE.userConfig.bookmark.bookmarks[bookmarkId];
 
     try {
-      await JE.saveUserSettings('bookmark.json', JE.userConfig.bookmark);
+      // FIX: Get userId consistently
+      const userId = getCurrentUserId();
+
+      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+        id,
+        ...bm
+      }));
+
+      // FIX: Use consistent cache key with userId
+      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
       emitBookmarksUpdated('delete');
       return true;
     } catch (e) {
@@ -302,7 +323,7 @@
   }
 
   /**
-   * Sync bookmarks from old item ID to new item ID
+   * Sync bookmarks from old item ID to new item ID with optimized cache update
    * Creates duplicates with new item ID, keeps old ones
    */
   async function syncBookmarks(oldBookmarks, newItemDetails, timeOffset = 0) {
@@ -331,7 +352,18 @@
     }
 
     try {
-      await JE.saveUserSettings('bookmark.json', JE.userConfig.bookmark);
+      // Update localStorage cache using the same pattern as watchlist
+      const apiClient = window.ApiClient;
+      const userId = apiClient.getCurrentUserId();
+
+      // Optimize data for storage
+      const optimizedData = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+        id,
+        ...bm
+      }));
+
+      localStorageCache.set('bookmarks', optimizedData, userId, BOOKMARK_CACHE_TTL);
+
       emitBookmarksUpdated('sync');
       return synced;
     } catch (e) {
@@ -928,10 +960,10 @@
       try {
         if (isEdit) {
           await updateBookmark(existingBookmark.id, { label: labelInput });
-           JE.toast(JE.t('toast_bookmark_updated'), 2000);
+          JE.toast(JE.t('toast_bookmark_updated'), 2000);
         } else {
           await addBookmark(timestamp, labelInput);
-           JE.toast(JE.t('toast_bookmark_updated'), 2000);
+          JE.toast(JE.t('toast_bookmark_updated'), 2000);
         }
 
         // Refresh markers
@@ -1012,14 +1044,39 @@
     nativeSettingsButton.parentElement.insertBefore(bookmarkBtn, nativeSettingsButton);
   }
 
+  function loadBookmarksFromLocalStorage() {
+    try {
+      const userId = getCurrentUserId();
+      const cached = localStorageCache.get('bookmarks', userId);
+
+      if (!cached) return;
+
+      // Initialize structure if needed
+      if (!JE.userConfig.bookmark) {
+        JE.userConfig.bookmark = { bookmarks: {} };
+      }
+
+      // Convert array to object if needed
+      if (Array.isArray(cached)) {
+        cached.forEach(bm => {
+          if (bm.id) {
+            const { id, ...data } = bm;
+            JE.userConfig.bookmark.bookmarks[id] = data;
+          }
+        });
+      }
+    } catch (e) {
+      console.error(`${logPrefix} Failed to load bookmarks from cache`, e);
+    }
+  }
   /**
    * Initialize bookmarks system
    */
-  JE.initializeBookmarks = (function() {
+  JE.initializeBookmarks = (function () {
     let initialized = false;
     let cleanupFunctions = [];
 
-    return function() {
+    return function () {
       // Prevent multiple initializations
       if (initialized) {
         return;
@@ -1033,6 +1090,7 @@
       let lastInjectedOsdKey = null;
       const osdObserverId = 'je-bookmarks-osd';
       const videoObserverId = 'je-bookmarks-video-changes';
+      loadBookmarksFromLocalStorage();
 
       function getOsdKey() {
         const video = document.querySelector('.videoPlayerContainer video');
@@ -1126,7 +1184,7 @@
       }
 
       // Store cleanup function globally
-      JE.cleanupBookmarks = function() {
+      JE.cleanupBookmarks = function () {
         cleanupFunctions.forEach(fn => fn());
         cleanupFunctions = [];
         JE.helpers.disconnectObserver(osdObserverId);

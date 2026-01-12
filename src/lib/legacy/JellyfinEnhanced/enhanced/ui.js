@@ -840,6 +840,12 @@
                             </div>
                         </div>
                     </details>
+                    <div style="padding: 12px; background: ${presetBoxBackground}; border-radius: 6px; border-left: 3px solid ${toggleAccentColor};">
+                        <button id="clearBrowserCacheButton" style="width: 100%; padding: 12px; background: ${toggleAccentColor}; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            ${JE.t('panel_settings_browser_clear_cache')}
+                        </button>
+                        <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:8px;">${JE.t('panel_settings_browser_clear_cache_desc')}</div>
+                    </div>
                 </div>
             </div>
             <div class="panel-footer" style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); background: ${headerFooterBg}; display: flex; justify-content: space-between; align-items: center;">
@@ -1349,6 +1355,21 @@
                 localStorage.removeItem('JE_available_languages_ts');
 
                 JE.toast(JE.t('toast_translation_cache_cleared', { count: cacheKeys.length }));
+                setTimeout(() => window.location.reload(), 2000);
+                resetAutoCloseTimer();
+            });
+        }
+
+        const clearBrowserCacheButton = document.getElementById('clearBrowserCacheButton');
+        if (clearBrowserCacheButton) {
+            clearBrowserCacheButton.addEventListener('click', () => {
+                caches.keys().then((names) => {
+                    for (let name of names) {
+                        caches.delete(name);
+                    }
+                });
+
+                JE.toast(JE.t('toast_browser_cache_cleared'));
                 setTimeout(() => window.location.reload(), 2000);
                 resetAutoCloseTimer();
             });

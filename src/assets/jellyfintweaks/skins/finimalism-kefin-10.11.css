@@ -1,0 +1,322 @@
+.layout-desktop .detailImageContainer .card,
+.layout-tv .detailImageContainer .card {
+  width: 10.975em;
+  top: 11.5em;
+  left: 4.3em;
+  min-width: 265px;
+  filter: drop-shadow(-6px 2px 8px rgba(0, 0, 0, 0.58));
+  max-width: unset;
+}
+
+.layout-desktop #itemDetailPage .tagline,
+.layout-tv #itemDetailPage .tagline {
+  margin-top: 2.3em;
+  margin-bottom: 0em;
+  font-size: 1.5em;
+  min-height: 2em;
+}
+
+.layout-desktop .detailLogo,
+.layout-tv .detailLogo {
+  position: fixed;
+  z-index: 10;
+  left: 7em;
+  width: 17.6em;
+  height: 8.3em;
+  animation: logoScale 0.3s ease-out forwards;
+  display: block;
+  transition: width 0.2s ease-in-out;
+}
+
+.layout-desktop .mainDetailButtons.focuscontainer-x,
+.layout-tv .mainDetailButtons.focuscontainer-x {
+  left: 4em;
+  width: 20em;
+  top: 33em;
+}
+
+.layout-desktop .mainDetailButtons.focuscontainer-x::before,
+.layout-tv .mainDetailButtons.focuscontainer-x::before {
+  width: 0;
+  height: 0;
+}
+
+.layout-desktop #itemDetailPage .nameContainer,
+.layout-tv #itemDetailPage .nameContainer {
+  position: fixed;
+  left: 2.75em;
+  top: 40.7em;
+  width: 26.4em;
+  justify-content: center;
+  text-align: center;
+  height: 3.6em;
+  display: flex;
+  flex-direction: row;
+}
+
+.layout-desktop .itemName.infoText.originalTitle,
+.layout-tv .itemName.infoText.originalTitle {
+  top: 45.6em;
+  left: 4.3em;
+  width: 23em;
+  position: fixed;
+}
+
+.layout-tv .trackSelections {
+  position: relative;
+  left: 0;
+  top: .7em;
+  width: unset;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailSectionContent,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailSectionContent {
+  width: 25em !important;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .trackSelections,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .trackSelections {
+  top: 2em !important;
+  width: 25em;
+  left: 1.5em;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailPagePrimaryContent,
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailPageContent,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailPagePrimaryContent,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailPageContent {
+  padding-left: 40em;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailRibbon,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailRibbon {
+  padding-left: 40.5em;
+  height: 4em;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary {
+  font-weight: 600;
+  text-align: center;
+  filter: drop-shadow(0px 4px 1px #0005);
+  justify-content: flex-start;
+  padding-top: 0em;
+  width: 100%;
+  column-gap: 12px;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.genresGroup .genres.content.focuscontainer-x,
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.writersGroup .writers.content.focuscontainer-x,
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.directorsGroup .directors.content.focuscontainer-x,
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.studiosGroup .studios.content.focuscontainer-x,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.genresGroup .genres.content.focuscontainer-x,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.writersGroup .writers.content.focuscontainer-x,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.directorsGroup .directors.content.focuscontainer-x,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup .detailsGroupItem.studiosGroup .studios.content.focuscontainer-x {
+  text-align: start;
+  width: 34em !important;
+  margin-left: 1.5em !important;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemDetailsGroup,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .itemDetailsGroup {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 25em;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailLogo,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailLogo {
+  top: 4.3em;
+  left: 4em;
+  width: 30.75em;
+  height: 6em;
+  transition: width 0.2s ease-in-out;
+}
+
+.layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .detailImageContainer .card.backdropCard,
+.layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .detailImageContainer .card.backdropCard {
+  top: 14.35em !important;
+  width: 30.15em;
+}
+
+.layout-tv .cardText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: unset;
+  text-align: start !important;
+}
+
+.layout-tv .overflowBackdropCard {
+  max-width: 18em;
+}
+
+.layout-desktop .infoWrapper,
+.layout-tv .infoWrapper {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1400px) {
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .infoWrapper .nameContainer .parentName.focuscontainer-x {
+    display: none;
+  }
+
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary {
+    width: 100%;
+  }
+
+  .layout-desktop .detailImageContainer .card,
+  .layout-tv .detailImageContainer .card {
+    left: 9em;
+    min-width: 200px;
+  }
+
+  .layout-desktop .mainDetailButtons.focuscontainer-x,
+  .layout-tv .mainDetailButtons.focuscontainer-x {
+    top: 13em;
+  }
+
+  .layout-desktop #itemDetailPage .nameContainer,
+  .layout-tv #itemDetailPage .nameContainer {
+    left: 2.75em;
+    top: 41em;
+    font-size: 12px;
+    width: 34.4em;
+  }
+
+  .layout-desktop .itemName.infoText.subtitle,
+  .layout-tv .itemName.infoText.subtitle {
+    position: absolute;
+    top: 2em;
+    left: 6em;
+    width: 20em;
+  }
+
+  .layout-desktop .itemName.infoText.originalTitle,
+  .layout-tv .itemName.infoText.originalTitle {
+    top: 43em;
+    left: 19%;
+    width: unset;
+    transform: translateX(-50%);
+  }
+
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .infoWrapper,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .infoWrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .nameContainer,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .nameContainer {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: transform 0s;
+    top: 11.5em !important;
+    height: unset !important;
+    width: 34em;
+    left: 7.75em !important;
+  }
+
+  .layout-tv .itemName.infoText.subtitle.focuscontainer-x {
+    top: 13em;
+    left: 22em;
+    width: 34em !important;
+  }
+
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemName.infoText.originalTitle {
+    top: 18.5em !important;
+    left: 24% !important;
+    width: unset;
+    transform: translateX(-50%);
+  }
+
+  .layout-tv #childrenContent .itemsContainer.padded-right.itemsContainer-tv.vertical-list {
+    width: 55vw;
+  }
+}
+
+@media (max-width: 1024px) {
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) div.itemMiscInfo.itemMiscInfo-primary {
+    width: 100%;
+  }
+
+  .layout-desktop .detailImageContainer .card,
+  .layout-tv .detailImageContainer .card {
+    left: 9em;
+    min-width: 200px;
+  }
+
+  .layout-desktop .mainDetailButtons.focuscontainer-x,
+  .layout-tv .mainDetailButtons.focuscontainer-x {
+    top: 13em;
+  }
+
+  .layout-desktop #itemDetailPage .nameContainer,
+  .layout-tv #itemDetailPage .nameContainer {
+    left: 2.75em;
+    top: 40em;
+    font-size: 12px;
+    width: 34.4em;
+  }
+
+  .layout-desktop .itemName.infoText.subtitle,
+  .layout-tv .itemName.infoText.subtitle {
+    position: absolute;
+    top: 2em;
+    left: 6em;
+    width: 20em;
+  }
+
+  .layout-desktop .itemName.infoText.originalTitle,
+  .layout-tv .itemName.infoText.originalTitle {
+    top: 43em;
+    left: 23%;
+    width: unset;
+    transform: translateX(-50%);
+  }
+
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .infoWrapper,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .infoWrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .layout-desktop .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .nameContainer,
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button.show-focus[data-type="Season"]) .nameContainer {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: transform 0s;
+    top: 11.5em !important;
+    height: unset !important;
+    width: 34em;
+    left: 7.75em !important;
+  }
+
+  .layout-tv .itemName.infoText.subtitle.focuscontainer-x {
+    top: 13em;
+    left: 22em;
+    width: 34em !important;
+  }
+
+  .layout-tv .itemDetailPage:has(.button-link.itemAction.emby-button[data-type="Season"]) .itemName.infoText.originalTitle {
+    top: 18.5em !important;
+    left: 29% !important;
+    width: unset;
+    transform: translateX(-50%);
+  }
+
+  .layout-tv #childrenContent .itemsContainer.padded-right.itemsContainer-tv.vertical-list {
+    width: 55vw;
+  }
+}

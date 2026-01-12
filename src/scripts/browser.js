@@ -29,6 +29,14 @@ function isTv(userAgent) {
     return isWeb0s(userAgent);
 }
 
+function isMac(userAgent) {
+    return userAgent.includes('Phim Ne macOS');
+}
+
+function isIOS(userAgent) {
+    return userAgent.includes('Phim Ne iOS');
+}
+
 function isWeb0s(userAgent) {
     return userAgent.includes('netcast')
         || userAgent.includes('web0s');
@@ -294,6 +302,8 @@ export const detectBrowser = (userAgent = navigator.userAgent) => {
     browser.operaTv = browser.tv && normalizedUA.includes('opr/');
 
     browser.edgeUwp = (browser.edge || browser.edgeChromium) && (normalizedUA.includes('msapphost') || normalizedUA.includes('webview'));
+    browser.phimNeMac = isMac(normalizedUA);
+    browser.phimNeiOS = isIOS(normalizedUA);
 
     if (browser.web0s) {
         browser.web0sVersion = web0sVersion(browser);

@@ -2,7 +2,7 @@
  * @file Centralized helper utilities for Jellyfin Enhanced
  * Provides standardized functionality for hooking into page views and managing MutationObservers
  */
-(function(JE) {
+(function (JE) {
     'use strict';
 
 
@@ -21,6 +21,44 @@
     let fetchInProgress = null;
 
     /**
+     * Converts PascalCase object keys to camelCase recursively.
+     * @param {object} obj - The object to convert.
+     * @returns {object} - A new object with camelCase keys.
+     */
+    function toCamelCase(obj) {
+        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+            return obj; // Return primitives and arrays as-is
+        }
+        const camelCased = {};
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+                camelCased[camelKey] = toCamelCase(obj[key]); // Recursive for nested objects
+            }
+        }
+        return camelCased;
+    }
+
+    /**
+     * Converts object keys from camelCase to PascalCase (recursively).
+     * @param {object} obj - The object to convert.
+     * @returns {object} - A new object with PascalCase keys.
+     */
+    function toPascalCase(obj) {
+        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
+            return obj; // Return primitives and arrays as-is
+        }
+        const pascalCased = {};
+        for (const key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                const pascalKey = key.charAt(0).toUpperCase() + key.slice(1);
+                pascalCased[pascalKey] = toPascalCase(obj[key]); // Recursive for nested objects
+            }
+        }
+        return pascalCased;
+    }
+
+    /**
      * Initialize the utils by hooking into Emby.Page.onViewShow
      */
     function initialize() {
@@ -34,7 +72,7 @@
         originalOnViewShow = window.Emby.Page.onViewShow;
 
         // Override onViewShow to intercept page view changes
-        window.Emby.Page.onViewShow = function(view, element, hash) {
+        window.Emby.Page.onViewShow = function (view, element, hash) {
             // Call original handler first
             if (originalOnViewShow) {
                 try {
@@ -104,13 +142,13 @@
 
             const userId = ApiClient.getCurrentUserId();
             cachedItemId = itemId;
-            
+
             fetchInProgress = ApiClient.getItem(userId, itemId);
             const item = await fetchInProgress;
-            
+
             cachedItem = item;
             fetchInProgress = null;
-            
+
             return item;
         } catch (err) {
             console.error('🪼 Jellyfin Enhanced: Error fetching item:', err);
@@ -146,7 +184,7 @@
             try {
                 const currentView = getCurrentView();
                 const currentHash = window.location.hash;
-                
+
                 if (!options.pages || options.pages.includes(currentView)) {
                     const element = document.querySelector('.libraryPage:not(.hide)');
                     let itemPromise = null;
@@ -178,10 +216,10 @@
         if (!visiblePage) return null;
 
         // Try to get view from data attributes or id
-        return visiblePage.dataset.type || 
-               visiblePage.id || 
-               visiblePage.getAttribute('data-role') || 
-               null;
+        return visiblePage.dataset.type ||
+            visiblePage.id ||
+            visiblePage.getAttribute('data-role') ||
+            null;
     }
 
     /**
@@ -300,7 +338,7 @@
      */
     function throttle(func, limit) {
         let inThrottle;
-        return function(...args) {
+        return function (...args) {
             if (!inThrottle) {
                 func.apply(this, args);
                 inThrottle = true;
@@ -318,24 +356,24 @@
      */
     async function retry(fn, maxAttempts = 5, baseDelay = 1000) {
         let lastError;
-        
+
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 return await fn();
             } catch (error) {
                 lastError = error;
-                
+
                 if (attempt === maxAttempts) {
                     console.error(`🪼 Jellyfin Enhanced: Failed after ${maxAttempts} attempts:`, error);
                     throw error;
                 }
-                
+
                 const delay = baseDelay * Math.pow(2, attempt - 1);
                 console.warn(`🪼 Jellyfin Enhanced: Attempt ${attempt}/${maxAttempts} failed, retrying in ${delay}ms...`, error);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
-        
+
         throw lastError;
     }
 
@@ -346,7 +384,7 @@
      */
     function isElementVisible(element) {
         if (!element) return false;
-        
+
         const rect = element.getBoundingClientRect();
         return (
             rect.top >= 0 &&
@@ -366,22 +404,22 @@
     function waitForCondition(condition, timeout = 5000, interval = 100) {
         return new Promise((resolve) => {
             const startTime = Date.now();
-            
+
             const checkCondition = () => {
                 if (condition()) {
                     resolve(true);
                     return;
                 }
-                
+
                 if (Date.now() - startTime >= timeout) {
                     console.warn('🪼 Jellyfin Enhanced: Timeout waiting for condition');
                     resolve(false);
                     return;
                 }
-                
+
                 setTimeout(checkCondition, interval);
             };
-            
+
             checkCondition();
         });
     }
@@ -397,12 +435,12 @@
         if (existing) {
             existing.remove();
         }
-        
+
         const style = document.createElement('style');
         style.id = id;
         style.textContent = css;
         document.head.appendChild(style);
-        
+
     }
 
     /**
@@ -447,6 +485,8 @@
         isElementVisible,
         addCSS,
         removeCSS,
+        toPascalCase,
+        toCamelCase,
         getHandlerCount: () => handlers.length,
         getObserverCount: () => activeObservers.size
     };

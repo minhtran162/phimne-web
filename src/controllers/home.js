@@ -70,7 +70,7 @@ class HomeView extends TabbedView {
         const targetElements = document.querySelectorAll('.page.homePage');
 
         for (const element of targetElements) {
-            if (!element.classList.contains('hide') && (!browser.tv)) {
+            if (!element.classList.contains('hide')) {
                 this.createSlideshow();
                 break;
             }
@@ -127,6 +127,8 @@ class HomeView extends TabbedView {
             name: globalize.translate('Favorites')
         }, {
             name: globalize.translate('Watchlist')
+        }, {
+            name: globalize.translate('Bookmarks')
         }];
     }
 
@@ -141,12 +143,14 @@ class HomeView extends TabbedView {
             case 0:
                 depends = 'hometab';
                 break;
-
             case 1:
                 depends = 'favorites';
-
+                break;
             case 2:
                 depends = 'watchlist';
+                break;
+            case 3:
+                depends = 'bookmarks';
                 break;
         }
 

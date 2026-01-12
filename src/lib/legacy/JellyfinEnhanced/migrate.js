@@ -115,7 +115,7 @@
                 JE.saveUserSettings('settings.json', userSettings),
                 JE.saveUserSettings('shortcuts.json', userShortcuts),
                 JE.saveUserSettings('elsewhere.json', elsewhereSettings),
-                JE.saveUserSettings('bookmarks.json', userBookmarks)
+                JE.saveUserSettings('bookmark.json', userBookmarks)
             ]);
 
             clearLocalStorage();

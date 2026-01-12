@@ -831,7 +831,21 @@ const initializeJellyfinEnhanced = async () => {
                 if (typeof JE.loadSettings === 'function') JE.currentSettings = JE.loadSettings();
                 if (typeof JE.initializeShortcuts === 'function') JE.initializeShortcuts();
                 if (typeof JE.themer?.init === 'function') JE.themer.init();
+
+                // Initialize feature modules
                 if (typeof JE.initializeEnhancedScript === 'function') JE.initializeEnhancedScript();
+                if (typeof JE.initializePauseScreen === 'function') JE.initializePauseScreen();
+                if (typeof JE.initializeBookmarksLibrary === 'function') JE.initializeBookmarksLibrary();
+                if (typeof JE.initializeBookmarks === 'function') JE.initializeBookmarks();
+                if (typeof JE.initializeQualityTags === 'function') JE.initializeQualityTags();
+                if (typeof JE.initializeGenreTags === 'function') JE.initializeGenreTags();
+                if (typeof JE.initializeRatingTags === 'function') JE.initializeRatingTags();
+                if (typeof JE.initializeArrLinksScript === 'function') JE.initializeArrLinksScript();
+                if (typeof JE.initializeArrTagLinksScript === 'function') JE.initializeArrTagLinksScript();
+                if (typeof JE.initializeLetterboxdLinksScript === 'function') JE.initializeLetterboxdLinksScript();
+                if (typeof JE.initializeReviewsScript === 'function') JE.initializeReviewsScript();
+                if (typeof JE.initializeLanguageTags === 'function') JE.initializeLanguageTags();
+                if (typeof JE.initializeOsdRating === 'function') JE.initializeOsdRating();
 
                 // Hide splash after core init
                 if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();

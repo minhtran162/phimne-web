@@ -39,12 +39,13 @@
     display: none;
 }
 
-.layout-mobile  .listItemBody {
+.layout-mobile .listItemBody {
     background-color: #00000045;
     border-radius: 4px;
     width: 100%;
     display: flex;
 }
+
 .layout-mobile .listItemBody>.listItemBodyText:not(.secondary) {
     -webkit-line-clamp: 1 !important;
 }
