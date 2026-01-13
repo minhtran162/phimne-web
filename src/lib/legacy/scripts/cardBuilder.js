@@ -1,3 +1,6 @@
+import datetime from 'scripts/datetime';
+import globalize from 'lib/globalize';
+
 // Jellyfin Card Builder
 // This module provides a main entry point function to build Jellyfin cards
 // Usage: window.cardBuilder.buildCard(jellyfinItem)
@@ -131,7 +134,7 @@
 
     /**
      * Optimized Image Fetcher for Jellyfin
-     * * @param {Object} item - The Jellyfin item object
+     * @param {Object} item - The Jellyfin item object
      * @param {String} type - 'backdrop', 'thumb', 'square', or 'portrait'
      * @param {Object} options - { width, height, quality, fillWidth, fillHeight } (CSS pixels)
      * @param {String} serverAddress - Base URL of the server
@@ -161,8 +164,6 @@
 
             // Handle specific "Fill" logic (cropping) if needed
             if (options.fillWidth && options.fillHeight) {
-                urlParams.set('width', Math.round(options.fillWidth * dpr));
-                urlParams.set('height', Math.round(options.fillHeight * dpr));
                 urlParams.set('fillWidth', Math.round(options.fillWidth * dpr));
                 urlParams.set('fillHeight', Math.round(options.fillHeight * dpr));
             }
@@ -234,7 +235,7 @@
             return {
                 cardClass: overflowCard ? 'overflowBackdropCard' : 'backdropCard',
                 padderClass: overflowCard ? 'cardPadder-overflowBackdrop' : 'cardPadder-backdrop',
-                imageParams: {fillHeight: 267, fillWidth: 474, quality: 90}
+                imageParams: { fillHeight: 267, fillWidth: 474, quality: 90 }
             };
         }
 
@@ -242,15 +243,15 @@
             return {
                 cardClass: overflowCard ? 'overflowSquareCard' : 'squareCard',
                 padderClass: overflowCard ? 'cardPadder-overflowSquare' : 'cardPadder-square',
-                imageParams: {fillHeight: 297, fillWidth: 297, quality: 90}
+                imageParams: { fillHeight: 297, fillWidth: 297, quality: 90 }
             };
         }
 
-        // Portrait (default) - higher res for desktop/mobile
+        // Portrait (default) - lower res/quality for mobile/low-end
         return {
             cardClass: overflowCard ? 'overflowPortraitCard' : 'portraitCard',
             padderClass: overflowCard ? 'cardPadder-overflowPortrait' : 'cardPadder-portrait',
-            imageParams: isMobile ? {fillHeight: 786, fillWidth: 524, quality: 90} : {fillHeight: 786, fillWidth: 524, quality: 90}
+            imageParams: isMobile ? { fillHeight: 524, fillWidth: 524, quality: 80 } : { fillHeight: 786, fillWidth: 524, quality: 90 }
         };
     }
 
@@ -276,12 +277,46 @@
         return textContainer;
     }
 
+    // Shared helper: Get year text
+    function getYearText(item) {
+        let yearText = '';
+        if (item.Type === 'Series') {
+            const startYear = item.PremiereDate?.substring(0, 4) || item.ProductionYear || '';
+            if (item.Status === 'Continuing') {
+                yearText = globalize.translate('SeriesYearToPresent', startYear);
+            } else if (item.EndDate && item.ProductionYear) {
+                const endYear = datetime.toLocaleString(datetime.parseISO8601Date(item.EndDate).getFullYear(), { useGrouping: false });
+                yearText = `${startYear} - ${endYear}`;
+            } else {
+                yearText = startYear;
+            }
+        } else {
+            yearText = item.ProductionYear || '';
+        }
+        return yearText;
+    }
+
     // Create Mobile Card
     function createMobileCard(item, serverId, serverAddress) {
         const card = document.createElement('div');
         const isFolderItem = isFolder(item);
 
-        card.className = `card overflowPortraitCard ${isFolderItem ? 'groupedCard' : ''} card-withuserdata`;
+        // Determine card format based on item type
+        let cardFormat = 'portrait';
+        if (item.Type === 'Episode') {
+            cardFormat = 'backdrop';
+        }
+
+        const config = getCardFormatConfig(cardFormat, item.Type, true, true); // isMobile=true for optimization
+
+        // Set card classes
+        const cardClasses = ['card', config.cardClass, 'card-withuserdata'];
+        if (isFolderItem) {
+            cardClasses.push('groupedCard');
+        }
+        card.className = cardClasses.join(' ');
+
+        // Set card attributes
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', isFolderItem.toString());
         card.setAttribute('data-serverid', serverId);
@@ -290,72 +325,111 @@
         card.setAttribute('data-mediatype', item.MediaType || 'Unknown');
         if (item.Path) card.setAttribute('data-path', item.Path);
         card.setAttribute('data-context', 'home');
+        if (item.EndDate) card.setAttribute('data-enddate', item.EndDate);
         if (item.Name?.startsWith('The ')) card.setAttribute('data-prefix', 'THE');
 
+        // Create cardBox
         const cardBox = document.createElement('div');
         cardBox.className = 'cardBox cardBox-bottompadded';
 
+        // Create cardScalable
         const cardScalable = document.createElement('div');
         cardScalable.className = 'cardScalable';
 
+        // Create cardPadder
         const cardPadder = document.createElement('div');
-        cardPadder.className = 'cardPadder cardPadder-overflowPortrait lazy-hidden-children';
+        cardPadder.className = `cardPadder ${config.padderClass} lazy-hidden-children`;
         cardPadder.appendChild(createIcon(item.Type));
 
+        // Create blurhash canvas
+        const canvas = createBlurhashCanvas();
+
+        // Create cardImageContainer
         const cardImageContainer = document.createElement('a');
-        cardImageContainer.href = `${serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
-        cardImageContainer.className = 'cardImageContainer cardContent itemAction lazy blurhashed lazy-image-fadein-fast';
+        cardImageContainer.href = `#/details?id=${item.Id}&serverId=${serverId}`;
         cardImageContainer.setAttribute('data-action', 'link');
+        cardImageContainer.className = 'cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast';
         cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
 
-        const imageUrl = getImageUrl(item, 'portrait', {fillHeight: 524, fillWidth: 524, quality: 90}, serverAddress);
+        // Set background image
+        const imageUrl = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
         if (imageUrl) {
             cardImageContainer.style.backgroundImage = `url("${imageUrl}")`;
-        } else {
-            cardImageContainer.appendChild(createIcon(item.Type));
         }
 
-        // Indicators
-        const cardIndicators = document.createElement('div');
-        cardIndicators.className = 'cardIndicators';
-
+        // Add indicators for folders (ChildCount) or played status
         if (isFolderItem && item.ChildCount !== undefined) {
+            const cardIndicators = document.createElement('div');
+            cardIndicators.className = 'cardIndicators';
+
             const countIndicator = document.createElement('div');
             countIndicator.className = 'countIndicator indicator';
             countIndicator.textContent = item.ChildCount;
             cardIndicators.appendChild(countIndicator);
-        } else if (item.UserData?.Played) {
-            const playedIndicator = document.createElement('div');
-            playedIndicator.className = 'playedIndicator indicator';
-            playedIndicator.innerHTML = '<span class="material-icons indicatorIcon check" aria-hidden="true"></span>';
-            cardIndicators.appendChild(playedIndicator);
-        }
 
-        if (cardIndicators.children.length > 0) {
             cardImageContainer.appendChild(cardIndicators);
         }
 
-        // Play button
+        // Create play button
         const playButton = document.createElement('button');
         playButton.setAttribute('is', 'paper-icon-button-light');
         playButton.className = 'cardOverlayButton cardOverlayButton-br itemAction paper-icon-button-light';
         playButton.setAttribute('data-action', 'play');
-        playButton.title = 'Play';
+        playButton.title = 'Phát';
         playButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon play_arrow" aria-hidden="true"></span>';
 
+        // Assemble cardScalable
         cardScalable.appendChild(cardPadder);
-        cardScalable.appendChild(createBlurhashCanvas());
+        cardScalable.appendChild(canvas);
         cardScalable.appendChild(cardImageContainer);
         cardScalable.appendChild(playButton);
 
+        // Add cardScalable to cardBox
         cardBox.appendChild(cardScalable);
-        cardBox.appendChild(createCardText(item, serverId, serverAddress));
 
-        const secondaryText = document.createElement('div');
-        secondaryText.className = 'cardText cardTextCentered';
-        secondaryText.innerHTML = '&nbsp;';
-        cardBox.appendChild(secondaryText);
+        // Create card text based on item type
+        if (item.Type === 'Episode') {
+            // Episode: First line is Series name, second line is episode info
+            const seriesText = createCardText({...item, Id: item.SeriesId || item.Id, Name: item.SeriesName || 'Unknown Series', Type: 'Series'}, serverId, serverAddress);
+            cardBox.appendChild(seriesText);
 
+            // Episode info
+            const episodeText = document.createElement('div');
+            episodeText.className = 'cardText cardTextCentered cardText-secondary';
+
+            const episodeBdi = document.createElement('bdi');
+            const episodeLink = document.createElement('a');
+            episodeLink.href = `#/details?id=${item.Id}&serverId=${serverId}`;
+            episodeLink.setAttribute('data-id', item.Id);
+            episodeLink.setAttribute('data-serverid', serverId);
+            episodeLink.setAttribute('data-type', 'Episode');
+            episodeLink.setAttribute('data-mediatype', 'undefined');
+            episodeLink.setAttribute('data-channelid', 'undefined');
+            episodeLink.setAttribute('data-isfolder', 'false');
+            episodeLink.className = 'itemAction textActionButton';
+
+            const episodeTitle = item.IndexNumber && item.ParentIndexNumber
+                ? `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}`
+                : item.Name;
+            episodeLink.title = episodeTitle;
+            episodeLink.setAttribute('data-action', 'link');
+            episodeLink.textContent = episodeTitle;
+
+            episodeBdi.appendChild(episodeLink);
+            episodeText.appendChild(episodeBdi);
+            cardBox.appendChild(episodeText);
+        } else {
+            // Movie or Series: First line is title
+            cardBox.appendChild(createCardText(item, serverId, serverAddress));
+
+            // Second line: Year info
+            const secondaryText = document.createElement('div');
+            secondaryText.className = 'cardText cardTextCentered cardText-secondary';
+            secondaryText.innerHTML = `<bdi>${getYearText(item)}</bdi>`;
+            cardBox.appendChild(secondaryText);
+        }
+
+        // Add cardBox to card
         card.appendChild(cardBox);
         return card;
     }
@@ -481,7 +555,7 @@
 
         const secondaryText = document.createElement('div');
         secondaryText.className = 'cardText cardTextCentered cardText-secondary';
-        secondaryText.innerHTML = `<bdi>${item.ProductionYear || item.PremiereDate?.substring(0, 4) || ''}</bdi>`;
+        secondaryText.innerHTML = `<bdi>${getYearText(item)}</bdi>`;
         cardBox.appendChild(secondaryText);
 
         card.appendChild(cardBox);
@@ -569,7 +643,7 @@
 
             const secondaryText = document.createElement('div');
             secondaryText.className = 'cardText cardTextCentered cardText-secondary';
-            secondaryText.innerHTML = `<bdi>${item.ProductionYear || item.PremiereDate?.substring(0, 4) || ''}</bdi>`;
+            secondaryText.innerHTML = `<bdi>${getYearText(item)}</bdi>`;
             cardBox.appendChild(secondaryText);
         }
 
@@ -1006,8 +1080,6 @@
         scroller.setAttribute('is', 'emby-scroller');
         scroller.setAttribute('data-horizontal', 'true');
         scroller.setAttribute('data-centerfocus', 'card');
-        scroller.setAttribute('data-centerfocus', 'card');
-        scroller.setAttribute('data-scroll-mode-x', 'custom');
         scroller.setAttribute('data-scroll-mode-x', 'custom');
         const itemsContainer = document.createElement('div');
         itemsContainer.setAttribute('is', 'emby-itemscontainer');

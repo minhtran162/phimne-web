@@ -27,9 +27,6 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
     // Store watchlist tab index
     let _watchlistTabIndex = null;
 
-    const bookmarksData = localStorageCache.get('bookmarks');
-
-    console.log("hehe: ", bookmarksData);
     // Data optimization functions for localStorage storage
     function optimizeProgressDataForStorage(progressDataArray) {
         return progressDataArray.map(progress => ({
@@ -1732,6 +1729,30 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
 
         // Replace history entry instead of adding new one
         window.history.replaceState(null, '', newUrl);
+    }
+
+    function navigateToTabPage(tabName, page) {
+        const searchTerm = tabName === 'progress' ? progressCache.searchTerm : '';
+        const movieSearchTerm = tabName === 'history' ? movieCache.searchTerm : '';
+        updateUrlWithSearch(tabName, page, searchTerm, movieSearchTerm);
+        if (tabName === 'history') {
+            renderHistoryContent();
+        } else if (tabName === 'progress') {
+            renderProgressContent();
+        } else if (tabName === 'watchlist') {
+            renderWatchlistContent();
+        } else if (tabName === 'statistics') {
+            renderStatisticsContent();
+        }
+    }
+
+    function applySearch(tabName, searchTerm = '', movieSearchTerm = '') {
+        updateUrlWithSearch(tabName, 1, searchTerm, movieSearchTerm);
+        if (tabName === 'history') {
+            renderHistoryContent();
+        } else if (tabName === 'progress') {
+            renderProgressContent();
+        }
     }
 
     // Sorting configuration and functions
@@ -5393,17 +5414,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
                 const page = parseInt(button.dataset.page);
 
                 if (page && page !== currentPage) {
-                    // Get search terms based on tab
-                    const searchTerm = tabName === 'progress' ? progressCache.searchTerm : '';
-                    const movieSearchTerm = tabName === 'history' ? movieCache.searchTerm : '';
-
-                    updateUrlWithSearch(tabName, page, searchTerm, movieSearchTerm);
-
-                    if (tabName === 'history') {
-                        renderHistoryContent();
-                    } else {
-                        renderProgressContent();
-                    }
+                    navigateToTabPage(tabName, page);
                 }
             });
         };
@@ -6417,10 +6428,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 updateSearchResults(searchTerm);
-                // Update URL with search term
-                const params = getUrlParams();
-                updateUrlWithSearch(params.pageTab, 1, searchTerm); // Reset to page 1 when searching
-                renderProgressContent();
+                applySearch('progress', searchTerm);
             }, 300); // 300ms delay
         };
 
@@ -6444,10 +6452,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             searchInput.value = '';
             clearBtn.style.display = 'none';
             updateSearchResults('');
-            // Update URL to remove search parameter
-            const params = getUrlParams();
-            updateUrlWithSearch(params.pageTab, 1, ''); // Reset to page 1 when clearing
-            renderProgressContent();
+            applySearch('progress', '');
         });
 
         // Mark as setup to prevent duplicates
@@ -6475,10 +6480,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
                 updateMovieSearchResults(searchTerm);
-                // Update URL with search term
-                const params = getUrlParams();
-                updateUrlWithSearch(params.pageTab, 1, '', searchTerm); // Reset to page 1 when searching
-                renderHistoryContent();
+                applySearch('history', '', searchTerm);
             }, 300); // 300ms delay
         };
 
@@ -6502,10 +6504,7 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
             searchInput.value = '';
             clearBtn.style.display = 'none';
             updateMovieSearchResults('');
-            // Update URL to remove search parameter
-            const params = getUrlParams();
-            updateUrlWithSearch(params.pageTab, 1, '', ''); // Reset to page 1 when clearing
-            renderHistoryContent();
+            applySearch('history', '', '');
         });
 
         // Mark as setup to prevent duplicates
