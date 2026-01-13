@@ -70,7 +70,7 @@ class HomeView extends TabbedView {
         const targetElements = document.querySelectorAll('.page.homePage');
 
         for (const element of targetElements) {
-            if (!element.classList.contains('hide')) {
+            if (!element.classList.contains('hide') && (!browser.tv)) {
                 this.createSlideshow();
                 break;
             }
