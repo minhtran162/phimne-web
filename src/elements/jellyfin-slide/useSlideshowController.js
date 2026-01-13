@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * - Autoplay timer that never goes stale
  * - Preloading next slide images (backdrop + logo)
  * - Lazy-loading by default (only fetch what you need)
+ * - Optimized image fetching based on device resolution
  */
 export function useSlideshowController({
     shuffleInterval = 15000,
@@ -130,26 +131,46 @@ export function useSlideshowController({
         const base = getBaseUrl();
         if (!base || !movie?.Id) return { backdrop: null, logo: null, hasBackdrop: false, hasLogo: false };
 
-        const backdropUrl = `${base}/Items/${encodeURIComponent(movie.Id)}/Images/Backdrop/0`;
-        const logoUrl = `${base}/Items/${encodeURIComponent(movie.Id)}/Images/Logo`;
+        // 1. Construct CLEAN URLs for checking existence (avoids triggering server-side resize)
+        const cleanBackdropUrl = `${base}/Items/${encodeURIComponent(movie.Id)}/Images/Backdrop/0`;
+        const cleanLogoUrl = `${base}/Items/${encodeURIComponent(movie.Id)}/Images/Logo`;
 
-        // HEAD check
+        // 2. Perform HEAD check on clean URLs
         const [hasBackdrop, hasLogo] = await Promise.all([
-            fetch(backdropUrl, { method: 'HEAD', headers: { Authorization: getAuthHeader() } }).then(r => r.ok).catch(() => false),
-            fetch(logoUrl, { method: 'HEAD', headers: { Authorization: getAuthHeader() } }).then(r => r.ok).catch(() => false)
+            fetch(cleanBackdropUrl, { method: 'HEAD', headers: { Authorization: getAuthHeader() } }).then(r => r.ok).catch(() => false),
+            fetch(cleanLogoUrl, { method: 'HEAD', headers: { Authorization: getAuthHeader() } }).then(r => r.ok).catch(() => false)
         ]);
 
-        // Preload images if available
+        // 3. Calculate optimized dimensions based on device resolution
+        // Use devicePixelRatio to ensure sharpness on Retina/High-DPI displays
+        const ratio = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+        const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+        // Backdrop: Fill the viewport
+        const backdropW = Math.round(screenWidth * ratio);
+        const backdropH = Math.round(screenHeight * ratio);
+        
+        // Logo: Usually an overlay, so we don't need 4K logos. 
+        // Cap width at 800px (scaled by ratio) or screen width, whichever is smaller.
+        const logoW = Math.min(Math.round(800 * ratio), backdropW);
+
+        // 4. Construct OPTIMIZED URLs for actual display
+        // Quality=90 is a good balance for Jellyfin
+        const optimizedBackdropUrl = `${cleanBackdropUrl}?maxWidth=${backdropW}&maxHeight=${backdropH}&quality=90`;
+        const optimizedLogoUrl = `${cleanLogoUrl}?maxWidth=${logoW}&quality=90`;
+
+        // 5. Preload images using the OPTIMIZED URLs
         if (hasBackdrop) {
-            try { const img = new Image(); img.src = backdropUrl; } catch { }
+            try { const img = new Image(); img.src = optimizedBackdropUrl; } catch { }
         }
         if (hasLogo) {
-            try { const img = new Image(); img.src = logoUrl; } catch { }
+            try { const img = new Image(); img.src = optimizedLogoUrl; } catch { }
         }
 
         return {
-            backdrop: hasBackdrop ? backdropUrl : null,
-            logo: hasLogo ? logoUrl : null,
+            backdrop: hasBackdrop ? optimizedBackdropUrl : null,
+            logo: hasLogo ? optimizedLogoUrl : null,
             hasBackdrop,
             hasLogo
         };

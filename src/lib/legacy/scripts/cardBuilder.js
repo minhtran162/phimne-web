@@ -129,44 +129,99 @@
         return item.IsFolder || ['Series', 'Season', 'BoxSet', 'MusicAlbum'].includes(item.Type);
     }
 
-    // Shared helper: Get image URL with fallback chain
-    function getImageUrl(item, format, params, serverAddress) {
-        const { Id, ImageTags = {}, ParentThumbImageTag, ParentThumbItemId,
-            BackdropImageTags = [], ParentBackdropImageTags = [],
-            ParentBackdropItemId, SeriesPrimaryImageTag, SeriesId } = item;
+    /**
+     * Optimized Image Fetcher for Jellyfin
+     * * @param {Object} item - The Jellyfin item object
+     * @param {String} type - 'backdrop', 'thumb', 'square', or 'portrait'
+     * @param {Object} options - { width, height, quality, fillWidth, fillHeight } (CSS pixels)
+     * @param {String} serverAddress - Base URL of the server
+     */
+    function getImageUrl(item, type, options = {}, serverAddress) {
+        if (!item) return '';
 
-        // Format-specific logic
-        if (format === 'backdrop' || format === 'thumb') {
-            if (ImageTags.Thumb) {
-                return `${serverAddress}/Items/${Id}/Images/Thumb?${params}&quality=96&tag=${ImageTags.Thumb}`;
+        // 1. Calculate dimensions based on Device Pixel Ratio (DPR)
+        const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+
+        // Helper to build the final URL
+        const buildUrl = (itemId, imageType, tag) => {
+            const urlParams = new URLSearchParams();
+
+            // Base quality params
+            urlParams.set('tag', tag);
+            urlParams.set('quality', options.quality || 90); // 90 is usually indistinguishable from 96 but smaller
+
+            // Calculate physical pixels requested from server
+            // If width is provided, scale it by DPR. Jellyfin will resize server-side.
+            if (options.width) {
+                urlParams.set('maxWidth', Math.round(options.width * dpr));
             }
-            if (BackdropImageTags[0]) {
-                return `${serverAddress}/Items/${Id}/Images/Backdrop?${params}&quality=96&tag=${BackdropImageTags[0]}`;
+            if (options.height) {
+                urlParams.set('maxHeight', Math.round(options.height * dpr));
             }
-            if (ParentBackdropImageTags?.[0]) {
-                return `${serverAddress}/Items/${ParentBackdropItemId}/Images/Backdrop?${params}&quality=96&tag=${ParentBackdropImageTags[0]}`;
+
+            // Handle specific "Fill" logic (cropping) if needed
+            if (options.fillWidth && options.fillHeight) {
+                urlParams.set('width', Math.round(options.fillWidth * dpr));
+                urlParams.set('height', Math.round(options.fillHeight * dpr));
+                urlParams.set('fillWidth', Math.round(options.fillWidth * dpr));
+                urlParams.set('fillHeight', Math.round(options.fillHeight * dpr));
             }
-        } else if (format === 'square') {
-            if (ImageTags.Primary) {
-                return `${serverAddress}/Items/${Id}/Images/Primary?${params}&quality=96&tag=${ImageTags.Primary}`;
-            }
-            if (ImageTags.Thumb) {
-                return `${serverAddress}/Items/${Id}/Images/Thumb?${params}&quality=96&tag=${ImageTags.Thumb}`;
-            }
-        } else {
-            // Portrait/default
-            if (ImageTags.Primary) {
-                return `${serverAddress}/Items/${Id}/Images/Primary?${params}&quality=96&tag=${ImageTags.Primary}`;
-            }
-            if (ImageTags.Thumb) {
-                return `${serverAddress}/Items/${Id}/Images/Thumb?${params}&quality=96&tag=${ImageTags.Thumb}`;
-            }
-            if (ParentThumbImageTag) {
-                return `${serverAddress}/Items/${ParentThumbItemId}/Images/Thumb?${params}&quality=96&tag=${ParentThumbImageTag}`;
-            }
-            if (SeriesPrimaryImageTag) {
-                return `${serverAddress}/Items/${SeriesId}/Images/Primary?${params}&quality=96&tag=${SeriesPrimaryImageTag}`;
-            }
+
+            return `${serverAddress}/Items/${itemId}/Images/${imageType}?${urlParams.toString()}`;
+        };
+
+        // Destructure item properties for easier access
+        const {
+            Id,
+            ImageTags = {},
+            ParentThumbImageTag,
+            ParentThumbItemId,
+            BackdropImageTags = [],
+            ParentBackdropImageTags = [],
+            ParentBackdropItemId,
+            SeriesPrimaryImageTag,
+            SeriesId
+        } = item;
+
+        // 2. Fallback Logic Chain
+        switch (type) {
+            case 'backdrop':
+            case 'thumb':
+                // Priority: Thumb -> Backdrop -> Parent Backdrop
+                if (ImageTags.Thumb)
+                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
+
+                if (BackdropImageTags[0])
+                    return buildUrl(Id, 'Backdrop', BackdropImageTags[0]);
+
+                if (ParentBackdropImageTags?.[0] && ParentBackdropItemId)
+                    return buildUrl(ParentBackdropItemId, 'Backdrop', ParentBackdropImageTags[0]);
+                break;
+
+            case 'square':
+                // Priority: Primary -> Thumb
+                if (ImageTags.Primary)
+                    return buildUrl(Id, 'Primary', ImageTags.Primary);
+
+                if (ImageTags.Thumb)
+                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
+                break;
+
+            case 'portrait':
+            default: // Default covers 'portrait' logic
+                // Priority: Primary -> Thumb -> Parent Thumb -> Series Primary
+                if (ImageTags.Primary)
+                    return buildUrl(Id, 'Primary', ImageTags.Primary);
+
+                if (ImageTags.Thumb)
+                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
+
+                if (ParentThumbImageTag && ParentThumbItemId)
+                    return buildUrl(ParentThumbItemId, 'Thumb', ParentThumbImageTag);
+
+                if (SeriesPrimaryImageTag && SeriesId)
+                    return buildUrl(SeriesId, 'Primary', SeriesPrimaryImageTag);
+                break;
         }
         return '';
     }
@@ -179,7 +234,7 @@
             return {
                 cardClass: overflowCard ? 'overflowBackdropCard' : 'backdropCard',
                 padderClass: overflowCard ? 'cardPadder-overflowBackdrop' : 'cardPadder-backdrop',
-                imageParams: 'fillHeight=267&fillWidth=474'
+                imageParams: {fillHeight: 267, fillWidth: 474, quality: 90}
             };
         }
 
@@ -187,7 +242,7 @@
             return {
                 cardClass: overflowCard ? 'overflowSquareCard' : 'squareCard',
                 padderClass: overflowCard ? 'cardPadder-overflowSquare' : 'cardPadder-square',
-                imageParams: 'fillHeight=297&fillWidth=297'
+                imageParams: {fillHeight: 297, fillWidth: 297, quality: 90}
             };
         }
 
@@ -195,7 +250,7 @@
         return {
             cardClass: overflowCard ? 'overflowPortraitCard' : 'portraitCard',
             padderClass: overflowCard ? 'cardPadder-overflowPortrait' : 'cardPadder-portrait',
-            imageParams: isMobile ? 'fillHeight=524&fillWidth=524&quality=96' : 'fillHeight=786&fillWidth=524'
+            imageParams: isMobile ? {fillHeight: 786, fillWidth: 524, quality: 90} : {fillHeight: 786, fillWidth: 524, quality: 90}
         };
     }
 
@@ -253,7 +308,7 @@
         cardImageContainer.setAttribute('data-action', 'link');
         cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
 
-        const imageUrl = getImageUrl(item, 'portrait', 'fillHeight=524&fillWidth=524&quality=96', serverAddress);
+        const imageUrl = getImageUrl(item, 'portrait', {fillHeight: 524, fillWidth: 524, quality: 90}, serverAddress);
         if (imageUrl) {
             cardImageContainer.style.backgroundImage = `url("${imageUrl}")`;
         } else {
