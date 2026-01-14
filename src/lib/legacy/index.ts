@@ -19,6 +19,11 @@ import './keyboardEvent';
 import './patchHeaders';
 import './vendorStyles';
 
+if (browser.mobile || browser.tablet || browser.tv || browser.iOS || browser.osx) {
+    import('./EventEmitter');
+    import('./nativeshell');
+}
+
 // Load config tweaks for developer and tizen
 const protocol = window.location.protocol;
 if (browser.tizen || protocol === 'http:') {

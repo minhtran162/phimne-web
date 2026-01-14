@@ -69,7 +69,8 @@ function isTablet(userAgent) {
         'ipad',
         'kindle fire',
         'opera mini',
-        'tablet'
+        'tablet',
+        'android'
     ];
 
     for (const term of terms) {
