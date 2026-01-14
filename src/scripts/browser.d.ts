@@ -17,6 +17,7 @@ declare namespace browser {
     export let ps4: boolean;
     export let tv: boolean;
     export let mobile: boolean;
+    export let tablet: boolean;
     export let xboxOne: boolean;
     export let animate: boolean;
     export let hisense: boolean;

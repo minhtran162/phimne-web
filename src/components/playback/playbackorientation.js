@@ -13,25 +13,35 @@ function onOrientationChangeError(err) {
     console.error('error locking orientation: ' + err);
 }
 
+function tryLockLandscape() {
+    try {
+        const orientation = window.screen.orientation;
+
+        if (!orientation || typeof orientation.lock !== 'function') {
+            return; // unsupported, move on with life
+        }
+
+        const result = orientation.lock('landscape');
+
+        if (result && typeof result.then === 'function') {
+            result.catch(() => {
+                /* ignore – orientation is best-effort */
+            });
+        }
+    } catch {
+        // NotSupportedError, SecurityError, Illegal invocation
+        // All non-fatal. Do absolutely nothing.
+    }
+}
+
 Events.on(playbackManager, 'playbackstart', function (e, player) {
-    const isLocalVideo = player.isLocalPlayer && !player.isExternalPlayer && playbackManager.isPlayingVideo(player);
+    const isLocalVideo =
+        player.isLocalPlayer &&
+        !player.isExternalPlayer &&
+        playbackManager.isPlayingVideo(player);
 
     if (isLocalVideo && layoutManager.mobile) {
-        const lockOrientation = window.screen.lockOrientation || window.screen.mozLockOrientation || window.screen.msLockOrientation || (window.screen.orientation?.lock);
-
-        if (lockOrientation) {
-            try {
-                const promise = lockOrientation('landscape');
-                if (promise.then) {
-                    promise.then(onOrientationChangeSuccess, onOrientationChangeError);
-                } else {
-                    // returns a boolean
-                    orientationLocked = promise;
-                }
-            } catch (err) {
-                onOrientationChangeError(err);
-            }
-        }
+        tryLockLandscape();
     }
 });
 

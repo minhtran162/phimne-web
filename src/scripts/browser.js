@@ -64,6 +64,23 @@ function isMobile(userAgent) {
     return false;
 }
 
+function isTablet(userAgent) {
+    const terms = [
+        'ipad',
+        'kindle fire',
+        'opera mini',
+        'tablet'
+    ];
+
+    for (const term of terms) {
+        if (userAgent.includes(term)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function hasKeyboard(browser) {
     if (browser.touch) {
         return true;
@@ -289,6 +306,10 @@ export const detectBrowser = (userAgent = navigator.userAgent) => {
         browser.mobile = true;
     }
 
+    if (isTablet(normalizedUA)) {
+        browser.tablet = true;
+    }
+
     browser.ps4 = normalizedUA.includes('playstation 4');
     browser.xboxOne = normalizedUA.includes('xbox');
 
@@ -326,7 +347,7 @@ export const detectBrowser = (userAgent = navigator.userAgent) => {
         browser.orsay = normalizedUA.includes('smarthub');
     }
 
-    if (browser.mobile || browser.tv) {
+    if (browser.mobile || browser.tv || browser.xboxOne || browser.ps4 || browser.tizen || browser.web0s || browser.tablet) {
         browser.slow = true;
     }
 
