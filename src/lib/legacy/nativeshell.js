@@ -1,4 +1,4 @@
-export { };
+export {};
 
 console.log('[NativeBridge] NativeInterface attached:', typeof window.NativeInterface);
 
@@ -28,6 +28,31 @@ let deviceId
 let deviceName
 let appName
 let appVersion
+
+function getBrowserDeviceId() {
+    const key = "jellyfin_device_id";
+    let id = localStorage.getItem(key);
+    if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(key, id);
+    }
+    return id;
+}
+
+function getBrowserDeviceInfo() {
+    const ua = navigator.userAgent;
+
+    const platform = ua.toLowerCase().includes('chrome') ? 'Chrome' :
+        ua.toLowerCase().includes('safari') ? 'Safari' :
+            ua.toLowerCase().includes('firefox') ? 'Firefox' :
+                'HTML5';
+    return {
+        deviceId: getBrowserDeviceId(),
+        deviceName: platform,
+        appName: "Phim Ne",
+        appVersion: "10.11.5"
+    };
+}
 
 window.NativeShell = {
     enableFullscreen() {
@@ -141,12 +166,27 @@ function getDeviceProfile(profileBuilder, item) {
 window.NativeShell.AppHost = {
     init() {
         try {
-            const result = JSON.parse(window.NativeInterface.getDeviceInformation());
-            // set globally so they can be used elsewhere
-            deviceId = result.deviceId;
-            deviceName = result.deviceName;
-            appName = result.appName;
-            appVersion = result.appVersion;
+            // Native environment
+            if (
+                window.NativeInterface &&
+                typeof window.NativeInterface.getDeviceInformation === "function"
+            ) {
+                const result = JSON.parse(
+                    window.NativeInterface.getDeviceInformation()
+                );
+
+                deviceId = result.deviceId;
+                deviceName = result.deviceName;
+                appName = result.appName;
+                appVersion = result.appVersion;
+            } else {
+                // Browser environment
+                const info = getBrowserDeviceInfo();
+                deviceId = info.deviceId;
+                deviceName = info.deviceName;
+                appName = info.appName;
+                appVersion = info.appVersion;
+            }
 
             return Promise.resolve({
                 deviceId,
@@ -159,7 +199,7 @@ window.NativeShell.AppHost = {
         }
     },
     getDefaultLayout() {
-        return "mobile";
+        return "desktop";
     },
     supports(command) {
         return features.includes(command.toLowerCase());
