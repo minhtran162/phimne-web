@@ -24,15 +24,6 @@ const plugins = [
     'ExternalPlayerPlugin'
 ];
 
-// Add plugin loaders
-for (const plugin of plugins) {
-    window[plugin] = async () => {
-        const pluginDefinition = await import(`/${plugin}.js`);
-        return pluginDefinition[plugin];
-    };
-}
-
-
 let deviceId
 let deviceName
 let appName
