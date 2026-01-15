@@ -1,7 +1,7 @@
 import browser from '@/scripts/browser';
 import appSettings from '@/scripts/settings/appSettings';
 
-export { };
+export {};
 
 console.log('[NativeBridge] NativeInterface attached:', typeof window.NativeInterface);
 
@@ -80,7 +80,6 @@ function getDeviceName() {
 }
 
 function getBrowserDeviceInfo() {
-
     return {
         deviceId: getDeviceId(),
         deviceName: getDeviceName(),
@@ -89,34 +88,14 @@ function getBrowserDeviceInfo() {
     };
 }
 
-window.NativeShell = {
-    enableFullscreen() {},
-    disableFullscreen() {},
-    openUrl(url, target) {},
-    updateMediaSession(mediaInfo) {},
-    hideMediaSession() {},
-    updateVolumeLevel(value) {},
-    downloadFile(downloadInfo) {},
-    downloadFiles(downloadInfo) {},
-    openClientSettings() {},
-    selectServer() {},
-    async execCast(action, args, callback) {},
-    async castCallback(action, keep, err, result) {}
-};
-
+window.NativeShell = {};
 
 window.NativeShell.AppHost = {
     init() {
         try {
             // Native environment
-            if (
-                window.NativeInterface &&
-                typeof window.NativeInterface.getDeviceInformation === "function"
-            ) {
-                const result = JSON.parse(
-                    window.NativeInterface.getDeviceInformation()
-                );
-
+            if (window.NativeInterface && typeof window.NativeInterface.getDeviceInformation === "function" ) {
+                const result = JSON.parse(window.NativeInterface.getDeviceInformation());
                 deviceId = result.deviceId;
                 deviceName = result.deviceName;
                 appName = result.appName;
