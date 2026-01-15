@@ -129,7 +129,7 @@ async function loadPlugins() {
     list = list.filter(plugin => !plugin.startsWith('sessionPlayer') && !plugin.startsWith('chromecastPlayer'));
 
     // add any native plugins
-    if (window.NativeShell) {
+    if (window.NativeShell && typeof window.NativeShell.getPlugins === "function") {
         list = list.concat(window.NativeShell.getPlugins());
     }
 
