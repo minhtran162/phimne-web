@@ -152,7 +152,8 @@ class ViewManager {
         if (currentView) {
             dispatchViewEvent(currentView, null, 'viewbeforehide');
             dispatchViewEvent(currentView, null, 'viewhide');
-            currentView.classList.add('hide');
+            dispatchViewEvent(currentView, null, 'viewdestroy');
+            viewContainer.reset();
             currentView = null;
         }
     }

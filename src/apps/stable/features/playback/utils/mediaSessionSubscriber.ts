@@ -92,12 +92,18 @@ class MediaSessionSubscriber extends PlaybackSubscriber {
 
     private onMediaSessionUpdate(
         { type: action }: Event,
-        state: PlayerState = this.playbackManager.getPlayerState(this.player)
+        state?: PlayerState
     ) {
-        const item = state.NowPlayingItem;
+        if (!this.player) {
+            console.debug('[MediaSessionSubscriber] no active player; resetting media session');
+            return resetMediaSession();
+        }
+
+        const resolvedState = state ?? this.playbackManager.getPlayerState(this.player);
+        const item = resolvedState.NowPlayingItem;
 
         if (!item) {
-            console.debug('[MediaSessionSubscriber] no now playing item; resetting media session', state);
+            console.debug('[MediaSessionSubscriber] no now playing item; resetting media session', resolvedState);
             return resetMediaSession();
         }
 
@@ -140,10 +146,10 @@ class MediaSessionSubscriber extends PlaybackSubscriber {
                 artist,
                 album,
                 duration: item.RunTimeTicks ? Math.round(item.RunTimeTicks / TICKS_PER_MILLISECOND) : 0,
-                position: state.PlayState.PositionTicks ? Math.round(state.PlayState.PositionTicks / TICKS_PER_MILLISECOND) : 0,
+                position: resolvedState.PlayState.PositionTicks ? Math.round(resolvedState.PlayState.PositionTicks / TICKS_PER_MILLISECOND) : 0,
                 imageUrl: getImageUrl(item, { maxHeight: 3_000 }),
-                canSeek: !!state.PlayState.CanSeek,
-                isPaused: !!state.PlayState.IsPaused
+                canSeek: !!resolvedState.PlayState.CanSeek,
+                isPaused: !!resolvedState.PlayState.IsPaused
             });
         }
     }

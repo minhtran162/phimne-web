@@ -102,7 +102,7 @@ export function handleHlsJsMediaError(instance, reject) {
         console.error('cannot recover, last media error recovery failed ...');
 
         if (reject) {
-            reject();
+            reject(MediaError.FATAL_HLS_ERROR);
         } else {
             onErrorInternal(instance, MediaError.FATAL_HLS_ERROR);
         }
@@ -214,7 +214,7 @@ export function playWithPromise(elem, onErrorFn) {
             });
     } catch (err) {
         console.error('error calling video.play: ' + err);
-        return Promise.reject();
+        return Promise.reject(err || new Error('error calling video.play'));
     }
 }
 
@@ -261,21 +261,23 @@ export function destroyFlvPlayer(instance) {
 
 export function bindEventsToHlsPlayer(instance, hls, elem, onErrorFn, resolve, reject) {
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        playWithPromise(elem, onErrorFn).then(resolve, function () {
+        playWithPromise(elem, onErrorFn).then(resolve, function (error) {
             if (reject) {
-                reject();
+                reject(error || MediaError.FATAL_HLS_ERROR);
                 reject = null;
             }
         });
     });
 
     hls.on(Hls.Events.ERROR, function (event, data) {
-        console.error('HLS Error: Type: ' + data.type + ' Details: ' + (data.details || '') + ' Fatal: ' + (data.fatal || false));
+        const fatal = data.fatal || false;
+        const message = 'HLS Error: Type: ' + data.type + ' Details: ' + (data.details || '') + ' Fatal: ' + fatal;
 
         // try to recover network error
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR
                 && data.response?.code && data.response.code >= 400
         ) {
+            console.error(message);
             console.debug('hls.js response error code: ' + data.response.code);
 
             // Trigger failure differently depending on whether this is prior to start of playback, or after
@@ -291,7 +293,14 @@ export function bindEventsToHlsPlayer(instance, hls, elem, onErrorFn, resolve, r
             return;
         }
 
-        if (data.fatal) {
+        if (!fatal) {
+            console.warn(message);
+            return;
+        }
+
+        console.error(message);
+
+        if (fatal) {
             switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
 
@@ -328,7 +337,7 @@ export function bindEventsToHlsPlayer(instance, hls, elem, onErrorFn, resolve, r
                     hls.destroy();
 
                     if (reject) {
-                        reject();
+                        reject(MediaError.FATAL_HLS_ERROR);
                         reject = null;
                     } else {
                         onErrorInternal(instance, MediaError.FATAL_HLS_ERROR);
