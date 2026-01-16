@@ -34,6 +34,11 @@ import globalize from 'lib/globalize';
         return arr;
     }
 
+    // Helper function to check if item is a folder
+    function isFolder(item) {
+        return ['Series', 'Folder', 'MusicAlbum', 'Artist', 'CollectionFolder', 'Playlist'].includes(item.Type);
+    }
+
     /**
      * Sorts items based on sort order and direction
      * @param {Array} items - Array of Jellyfin items
@@ -93,27 +98,155 @@ import globalize from 'lib/globalize';
         return ['portrait', 'thumb'][Math.floor(Math.random() * 2)];
     }
 
-    // Shared helper: Get item type icon
-    function getItemIcon(type) {
-        const icons = {
-            Movie: 'movie',
-            Series: 'tv',
-            Episode: 'play_circle',
-            MusicAlbum: 'album',
-            Audio: 'music_note',
-            Artist: 'person',
-            Person: 'person',
-            MusicArtist: 'person'
-        };
-        return icons[type] || 'folder';
+    /**
+     * Creates a DOM element with specified tag, class, and attributes
+     * @param {string} tagName - HTML tag name
+     * @param {string} className - CSS class name(s)
+     * @param {Object} attributes - Key-value pairs of attributes
+     * @param {string} textContent - Optional text content
+     * @returns {HTMLElement} - Created element
+     */
+    function createElement(tagName, className = '', attributes = {}, textContent = '') {
+        const element = document.createElement(tagName);
+        if (className) element.className = className;
+        Object.entries(attributes).forEach(([key, value]) => {
+            element.setAttribute(key, value);
+        });
+        if (textContent) element.textContent = textContent;
+        return element;
     }
 
-    // Shared helper: Create icon element
-    function createIcon(type, className = 'cardImageIcon material-icons') {
-        const icon = document.createElement('span');
-        icon.className = className;
-        icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = getItemIcon(type);
+    /**
+     * Creates a link element with common Jellyfin styling
+     * @param {Object} options - Link configuration
+     * @param {string} options.href - Link URL
+     * @param {string} options.className - Additional CSS classes
+     * @param {string} options.title - Link title
+     * @param {Object} options.attributes - Additional attributes
+     * @param {string} options.textContent - Link text content
+     * @returns {HTMLElement} - Created link
+     */
+    function createLinkElement(options = {}) {
+        const {
+            href = '#',
+            className = 'itemAction textActionButton',
+            title = '',
+            attributes = {},
+            textContent = ''
+        } = options;
+
+        return createElement('a', className, {
+            href,
+            title,
+            ...attributes
+        }, textContent);
+    }
+
+    /**
+     * Creates a text container with BDI wrapper for proper text direction
+     * @param {string} text - Text content
+     * @param {string} className - Container class name
+     * @returns {HTMLElement} - Text container
+     */
+    function createTextContainer(text, className = 'cardText cardTextCentered') {
+        const container = createElement('div', className);
+        const bdi = createElement('bdi');
+        bdi.textContent = text || 'Unknown';
+        container.appendChild(bdi);
+        return container;
+    }
+
+    /**
+     * Creates a card indicators container
+     * @param {Array} indicators - Array of indicator HTML strings
+     * @returns {HTMLElement} - Card indicators container
+     */
+    function createCardIndicators(indicators = []) {
+        if (indicators.length === 0) return null;
+
+        const container = createElement('div', 'cardIndicators');
+        indicators.forEach(html => {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            container.appendChild(temp.firstChild);
+        });
+        return container;
+    }
+
+    /**
+     * Creates a blurhash canvas element
+     * @returns {HTMLCanvasElement} - Blurhash canvas element
+     */
+    function createBlurhashCanvas() {
+        if (cache.blurhashCanvas) {
+            return cache.blurhashCanvas.cloneNode();
+        }
+
+        const canvas = createElement('canvas', 'blurhash-canvas lazy-hidden', {
+            'aria-hidden': 'true'
+        });
+        canvas.width = 20;
+        canvas.height = 20;
+
+        cache.blurhashCanvas = canvas;
+        return canvas.cloneNode();
+    }
+
+    /**
+     * Creates a card overlay button
+     * @param {Object} options - Button configuration
+     * @param {string} options.className - Additional CSS classes
+     * @param {string} options.title - Button title/tooltip
+     * @param {string} options.icon - Material icon name
+     * @param {string} options.action - Data-action attribute
+     * @param {Object} options.attributes - Additional attributes
+     * @returns {HTMLElement} - Created button
+     */
+    function createOverlayButton(options = {}) {
+        const {
+            className = '',
+            title = '',
+            icon = 'play_arrow',
+            action = 'play',
+            attributes = {}
+        } = options;
+
+        const button = createElement('button',
+            `cardOverlayButton cardOverlayButton-br itemAction paper-icon-button-light ${className}`,
+            {
+                'is': 'paper-icon-button-light',
+                'data-action': action,
+                'title': title,
+                ...attributes
+            }
+        );
+
+        button.innerHTML = `<span class="material-icons cardOverlayButtonIcon ${icon}" aria-hidden="true"></span>`;
+        return button;
+    }
+
+    /**
+     * Creates an icon element based on item type
+     * @param {string} itemType - Type of item (Movie, Series, Episode, etc.)
+     * @returns {HTMLElement} - Icon element
+     */
+    function createIcon(itemType) {
+        const iconMap = {
+            'Movie': 'movie',
+            'Series': 'tv',
+            'Episode': 'tv',
+            'MusicAlbum': 'album',
+            'MusicArtist': 'person',
+            'Folder': 'folder',
+            'default': 'videocam'
+        };
+
+        const iconType = iconMap[itemType] || iconMap.default;
+
+        const icon = createElement('span', 'cardImageIcon material-icons ' + iconType, {
+            'aria-hidden': 'true'
+        });
+        icon.textContent = iconType;
         return icon;
     }
 
@@ -127,7 +260,11 @@ import globalize from 'lib/globalize';
         return canvas;
     }
 
-    // Shared helper: Check if item is folder
+    /**
+     * Determines if item is a folder
+     * @param {Object} item - Item object
+     * @returns {boolean} - True if item is a folder
+     */
     function isFolder(item) {
         return item.IsFolder || ['Series', 'Season', 'BoxSet', 'MusicAlbum'].includes(item.Type);
     }
@@ -297,15 +434,9 @@ import globalize from 'lib/globalize';
     }
 
     // Create Mobile Card
-    function createMobileCard(item, serverId, serverAddress) {
+    function createMobileCard(item, overflowCard, cardFormat, serverId, serverAddress) {
         const card = document.createElement('div');
         const isFolderItem = isFolder(item);
-
-        // Determine card format based on item type
-        let cardFormat = 'portrait';
-        if (item.Type === 'Episode') {
-            cardFormat = 'backdrop';
-        }
 
         const config = getCardFormatConfig(cardFormat, item.Type, true, true); // isMobile=true for optimization
 
@@ -390,7 +521,7 @@ import globalize from 'lib/globalize';
         // Create card text based on item type
         if (item.Type === 'Episode') {
             // Episode: First line is Series name, second line is episode info
-            const seriesText = createCardText({...item, Id: item.SeriesId || item.Id, Name: item.SeriesName || 'Unknown Series', Type: 'Series'}, serverId, serverAddress);
+            const seriesText = createCardText({ ...item, Id: item.SeriesId || item.Id, Name: item.SeriesName || 'Unknown Series', Type: 'Series' }, serverId, serverAddress);
             cardBox.appendChild(seriesText);
 
             // Episode info
@@ -567,15 +698,37 @@ import globalize from 'lib/globalize';
         const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false);
 
         const card = document.createElement('button');
-        card.className = `card ${config.cardClass} show-focus card-withuserdata itemAction`;
+        card.className = `card ${config.cardClass} show-focus show-animation card-withuserdata itemAction`;
         card.setAttribute('data-index', '0');
-        card.setAttribute('data-isfolder', ['MusicAlbum', 'Artist'].includes(item.Type).toString());
+        card.setAttribute('data-isfolder', ['Series', 'MusicAlbum', 'Artist'].includes(item.Type).toString());
         card.setAttribute('data-serverid', serverId);
         card.setAttribute('data-id', item.Id);
         card.setAttribute('data-type', item.Type);
         card.setAttribute('data-mediatype', item.MediaType || 'Video');
         if (item.Name?.startsWith('The ')) card.setAttribute('data-prefix', 'THE');
         card.setAttribute('data-action', 'link');
+        card.setAttribute('data-context', 'home');
+        card.setAttribute('aria-label', item.Name || 'Unknown');
+
+        // Add path if available
+        if (item.Path) {
+            card.setAttribute('data-path', item.Path);
+        }
+
+        // Add endDate for Series
+        if (item.Type === 'Series' && item.EndDate) {
+            card.setAttribute('data-enddate', item.EndDate);
+        }
+
+        // Add positionticks for in-progress items
+        if (item.UserData?.PlaybackPositionTicks) {
+            card.setAttribute('data-positionticks', item.UserData.PlaybackPositionTicks);
+        }
+
+        // Add groupedCard class for Series
+        if (item.Type === 'Series') {
+            card.classList.add('groupedCard');
+        }
 
         const cardBox = document.createElement('div');
         cardBox.className = 'cardBox cardBox-bottompadded';
@@ -588,9 +741,14 @@ import globalize from 'lib/globalize';
         cardPadder.appendChild(createIcon(item.Type));
 
         const cardImageContainer = document.createElement('div');
-        cardImageContainer.setAttribute('data-src', `${serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`);
-        cardImageContainer.className = 'cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast';
-        cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
+        // Remove data-src attribute as it's not in target examples
+
+        // Conditionally add coveredImage class
+        let imageContainerClass = 'cardImageContainer cardContent lazy blurhashed lazy-image-fadein-fast';
+        if (item.Type !== 'Episode' || config.cardClass !== 'overflowBackdropCard') {
+            imageContainerClass = 'cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast';
+        }
+        cardImageContainer.className = imageContainerClass;
 
         const imageUrl = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
         if (imageUrl) {
@@ -599,11 +757,38 @@ import globalize from 'lib/globalize';
             cardImageContainer.appendChild(createIcon(item.Type));
         }
 
-        if (item.UserData?.Played) {
+        // Add indicators container only if needed
+        const hasIndicators = item.UserData?.Played || item.ChildCount || item.SeriesCount;
+        if (hasIndicators) {
             const cardIndicators = document.createElement('div');
             cardIndicators.className = 'cardIndicators';
-            cardIndicators.innerHTML = '<div class="playedIndicator indicator"><span class="material-icons indicatorIcon check" aria-hidden="true"></span></div>';
+
+            if (item.UserData?.Played) {
+                cardIndicators.innerHTML = '<div class="playedIndicator indicator"><span class="material-icons indicatorIcon check" aria-hidden="true"></span></div>';
+            } else if (item.ChildCount || item.SeriesCount) {
+                // For Series, show count indicator
+                const count = item.ChildCount || item.SeriesCount;
+                cardIndicators.innerHTML = `<div class="countIndicator indicator">${count}</div>`;
+            }
             cardImageContainer.appendChild(cardIndicators);
+        }
+
+        // Add progress bar for in-progress items
+        if (item.UserData?.PlaybackPositionTicks && item.RunTimeTicks) {
+            const progressPercentage = (item.UserData.PlaybackPositionTicks / item.RunTimeTicks) * 100;
+            const innerCardFooter = document.createElement('div');
+            innerCardFooter.className = 'innerCardFooter fullInnerCardFooter innerCardFooterClear';
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'itemProgressBar';
+
+            const progressBarForeground = document.createElement('div');
+            progressBarForeground.className = 'itemProgressBarForeground';
+            progressBarForeground.style.width = `${progressPercentage}%`;
+
+            progressBar.appendChild(progressBarForeground);
+            innerCardFooter.appendChild(progressBar);
+            cardImageContainer.appendChild(innerCardFooter);
         }
 
         cardScalable.appendChild(cardPadder);
@@ -613,6 +798,7 @@ import globalize from 'lib/globalize';
         cardBox.appendChild(cardScalable);
 
         if (item.Type === 'Episode') {
+            // For Episode, show Series name first
             const seriesText = createCardText({
                 ...item,
                 Id: item.SeriesId || item.Id,
@@ -621,6 +807,7 @@ import globalize from 'lib/globalize';
             }, serverId, serverAddress);
             cardBox.appendChild(seriesText);
 
+            // Episode number and name
             const episodeName = item.IndexNumber && item.ParentIndexNumber
                 ? `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}`
                 : item.Name;
@@ -636,14 +823,35 @@ import globalize from 'lib/globalize';
                 cardBox.appendChild(footerText);
             }
         } else {
+            // For Series/Movie, show name and year
             const titleText = document.createElement('div');
             titleText.className = 'cardText cardTextCentered cardText-first';
-            titleText.innerHTML = `<bdi>${item.Name || 'Unknown'}</bdi>`;
+
+            // For Series, include year in title if available
+            let displayName = item.Name || 'Unknown';
+            if (item.Type === 'Series' && item.ProductionYear) {
+                displayName = `${item.Name} (${item.ProductionYear})`;
+            }
+
+            titleText.innerHTML = `<bdi>${displayName}</bdi>`;
             cardBox.appendChild(titleText);
 
+            // Secondary text - year or date range
             const secondaryText = document.createElement('div');
             secondaryText.className = 'cardText cardTextCentered cardText-secondary';
-            secondaryText.innerHTML = `<bdi>${getYearText(item)}</bdi>`;
+
+            let yearText = getYearText(item);
+            if (item.Type === 'Series') {
+                const startYear = item.ProductionYear || '';
+                const endYear = item.EndDate ? new Date(item.EndDate).getFullYear() : '';
+                if (startYear && endYear) {
+                    yearText = `${startYear} - ${endYear}`;
+                } else if (startYear) {
+                    yearText = `${startYear} - Hiện tại`;
+                }
+            }
+
+            secondaryText.innerHTML = `<bdi>${yearText}</bdi>`;
             cardBox.appendChild(secondaryText);
         }
 
@@ -661,7 +869,7 @@ import globalize from 'lib/globalize';
         const isHomepage = !document.querySelector('.page.homePage')?.classList.contains('hide');
 
         if (isMobileLayout && isHomepage) {
-            return createMobileCard(item, serverId, serverAddress);
+            return createMobileCard(item, overflowCard, cardFormat, serverId, serverAddress);
         }
 
         if (isTVLayout) {
@@ -1026,7 +1234,7 @@ import globalize from 'lib/globalize';
     function createScrollableContainer(items, title, viewMoreUrl = null, overflowCard = false, cardFormat = null) {
         // Create the main vertical section container
         const verticalSection = document.createElement('div');
-        verticalSection.className = 'verticalSection emby-scroller-container custom-scroller-container';
+        verticalSection.className = 'verticalSection';
 
         // Create section title
         const sectionTitleContainer = document.createElement('div');
@@ -1067,7 +1275,7 @@ import globalize from 'lib/globalize';
             sectionTitleContainer.appendChild(titleText);
         }
 
-        // Create "Show All" button (will be added after items are created)
+        // Create "Show All" button
         const showAllButton = document.createElement('button');
         showAllButton.type = 'button';
         showAllButton.className = 'show-all-button';
@@ -1075,15 +1283,18 @@ import globalize from 'lib/globalize';
         showAllButton.textContent = 'Expand';
         showAllButton.title = 'Show all items';
 
-        // Create scroller container
+        // Create scroller container following Jellyfin's structure
         const scroller = document.createElement('div');
         scroller.setAttribute('is', 'emby-scroller');
-        scroller.setAttribute('data-horizontal', 'true');
-        scroller.setAttribute('data-centerfocus', 'card');
+        scroller.className = 'padded-top-focusscale padded-bottom-focusscale emby-scroller';
+        scroller.setAttribute('data-centerfocus', 'true');
         scroller.setAttribute('data-scroll-mode-x', 'custom');
+        scroller.style.overflow = 'hidden';
+
+        // Create items container
         const itemsContainer = document.createElement('div');
         itemsContainer.setAttribute('is', 'emby-itemscontainer');
-        itemsContainer.className = 'focuscontainer-x itemsContainer scrollSlider animatedScrollX';
+        itemsContainer.className = 'itemsContainer scrollSlider focuscontainer-x animatedScrollX';
         itemsContainer.style.whiteSpace = 'nowrap';
 
         // Add items to container
@@ -1102,31 +1313,102 @@ import globalize from 'lib/globalize';
 
         // Toggle between scroll and grid view
         let isShowingAll = false;
-        const originalItemsContainerStyle = itemsContainer.style.cssText;
+        let originalTransform = 'translateX(0px)';
+        let originalStyle = itemsContainer.style.cssText;
+        let originalScrollerStyle = scroller.style.cssText;
+
+        // Store the original transition for restoration
+        const storeOriginalStyles = () => {
+            originalTransform = itemsContainer.style.transform || 'translateX(0px)';
+            originalStyle = itemsContainer.style.cssText;
+            originalScrollerStyle = scroller.style.cssText;
+        };
+
+        // Initial store
+        setTimeout(() => storeOriginalStyles(), 100);
 
         showAllButton.addEventListener('click', () => {
-            // Find the scroll buttons for this container
-            const scrollerContainer = showAllButton.closest('.emby-scroller-container');
-            const scrollButtons = scrollerContainer ? scrollerContainer.querySelector('.emby-scrollbuttons') : null;
-
             if (isShowingAll) {
                 // Switch back to scroll view
-                itemsContainer.style.cssText = originalItemsContainerStyle;
-                if (scrollButtons) scrollButtons.style.display = '';
+                itemsContainer.style.cssText = originalStyle;
+                scroller.style.cssText = originalScrollerStyle;
                 showAllButton.textContent = 'Expand';
                 showAllButton.title = 'Show all items in a grid layout';
                 isShowingAll = false;
+
+                // Restore Jellyfin's scrolling functionality
+                itemsContainer.style.transform = originalTransform;
+                itemsContainer.style.transition = 'transform 270ms ease-out';
+
+                // Re-enable Jellyfin's scroller
+                scroller.style.overflow = 'hidden';
+
+                // Reset individual card styles
+                const cards = itemsContainer.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.style.width = '';
+                    card.style.flexShrink = '';
+                    card.style.marginRight = '';
+                });
             } else {
                 // Switch to grid view
-                itemsContainer.style.cssText = 'display: flex; flex-wrap: wrap; gap: 12px; white-space: normal; transform: none !important; transition: none !important;';
-                if (scrollButtons) scrollButtons.style.display = 'none';
+                storeOriginalStyles();
+
+                // Calculate appropriate card size based on format
+                const isBackdrop = cardFormat === 'backdrop' ||
+                    (items.length > 0 && items[0].MediaType === 'Video' &&
+                        itemsContainer.querySelector('.overflowBackdropCard'));
+
+                const cardWidth = isBackdrop ?
+                    'calc((100% - 24px) / 3)' :  // 3 backdrop cards per row
+                    'calc((100% - 30px) / 6)';   // 6 portrait cards per row
+
+                const cardMargin = isBackdrop ? '8px' : '6px';
+
+                // Apply grid layout
+                itemsContainer.style.cssText = `
+                display: flex;
+                flex-wrap: wrap;
+                gap: ${cardMargin};
+                white-space: normal;
+                transform: none !important;
+                transition: none !important;
+                will-change: auto;
+                padding: 0;
+                margin: 0;
+            `;
+
+                scroller.style.cssText = `
+                overflow: visible !important;
+                height: auto !important;
+            `;
+
+                // Adjust each card for grid view
+                const cards = itemsContainer.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.style.width = cardWidth;
+                    card.style.flexShrink = '0';
+                    card.style.marginRight = '0';
+                });
+
                 showAllButton.textContent = 'Collapse';
                 showAllButton.title = 'Show items in scrollable layout';
                 isShowingAll = true;
             }
         });
 
-        // Assemble the section
+        // Add scroll animation handling for Jellyfin's system
+        let scrollPosition = 0;
+        const containerWidth = itemsContainer.offsetWidth;
+        const cardCount = items.length;
+
+        // This function would be called by Jellyfin's navigation system
+        const scrollToPosition = (position) => {
+            scrollPosition = position;
+            itemsContainer.style.transform = `translateX(${-position}px)`;
+        };
+
+        // Add the section to the page
         verticalSection.appendChild(sectionTitleContainer);
         verticalSection.appendChild(scroller);
 
