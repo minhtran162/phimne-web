@@ -193,8 +193,8 @@ a[href*="themoviedb.org/collection"]:before,
 a[href*="thetvdb.com"]:before,
 a[href*="trakt.tv"]:before,
 a[href*="tvmaze.com"]:before,
-.arr-link-sonarr::before, 
-.arr-link-radarr::before, 
+.arr-link-sonarr::before,
+.arr-link-radarr::before,
 .arr-link-bazarr::before {
     background-repeat: no-repeat;
     background-size: contain;
@@ -205,8 +205,9 @@ a[href*="tvmaze.com"]:before,
     margin-right: 0px;
     vertical-align: middle;
 }
-.arr-link-sonarr::before, 
-.arr-link-radarr::before, 
+
+.arr-link-sonarr::before,
+.arr-link-radarr::before,
 .arr-link-bazarr::before {
     width: 25px;
 }
@@ -2070,11 +2071,6 @@ html {
     text-overflow: ellipsis
 }
 
-#indexPage {
-    margin-top: 4em;
-    padding-top: 2em !important
-}
-
 .headerTop {
     -webkit-justify-content: space-between;
     justify-content: space-between
@@ -2131,6 +2127,10 @@ html {
 }
 
 @media only screen and (max-width:767px) {
+    .layout-mobile .slides-container {
+        margin-top: -4em;
+    }
+
     .libraryPage:not(.noSecondaryNavPage) {
         padding-top: 7.5em !important
     }
