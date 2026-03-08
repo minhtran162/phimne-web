@@ -700,6 +700,8 @@ import browser from 'scripts/browser';
 
         const card = document.createElement('button');
         card.className = `card ${config.cardClass} show-focus card-withuserdata itemAction`;
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', 'button');
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', ['Series', 'MusicAlbum', 'Artist'].includes(item.Type).toString());
         card.setAttribute('data-serverid', serverId);
@@ -799,13 +801,10 @@ import browser from 'scripts/browser';
         cardBox.appendChild(cardScalable);
 
         if (item.Type === 'Episode') {
-            // For Episode, show Series name first
-            const seriesText = createCardText({
-                ...item,
-                Id: item.SeriesId || item.Id,
-                Name: item.SeriesName || 'Unknown Series',
-                Type: 'Series'
-            }, serverId, serverAddress);
+            // For Episode, show Series name first (plain text, no nested <a>)
+            const seriesText = document.createElement('div');
+            seriesText.className = 'cardText cardTextCentered cardText-first';
+            seriesText.innerHTML = `<bdi>${item.SeriesName || 'Unknown Series'}</bdi>`;
             cardBox.appendChild(seriesText);
 
             // Episode number and name
@@ -824,7 +823,7 @@ import browser from 'scripts/browser';
                 cardBox.appendChild(footerText);
             }
         } else {
-            // For Series/Movie, show name and year
+            // For Series/Movie, show name and year (plain text, no nested <a>)
             const titleText = document.createElement('div');
             titleText.className = 'cardText cardTextCentered cardText-first';
 
@@ -855,6 +854,8 @@ import browser from 'scripts/browser';
             secondaryText.innerHTML = `<bdi>${yearText}</bdi>`;
             cardBox.appendChild(secondaryText);
         }
+
+        cardBox.style.pointerEvents = 'none';
 
         card.appendChild(cardBox);
         return card;
