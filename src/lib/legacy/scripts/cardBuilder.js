@@ -1,5 +1,6 @@
 import datetime from 'scripts/datetime';
 import globalize from 'lib/globalize';
+import browser from 'scripts/browser';
 
 // Jellyfin Card Builder
 // This module provides a main entry point function to build Jellyfin cards
@@ -698,7 +699,7 @@ import globalize from 'lib/globalize';
         const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false);
 
         const card = document.createElement('button');
-        card.className = `card ${config.cardClass} show-focus show-animation card-withuserdata itemAction`;
+        card.className = `card ${config.cardClass} show-focus card-withuserdata itemAction`;
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', ['Series', 'MusicAlbum', 'Artist'].includes(item.Type).toString());
         card.setAttribute('data-serverid', serverId);
@@ -866,10 +867,10 @@ import globalize from 'lib/globalize';
         // Detect layout once
         const isTVLayout = document.documentElement.classList.contains('layout-tv');
         const isMobileLayout = document.documentElement.classList.contains('layout-mobile');
-        const isHomepage = !document.querySelector('.page.homePage')?.classList.contains('hide');
+        const isHomepage = document.querySelector('.page.homePage');
 
         if (isMobileLayout && isHomepage) {
-            return createMobileCard(item, overflowCard, cardFormat, serverId, serverAddress);
+            return createMobileCard(item, true, cardFormat, serverId, serverAddress);
         }
 
         if (isTVLayout) {
@@ -1234,7 +1235,10 @@ import globalize from 'lib/globalize';
     function createScrollableContainer(items, title, viewMoreUrl = null, overflowCard = false, cardFormat = null) {
         // Create the main vertical section container
         const verticalSection = document.createElement('div');
-        verticalSection.className = 'verticalSection';
+        // Conditionally set container classes based on platform
+        verticalSection.className = browser.tizen
+            ? 'verticalSection'
+            : 'verticalSection emby-scroller-container custom-scroller-container';
 
         // Create section title
         const sectionTitleContainer = document.createElement('div');
@@ -1283,13 +1287,22 @@ import globalize from 'lib/globalize';
         showAllButton.textContent = 'Expand';
         showAllButton.title = 'Show all items';
 
-        // Create scroller container following Jellyfin's structure
         const scroller = document.createElement('div');
         scroller.setAttribute('is', 'emby-scroller');
-        scroller.className = 'padded-top-focusscale padded-bottom-focusscale emby-scroller';
-        scroller.setAttribute('data-centerfocus', 'true');
-        scroller.setAttribute('data-scroll-mode-x', 'custom');
-        scroller.style.overflow = 'hidden';
+
+        if (browser.tizen) {
+            // Tizen TV optimized settings (keep as-is)
+            scroller.className = 'padded-top-focusscale padded-bottom-focusscale emby-scroller';
+            scroller.setAttribute('data-centerfocus', 'true');
+            scroller.setAttribute('data-scroll-mode-x', 'custom');
+            scroller.style.overflow = 'hidden';
+        } else {
+            scroller.setAttribute('data-horizontal', 'true');  // Critical for horizontal swipe
+            scroller.setAttribute('data-centerfocus', 'card'); // Proper focus handling
+            scroller.setAttribute('data-scroll-mode-x', 'custom');
+            scroller.style.overflow = '';
+            scroller.className = '';
+        }
 
         // Create items container
         const itemsContainer = document.createElement('div');

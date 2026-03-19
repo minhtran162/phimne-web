@@ -1552,9 +1552,11 @@ import globalize from '../../globalize';
                 return false;
             }
 
+            console.log(includeItemTypes)
+            
             const cardContainer = window.cardBuilder.renderCards(
                 items,
-                sectionConfig.name || globalize.translate('RecentlyAdded'),
+                includeItemTypes?.includes('Movie') ? globalize.translate('RecentlyAddedInMovies') : globalize.translate('RecentlyAddedInTVShows'),
                 viewMoreUrl,
                 true, // overflowCard (use standard overflow style for horizontal scroll)
                 sectionConfig.cardFormat || 'Poster',
