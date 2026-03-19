@@ -39,7 +39,7 @@
                 window.Emby.Notifications.show({ title: message, type: type, timeout: 3000 });
             }
         } catch (e) {
-            console.error("🪼 Jellyfin Enhanced: Failed to show notification", e);
+            console.error('🪼 Jellyfin Enhanced: Failed to show notification', e);
         }
     };
 
@@ -50,7 +50,7 @@
     async function getRandomItem() {
         const userId = ApiClient.getCurrentUserId();
         if (!userId) {
-            console.error("🪼 Jellyfin Enhanced: User not logged in.");
+            console.error('🪼 Jellyfin Enhanced: User not logged in.');
             return null;
         }
 
@@ -113,7 +113,7 @@
         randomButton.setAttribute('is', 'paper-icon-button-light');
         randomButton.className = 'headerButton headerButtonRight paper-icon-button-light';
         randomButton.title = JE.t('random_button_tooltip');
-        randomButton.innerHTML = `<i class="material-icons">casino</i>`;
+        randomButton.innerHTML = '<i class="material-icons">casino</i>';
 
         randomButton.addEventListener('click', async () => {
             randomButton.disabled = true;
@@ -130,7 +130,7 @@
                     if (document.getElementById(randomButton.id)) {
                         randomButton.disabled = false;
                         randomButton.classList.remove('loading');
-                        randomButton.innerHTML = `<i class="material-icons">casino</i>`;
+                        randomButton.innerHTML = '<i class="material-icons">casino</i>';
                     }
                 }, 500);
             }
@@ -141,8 +141,6 @@
         headerRight?.prepend(buttonContainer);
     };
 
-
-
     /**
      * Shows the total watch progress (in %) of an item (and its children) on its details page.
      * @param {string} itemId The ID of the item.
@@ -151,7 +149,7 @@
     async function displayWatchProgress(itemId, container) {
         // show itemMiscInfo if hidden like on season pages
         if (container.classList.contains('hide')) {
-            container.classList.remove('hide')
+            container.classList.remove('hide');
         }
 
         const existing = container.querySelector('.mediaInfoItem-watchProgress');
@@ -183,7 +181,7 @@
             const div = document.querySelector(`.mediaInfoItem-watchProgress[data-item-id="${itemId}"]`)
                 .querySelector('.mediaInfoItem-watchProgress-value');
             if (!div) return;
-            
+
             if (div.dataset.type === 'percentage') {
                 div.dataset.type = 'time';
                 div.innerHTML = `${getTimeString(watchProgress.totalPlaybackTicks)} / ${getTimeString(watchProgress.totalRuntimeTicks)}`;
@@ -191,9 +189,9 @@
                 div.dataset.type = 'percentage';
                 div.innerHTML = `${watchProgress.progress}%`;
             }
-        })
+        });
         // Show loading indicator
-        placeholder.innerHTML = `<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...`;
+        placeholder.innerHTML = '<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...';
         // Insert first so subsequent observer runs are triggered
         container.appendChild(placeholder);
 
@@ -216,7 +214,7 @@
                     style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset}; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.3s ease;"/>
             </svg>`;
             return `${svg}`;
-        }
+        };
 
         // Helper to get time string from ticks
         const getTimeString = (ticks) => {
@@ -226,9 +224,9 @@
             const totalDays = Math.floor(totalHours / 24);
             const totalMonths = Math.floor(totalDays / 30);
             const totalYears = Math.floor(totalDays / 365);
-            
+
             let result = '';
-            
+
             if (totalYears >= 1) {
                 // Show years and remaining months
                 result += `${totalYears}y`;
@@ -262,18 +260,18 @@
             } else {
                 result = '0m';
             }
-            
+
             return result;
-        }
-        
+        };
+
         const getWatchProgressValue = (watchProgress) => {
             const valueDiv = document.createElement('div');
             valueDiv.className = 'mediaInfoItem-watchProgress-value';
             valueDiv.dataset.type = 'percentage';
             valueDiv.innerHTML = `${watchProgress.progress}%`;
-                
+
             return valueDiv;
-        }
+        };
 
         // Helper to render the 0 state
         const renderUnavailable = () => {
@@ -299,7 +297,7 @@
                     url: ApiClient.getUrl(`/JellyfinEnhanced/watch-progress/${ApiClient.getCurrentUserId()}/${itemId}`),
                     dataType: 'json'
                 });
-                
+
                 const watchProgress = {
                     progress: itemResult?.progress ?? 0,
                     totalPlaybackTicks: itemResult?.totalPlaybackTicks ?? 0,
@@ -308,8 +306,8 @@
                 };
                 placeholder.innerHTML = getIconSpan(watchProgress.progress);
                 placeholder.appendChild(getWatchProgressValue(watchProgress));
-                
-                watchProgressCache[itemId] = watchProgress
+
+                watchProgressCache[itemId] = watchProgress;
             } catch (error) {
                 console.error(`🪼 Jellyfin Enhanced: Error fetching watch progress for ID ${itemId}:`, error);
                 // Keep placeholder with 0 to prevent repeated calls
@@ -352,13 +350,13 @@
         placeholder.style.alignItems = 'center';
         placeholder.style.margin = '0 1em 0 0 !important';
         // Show loading indicator
-        placeholder.innerHTML = `<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...`;
+        placeholder.innerHTML = '<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...';
         // Insert first so subsequent observer runs are triggered
         container.appendChild(placeholder);
 
         // Helper to render a dash (no data) but keep the element
         const renderUnavailable = () => {
-            placeholder.innerHTML = `<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">save</span> -`;
+            placeholder.innerHTML = '<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">save</span> -';
         };
 
         // Use requestIdleCallback to defer the work and not block page rendering
@@ -408,7 +406,7 @@
     /**
      * A map of language names/codes to country codes for flag display.
      */
-    const languageToCountryMap={English:"gb",eng:"gb",Japanese:"jp",jpn:"jp",Spanish:"es",spa:"es",French:"fr",fre:"fr",fra:"fr",German:"de",ger:"de",deu:"de",Italian:"it",ita:"it",Korean:"kr",kor:"kr",Chinese:"cn",chi:"cn",zho:"cn",Russian:"ru",rus:"ru",Portuguese:"pt",por:"pt",Hindi:"in",hin:"in",Dutch:"nl",dut:"nl",nld:"nl",Arabic:"sa",ara:"sa",Bengali:"in",ben:"in",Czech:"cz",ces:"cz",Danish:"dk",dan:"dk",Greek:"gr",ell:"gr",Finnish:"fi",fin:"fi",Hebrew:"il",heb:"il",Hungarian:"hu",hun:"hu",Indonesian:"id",ind:"id",Norwegian:"no",nor:"no",Polish:"pl",pol:"pl",Persian:"ir",per:"ir",fas:"ir",Romanian:"ro",ron:"ro",rum:"ro",Swedish:"se",swe:"se",Thai:"th",tha:"th",Turkish:"tr",tur:"tr",Ukrainian:"ua",ukr:"ua",Vietnamese:"vn",vie:"vn",Malay:"my",msa:"my",may:"my",Swahili:"ke",swa:"ke",Tagalog:"ph",tgl:"ph",Filipino:"ph",Tamil:"in",tam:"in",Telugu:"in",tel:"in",Marathi:"in",mar:"in",Punjabi:"in",pan:"in",Urdu:"pk",urd:"pk",Gujarati:"in",guj:"in",Kannada:"in",kan:"in",Malayalam:"in",mal:"in",Sinhala:"lk",sin:"lk",Nepali:"np",nep:"np",Pashto:"af",pus:"af",Kurdish:"iq",kur:"iq",Slovak:"sk",slk:"sk",Slovenian:"si",slv:"si",Serbian:"rs",srp:"rs",Croatian:"hr",hrv:"hr",Bulgarian:"bg",bul:"bg",Macedonian:"mk",mkd:"mk",Albanian:"al",sqi:"al",Estonian:"ee",est:"ee",Latvian:"lv",lav:"lv",Lithuanian:"lt",lit:"lt",Icelandic:"is",isl:"is",Georgian:"ge",kat:"ge",Armenian:"am",hye:"am",Mongolian:"mn",mon:"mn",Kazakh:"kz",kaz:"kz",Uzbek:"uz",uzb:"uz",Azerbaijani:"az",aze:"az",Belarusian:"by",bel:"by",Amharic:"et",amh:"et",Zulu:"za",zul:"za",Afrikaans:"za",afr:"za",Hausa:"ng",hau:"ng",Yoruba:"ng",yor:"ng",Igbo:"ng",ibo:"ng",Brazilian:"br",bra:"br"};
+    const languageToCountryMap = { English:'gb', eng:'gb', Japanese:'jp', jpn:'jp', Spanish:'es', spa:'es', French:'fr', fre:'fr', fra:'fr', German:'de', ger:'de', deu:'de', Italian:'it', ita:'it', Korean:'kr', kor:'kr', Chinese:'cn', chi:'cn', zho:'cn', Russian:'ru', rus:'ru', Portuguese:'pt', por:'pt', Hindi:'in', hin:'in', Dutch:'nl', dut:'nl', nld:'nl', Arabic:'sa', ara:'sa', Bengali:'in', ben:'in', Czech:'cz', ces:'cz', Danish:'dk', dan:'dk', Greek:'gr', ell:'gr', Finnish:'fi', fin:'fi', Hebrew:'il', heb:'il', Hungarian:'hu', hun:'hu', Indonesian:'id', ind:'id', Norwegian:'no', nor:'no', Polish:'pl', pol:'pl', Persian:'ir', per:'ir', fas:'ir', Romanian:'ro', ron:'ro', rum:'ro', Swedish:'se', swe:'se', Thai:'th', tha:'th', Turkish:'tr', tur:'tr', Ukrainian:'ua', ukr:'ua', Vietnamese:'vn', vie:'vn', Malay:'my', msa:'my', may:'my', Swahili:'ke', swa:'ke', Tagalog:'ph', tgl:'ph', Filipino:'ph', Tamil:'in', tam:'in', Telugu:'in', tel:'in', Marathi:'in', mar:'in', Punjabi:'in', pan:'in', Urdu:'pk', urd:'pk', Gujarati:'in', guj:'in', Kannada:'in', kan:'in', Malayalam:'in', mal:'in', Sinhala:'lk', sin:'lk', Nepali:'np', nep:'np', Pashto:'af', pus:'af', Kurdish:'iq', kur:'iq', Slovak:'sk', slk:'sk', Slovenian:'si', slv:'si', Serbian:'rs', srp:'rs', Croatian:'hr', hrv:'hr', Bulgarian:'bg', bul:'bg', Macedonian:'mk', mkd:'mk', Albanian:'al', sqi:'al', Estonian:'ee', est:'ee', Latvian:'lv', lav:'lv', Lithuanian:'lt', lit:'lt', Icelandic:'is', isl:'is', Georgian:'ge', kat:'ge', Armenian:'am', hye:'am', Mongolian:'mn', mon:'mn', Kazakh:'kz', kaz:'kz', Uzbek:'uz', uzb:'uz', Azerbaijani:'az', aze:'az', Belarusian:'by', bel:'by', Amharic:'et', amh:'et', Zulu:'za', zul:'za', Afrikaans:'za', afr:'za', Hausa:'ng', hau:'ng', Yoruba:'ng', yor:'ng', Igbo:'ng', ibo:'ng', Brazilian:'br', bra:'br' };
 
     /**
      * Fetches the first episode of a series or season for language detection.
@@ -446,7 +444,7 @@
     async function displayAudioLanguages(itemId, container) {
         // show itemMiscInfo if hidden like on season pages
         if (container.classList.contains('hide')) {
-            container.classList.remove('hide')
+            container.classList.remove('hide');
         }
 
         const existing = container.querySelector('.mediaInfoItem-audioLanguage');
@@ -466,7 +464,7 @@
         placeholder.style.alignItems = 'center';
         placeholder.style.margin = '0 1em 0 0 !important';
         // Show loading indicator
-        placeholder.innerHTML = `<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...`;
+        placeholder.innerHTML = '<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">hourglass_empty</span> ...';
         container.appendChild(placeholder);
 
         const applyLangStyles = (el) => {
@@ -485,7 +483,7 @@
         // Helper to render unavailable/no data with dash
         const renderUnavailable = () => {
             applyLangStyles(placeholder);
-            placeholder.innerHTML = `<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">translate</span> -`;
+            placeholder.innerHTML = '<span class="material-icons" style="font-size: inherit; margin-right: 0.3em;">translate</span> -';
         };
 
         // Helper to render language items with proper DOM elements
@@ -744,7 +742,7 @@
     async function removeFromContinueWatching(itemId) {
         const userId = ApiClient.getCurrentUserId();
         if (!userId || !itemId) {
-            showNotification(JE.t('remove_continue_watching_error'), "error");
+            showNotification(JE.t('remove_continue_watching_error'), 'error');
             return false;
         }
 
@@ -758,7 +756,7 @@
             return true;
         } catch (error) {
             const errorMessage = error.responseJSON?.Message || error.statusText || JE.t('unknown_error');
-            showNotification(JE.t('remove_continue_watching_error_api', { error: errorMessage }), "error");
+            showNotification(JE.t('remove_continue_watching_error_api', { error: errorMessage }), 'error');
             return false;
         }
     }
@@ -795,7 +793,7 @@
 
             if (success) {
                 document.querySelector('.actionSheet.opened')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-                showNotification(JE.t('remove_continue_watching_success'), "success");
+                showNotification(JE.t('remove_continue_watching_success'), 'success');
                 setTimeout(() => window.Emby?.Page?.currentView?.refresh({ force: true }), 500);
             } else {
                 button.disabled = false;
@@ -838,5 +836,4 @@
             actionSheetContent.appendChild(removeButton);
         }
     };
-
 })(window.JellyfinEnhanced);

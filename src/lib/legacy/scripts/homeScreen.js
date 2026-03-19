@@ -594,7 +594,7 @@ import globalize from '../../globalize';
                     ...migrated,
                     ...JSON.parse(localStorage.getItem('KefinTweaksConfig')?.homeScreen || '{}')
                 }
-            }));    
+            }));
 
             // Save migrated config back to JS Injector plugin (async, don't block)
             if (window.KefinTweaksUtils && window.KefinTweaksUtils.saveConfigToJavaScriptInjector) {
@@ -1553,8 +1553,8 @@ import globalize from '../../globalize';
                 return false;
             }
 
-            console.log(includeItemTypes)
-            
+            console.log(includeItemTypes);
+
             const cardContainer = window.cardBuilder.renderCards(
                 items,
                 includeItemTypes?.includes('Movie') ? globalize.translate('RecentlyAddedInMovies') : globalize.translate('RecentlyAddedInTVShows'),
@@ -4726,7 +4726,7 @@ import globalize from '../../globalize';
                         sectionId = `director-${sectionData.data.name.toLowerCase().replace(/\s+/g, '-')}`;
                         break;
                     case 'writer':
-                        const writerTemplate = sectionConfig?.name || `${globalize.translate('WrittenBy')} [Writer]`;   
+                        const writerTemplate = sectionConfig?.name || `${globalize.translate('WrittenBy')} [Writer]`;
                         sectionName = formatSectionName(writerTemplate, { Writer: sectionData.data.name });
                         sectionId = `writer-${sectionData.data.name.toLowerCase().replace(/\s+/g, '-')}`;
                         break;
@@ -5046,7 +5046,7 @@ import globalize from '../../globalize';
 
         let lastScrollTop = 0;
         let lastTouchY = null;
-        
+
         // Clear any existing scroll timeout when setting up again
         if (scrollTimeout) {
             clearTimeout(scrollTimeout);
@@ -5860,7 +5860,7 @@ import globalize from '../../globalize';
 
             // Wait for all parallel operations to complete
             await Promise.all(initPromises);
-            
+
             // Setup infinite loading after content is rendered
             setupInfiniteLoading(homeSectionsContainer);
         } catch (error) {
@@ -5873,7 +5873,7 @@ import globalize from '../../globalize';
 
     // Keep track of the current page instance to clean up when page changes
     let currentPageInstance = null;
-    
+
     if (window.KefinTweaksUtils) {
         // Register handler for all pages (breadcrumbs can appear on any detail page)
         window.KefinTweaksUtils.onViewPage((view, element) => {
@@ -5883,10 +5883,10 @@ import globalize from '../../globalize';
                     // Perform comprehensive cleanup when leaving the page
                     cleanupModule();
                 }
-                
+
                 // Update current page instance
                 currentPageInstance = view;
-                
+
                 // Run our custom code
                 checkAndRenderCustomSections();
             } catch (err) {
@@ -5908,10 +5908,10 @@ import globalize from '../../globalize';
             clearTimeout(scrollTimeout);
             scrollTimeout = null;
         }
-        
+
         // Remove all event listeners
         removeScrollBasedLoading();
-        
+
         // Reset state variables to free memory
         discoveryBuffer.length = 0;
         hiddenDiscoverySections.length = 0;

@@ -11,7 +11,6 @@
     let refreshModalInterval = null;
     let active4KPopup = null;
 
-
     // ================================
     // SVG ICONS LIBRARY
     // ================================
@@ -133,7 +132,6 @@
      * @returns {HTMLElement|null} - Popover element or null if no download data.
      */
     function fillHoverPopover(item) {
-
         const allDownloads = [
             ...(item.mediaInfo?.downloadStatus || []),
             ...(item.mediaInfo?.downloadStatus4k || [])
@@ -148,9 +146,9 @@
         let popoverHTML = '';
 
         allDownloads.forEach(downloadStatus => {
-            const hasValidSizeData = (typeof downloadStatus.size === 'number' &&
-                                    typeof downloadStatus.sizeLeft === 'number' &&
-                                    downloadStatus.size > 0);
+            const hasValidSizeData = (typeof downloadStatus.size === 'number'
+                                    && typeof downloadStatus.sizeLeft === 'number'
+                                    && downloadStatus.size > 0);
 
             const isQueued = (downloadStatus.status && downloadStatus.status.toLowerCase() === 'queued');
             const isWarning = (downloadStatus.status && downloadStatus.status.toLowerCase() === 'warning');
@@ -202,8 +200,8 @@
     function positionHoverPopover(element, x, y) {
         const padding = 12;
         const rect = element.getBoundingClientRect();
-        let newX = Math.min(Math.max(x + 14, padding), window.innerWidth - rect.width - padding);
-        let newY = Math.min(Math.max(y - rect.height - 14, padding), window.innerHeight - rect.height - padding);
+        const newX = Math.min(Math.max(x + 14, padding), window.innerWidth - rect.width - padding);
+        const newY = Math.min(Math.max(y - rect.height - 14, padding), window.innerHeight - rect.height - padding);
         element.style.transform = `translate(${newX}px, ${newY}px)`;
     }
 
@@ -668,9 +666,9 @@
      * @param {function} onToggleFilter - The function to call to toggle the filter.
      */
     ui.updateJellyseerrIcon = function(isJellyseerrActive, jellyseerrUserFound, isJellyseerrOnlyMode, onToggleFilter) {
-        const anchor = document.querySelector('.searchFields .inputContainer') ||
-                       document.querySelector('#searchPage .searchFields') ||
-                       document.querySelector('#searchPage');
+        const anchor = document.querySelector('.searchFields .inputContainer')
+                       || document.querySelector('#searchPage .searchFields')
+                       || document.querySelector('#searchPage');
         if (!anchor) return;
 
         let icon = document.getElementById('jellyseerr-search-icon');
@@ -743,7 +741,7 @@
         const requestedCount = statusCounts.pending + statusCounts.processing;
         const availableCount = statusCounts.available + statusCounts.partiallyAvailable;
         const accountedForCount = requestedCount + availableCount;
-        let overallStatus, statusSummary = null;
+        let overallStatus; let statusSummary = null;
 
         if (statusCounts.notRequested === 0) {
             overallStatus = (availableCount === total) ? 5 : 7;
@@ -774,7 +772,7 @@
         }
 
         const oldSection = searchPage.querySelector('.jellyseerr-section');
-        if(oldSection) oldSection.remove();
+        if (oldSection) oldSection.remove();
 
         const sectionToInject = createJellyseerrSection(results, isJellyseerrOnlyMode, isJellyseerrActive, jellyseerrUserFound);
 
@@ -864,23 +862,23 @@
             document.dispatchEvent(new CustomEvent('jellyseerr-manual-refresh'));
         });
         title.appendChild(refreshBtn);
-    if (!document.getElementById('jellyseerr-refresh-style')) {
-        const style = document.createElement('style');
-        style.id = 'jellyseerr-refresh-style';
-        style.textContent = `
+        if (!document.getElementById('jellyseerr-refresh-style')) {
+            const style = document.createElement('style');
+            style.id = 'jellyseerr-refresh-style';
+            style.textContent = `
             .jellyseerr-refresh-btn:focus { outline: none; }
             .jellyseerr-refresh-icon { color: #fff; filter: opacity(0.6); }
             .jellyseerr-refresh-btn:hover .jellyseerr-refresh-icon { color: #fff; filter: opacity(0.9); }
         `;
-        document.head.appendChild(style);
-    }
+            document.head.appendChild(style);
+        }
         section.appendChild(title);
 
         const scrollerContainer = document.createElement('div');
         scrollerContainer.setAttribute('is', 'emby-scroller');
         scrollerContainer.className = 'padded-top-focusscale padded-bottom-focusscale emby-scroller';
-        scrollerContainer.dataset.horizontal = "true";
-        scrollerContainer.dataset.centerfocus = "card";
+        scrollerContainer.dataset.horizontal = 'true';
+        scrollerContainer.dataset.centerfocus = 'card';
 
         const itemsContainer = document.createElement('div');
         itemsContainer.setAttribute('is', 'emby-itemscontainer');
@@ -929,35 +927,35 @@
 
         switch (status) {
             case 5: // Available
-                icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>`;
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-available';
                 break;
             case 2: // Pending
-                icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z" clip-rule="evenodd" /></svg>`;
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-pending';
                 break;
             case 3: // Status 3 can be either Processing (with downloads) or Requested (without downloads)
                 // Check if there are active downloads to differentiate
                 if (item.mediaInfo?.downloadStatus?.length > 0 || item.mediaInfo?.downloadStatus4k?.length > 0) {
                     // Processing - spinner icon with animation
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`;
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>';
                     statusClass = 'status-processing';
                 } else {
                     // Requested - clock icon
-                    icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>`;
+                    icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>';
                     statusClass = 'status-requested';
                 }
                 break;
             case 7: // Requested (clock icon)
-                icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>`;
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>';
                 statusClass = 'status-requested';
                 break;
             case 4: // Partially Available
-                icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd" /></svg>`;
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-partially-available';
                 break;
             case 6: // Rejected
-                icon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>`;
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-rejected';
                 break;
             default:
@@ -1226,7 +1224,7 @@
         try {
             const response = await fetch(url, {
                 headers: {
-                    "X-Emby-Token": ApiClient.accessToken()
+                    'X-Emby-Token': ApiClient.accessToken()
                 }
             });
             if (!response.ok) return;
@@ -1235,7 +1233,6 @@
             let providers = data.results?.[DEFAULT_REGION]?.flatrate;
 
             if (providers && providers.length > 0) {
-
                 // 1. If a default provider list is set, only include providers from that list.
                 if (DEFAULT_PROVIDERS.length > 0) {
                     providers = providers.filter(provider => DEFAULT_PROVIDERS.includes(provider.provider_name));
@@ -1337,9 +1334,9 @@
             case 3: setButton(JE.t('jellyseerr_btn_request_more'), icons.request, 'jellyseerr-button-request'); break;
             case 7: setButton(JE.t('jellyseerr_btn_view_status'), icons.requested, 'jellyseerr-button-pending'); break;
             case 4: setButton(JE.t('jellyseerr_btn_request_missing'), icons.request, 'jellyseerr-button-partially-available'); break;
-            case 5: setButton(JE.t('jellyseerr_btn_available'), icons.available, 'jellyseerr-button-available', true, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_all_seasons', {count: seasonAnalysis.total}) : null); break;
+            case 5: setButton(JE.t('jellyseerr_btn_available'), icons.available, 'jellyseerr-button-available', true, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_all_seasons', { count: seasonAnalysis.total }) : null); break;
             case 6: setButton(JE.t('jellyseerr_btn_rejected'), icons.cancel, 'jellyseerr-button-rejected', true); break;
-            default: setButton(JE.t('jellyseerr_btn_request'), icons.request, 'jellyseerr-button-request', false, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_seasons_available', {count: seasonAnalysis.total}) : null); break;
+            default: setButton(JE.t('jellyseerr_btn_request'), icons.request, 'jellyseerr-button-request', false, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_seasons_available', { count: seasonAnalysis.total }) : null); break;
         }
     }
 
@@ -1369,7 +1366,7 @@
             buttonGroup.className = 'jellyseerr-button-group';
 
             // Determine main button state based on status
-            let mainButtonText, mainButtonIcon, mainButtonClass, mainButtonDisabled;
+            let mainButtonText; let mainButtonIcon; let mainButtonClass; let mainButtonDisabled;
 
             if (status === 5) {
                 // Check if item is available but also downloading (upgrading version)
@@ -1651,8 +1648,6 @@
         imageContainer.appendChild(badge);
     }
 
-
-
     /**
      * Shows the advanced request modal for movies.
      * @param {number} tmdbId - TMDB ID of the movie.
@@ -1708,8 +1703,6 @@
             console.error(`${logPrefix} Failed to load advanced options:`, error);
             JE.toast('Failed to load server options', 3000);
         }
-
-
     };
 
     /**
@@ -1725,7 +1718,6 @@
             clearInterval(refreshModalInterval);
             refreshModalInterval = null;
         }
-
 
         const { create, createAdvancedOptionsHTML, populateAdvancedOptions } = JE.jellyseerrModal;
         const { fetchTvShowDetails, requestTvSeasons, fetchAdvancedRequestData, isPartialRequestsEnabled, requestMedia } = JE.jellyseerrAPI;
@@ -1860,7 +1852,6 @@
             }
         }
 
-
         // Start polling for updates when the modal is shown
         refreshModalInterval = setInterval(async () => {
             const freshTvDetails = await fetchTvShowDetails(tmdbId);
@@ -1906,7 +1897,7 @@
             const apiStatus = seasonStatusMap[seasonNumber];
             const canRequest = !apiStatus || apiStatus === 1 || apiStatus === 7;
 
-            let statusText = JE.t('jellyseerr_season_status_not_requested'), statusClass = 'not-requested';
+            let statusText = JE.t('jellyseerr_season_status_not_requested'); let statusClass = 'not-requested';
             switch (apiStatus) {
                 case 2:
                 case 3: statusText = JE.t('jellyseerr_season_status_requested'); statusClass = 'processing'; break;
@@ -1935,7 +1926,7 @@
                 <div class="jellyseerr-season-status jellyseerr-season-status-${statusClass}">${statusText}</div>
             `;
 
-            if(existingCheckbox) {
+            if (existingCheckbox) {
                 seasonItem.querySelector('.jellyseerr-season-checkbox').checked = isChecked;
             }
 
@@ -2013,9 +2004,9 @@
             }
 
             const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
-            const poster = movie.posterPath
-                ? `https://image.tmdb.org/t/p/w92${movie.posterPath}`
-                : 'https://i.ibb.co/fdbkXQdP/jellyseerr-poster-not-found.png';
+            const poster = movie.posterPath ?
+                `https://image.tmdb.org/t/p/w92${movie.posterPath}` :
+                'https://i.ibb.co/fdbkXQdP/jellyseerr-poster-not-found.png';
 
             return `
                 <div class="jellyseerr-collection-movie-row">
@@ -2180,10 +2171,9 @@
                 configureRequestButton(button, newItem, isJellyseerrActive, jellyseerrUserFound);
 
                 // If the popover for this item is currently visible, update it
-                if (jellyseerrHoverPopover &&
-                    jellyseerrHoverPopover.classList.contains('show') &&
-                    jellyseerrHoverPopover.dataset.tmdbId === tmdbId) {
-
+                if (jellyseerrHoverPopover
+                    && jellyseerrHoverPopover.classList.contains('show')
+                    && jellyseerrHoverPopover.dataset.tmdbId === tmdbId) {
                     console.log(`${logPrefix} Active popover found for TMDB ID ${tmdbId}. Refreshing content.`);
                     const popoverContent = fillHoverPopover(newItem);
                     if (popoverContent) {
@@ -2202,5 +2192,4 @@
     ui.createJellyseerrCard = createJellyseerrCard;
     ui.formatEtaText = formatEtaText;
     JE.jellyseerrUI = ui;
-
 })(window.JellyfinEnhanced);

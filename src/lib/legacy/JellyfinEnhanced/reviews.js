@@ -14,7 +14,7 @@
             const url = `${ApiClient.getUrl(`/JellyfinEnhanced/tmdb/${apiMediaType}/${tmdbId}/reviews`)}?language=en-US&page=1`;
             return fetch(url, {
                 headers: {
-                    "X-Emby-Token": ApiClient.accessToken()
+                    'X-Emby-Token': ApiClient.accessToken()
                 }
             })
                 .then(response => response.ok ? response.json() : Promise.reject(`API Error: ${response.status}`))
@@ -61,8 +61,8 @@
             `;
 
             const textElement = reviewCard.querySelector('.tmdb-review-text');
-            textElement.innerHTML = escapeHtml(previewContent).replace(/\n/g, '<br>') +
-                (isLongReview ? `... <span class="tmdb-review-toggle">${JE.t('reviews_read_more')}</span>` : '');
+            textElement.innerHTML = escapeHtml(previewContent).replace(/\n/g, '<br>')
+                + (isLongReview ? `... <span class="tmdb-review-toggle">${JE.t('reviews_read_more')}</span>` : '');
 
             return reviewCard;
         }
@@ -135,9 +135,9 @@
             }
 
             const insertionAnchor =
-                contextPage.querySelector('.streaming-lookup-container') ||
-                contextPage.querySelector('.itemExternalLinks') ||
-                contextPage.querySelector('.tagline');
+                contextPage.querySelector('.streaming-lookup-container')
+                || contextPage.querySelector('.itemExternalLinks')
+                || contextPage.querySelector('.tagline');
 
             if (insertionAnchor && insertionAnchor.parentNode) {
                 insertionAnchor.parentNode.insertBefore(reviewsSection, insertionAnchor.nextSibling);
@@ -272,9 +272,8 @@
                 setTimeout(processPages, 500);
             }
         };
-        
+
         window.addEventListener('hashchange', hashChangeHandler);
     };
 })(window.JellyfinEnhanced);
-
 

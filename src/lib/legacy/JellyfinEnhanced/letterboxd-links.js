@@ -9,10 +9,9 @@
             return;
         }
 
-
         let isAddingLinks = false; // Lock to prevent concurrent runs
-        let intervalId = null;
-        let processedItemIds = new Set(); // Cache of items we've already processed
+        const intervalId = null;
+        const processedItemIds = new Set(); // Cache of items we've already processed
         let lastVisibleItemId = null; // Track the currently visible item
 
         const LETTERBOXD_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/letterboxd.svg';
@@ -78,7 +77,7 @@
             // Cleanup stale links from any non-visible pages to prevent future conflicts
             document.querySelectorAll('#itemDetailPage.hide .letterboxd-link').forEach(staleLink => {
                 if (staleLink.previousSibling && staleLink.previousSibling.nodeType === Node.TEXT_NODE) {
-                   staleLink.previousSibling.remove();
+                    staleLink.previousSibling.remove();
                 }
                 staleLink.remove();
             });
@@ -109,7 +108,7 @@
                 // Create Letterboxd link using IMDb ID
                 const letterboxdUrl = `https://letterboxd.com/imdb/${imdbId}`;
                 anchorElement.appendChild(document.createTextNode(' '));
-                anchorElement.appendChild(createLinkButton("Letterboxd", letterboxdUrl, "letterboxd-link-icon"));
+                anchorElement.appendChild(createLinkButton('Letterboxd', letterboxdUrl, 'letterboxd-link-icon'));
                 processedItemIds.add(itemId);
             } catch (err) {
                 console.error(`${logPrefix} Error adding Letterboxd link:`, err);
@@ -142,7 +141,7 @@
                 letterboxdObserver.disconnect();
                 return;
             }
-            
+
             if (!processingLetterboxd) {
                 processingLetterboxd = true;
                 if (typeof requestIdleCallback !== 'undefined') {
@@ -158,13 +157,13 @@
                 }
             }
         });
-        
+
         letterboxdObserver.observe(document.body, {
             childList: true,
             subtree: true,
             attributeFilter: ['class']
         });
-        
+
         // Initial check
         if (typeof requestIdleCallback !== 'undefined') {
             requestIdleCallback(() => addLetterboxdLinks(), { timeout: 1000 });

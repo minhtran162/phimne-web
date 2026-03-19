@@ -4,52 +4,52 @@
  */
 
 (function () {
-  'use strict';
+    'use strict';
 
-  if (typeof window.LocalStorageCache === 'undefined') {
-    return console.warn('LocalStorageCache not available');
-  }
-
-  const localStorageCache = new window.LocalStorageCache();
-
-  // FIX: Helper to get userId consistently
-  function getCurrentUserId() {
-    try {
-      const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-      return apiClient?.getCurrentUserId?.() || 'anonymous';
-    } catch (e) {
-      console.warn('Failed to get user ID', e);
-      return 'anonymous';
-    }
-  }
-
-  // FIX: Load bookmarks with proper userId
-  function loadBookmarksFromCache() {
-    const userId = getCurrentUserId();
-    const cached = localStorageCache.get('bookmarks', userId);
-
-    if (!cached) {
-      return {};
+    if (typeof window.LocalStorageCache === 'undefined') {
+        return console.warn('LocalStorageCache not available');
     }
 
-    // Convert array back to object format
-    if (Array.isArray(cached)) {
-      const bookmarksObj = {};
-      cached.forEach(bm => {
-        if (bm.id) {
-          const { id, ...data } = bm;
-          bookmarksObj[id] = data;
+    const localStorageCache = new window.LocalStorageCache();
+
+    // FIX: Helper to get userId consistently
+    function getCurrentUserId() {
+        try {
+            const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+            return apiClient?.getCurrentUserId?.() || 'anonymous';
+        } catch (e) {
+            console.warn('Failed to get user ID', e);
+            return 'anonymous';
         }
-      });
-      return bookmarksObj;
     }
 
-    return cached;
-  }
+    // FIX: Load bookmarks with proper userId
+    function loadBookmarksFromCache() {
+        const userId = getCurrentUserId();
+        const cached = localStorageCache.get('bookmarks', userId);
 
-  // Inject custom styles
-  const style = document.createElement('style');
-  style.textContent = `
+        if (!cached) {
+            return {};
+        }
+
+        // Convert array back to object format
+        if (Array.isArray(cached)) {
+            const bookmarksObj = {};
+            cached.forEach(bm => {
+                if (bm.id) {
+                    const { id, ...data } = bm;
+                    bookmarksObj[id] = data;
+                }
+            });
+            return bookmarksObj;
+        }
+
+        return cached;
+    }
+
+    // Inject custom styles
+    const style = document.createElement('style');
+    style.textContent = `
     .je-bookmarks-wrapper {
       display: flex;
       flex-direction: column;
@@ -917,159 +917,158 @@
       font-size: 18px;
     }
   `;
-  document.head.appendChild(style);
+    document.head.appendChild(style);
 
-  const logPrefix = '🪼 Jellyfin Enhanced: Bookmarks Library:';
-  let sectionObserver = null;
-  let isRendering = false;
-  let lastRenderTs = 0;
+    const logPrefix = '🪼 Jellyfin Enhanced: Bookmarks Library:';
+    let sectionObserver = null;
+    let isRendering = false;
+    let lastRenderTs = 0;
 
-  function getJE() {
+    function getJE() {
     // Try common globals first
-    if (window.JE) return window.JE;
-    if (window.JellyfinEnhanced) return window.JellyfinEnhanced;
+        if (window.JE) return window.JE;
+        if (window.JellyfinEnhanced) return window.JellyfinEnhanced;
 
-    // Then parent/top frames (CustomTabs may run in a child frame)
-    if (window.parent?.JE) return window.parent.JE;
-    if (window.parent?.JellyfinEnhanced) return window.parent.JellyfinEnhanced;
-    if (window.top?.JE) return window.top.JE;
-    if (window.top?.JellyfinEnhanced) return window.top.JellyfinEnhanced;
+        // Then parent/top frames (CustomTabs may run in a child frame)
+        if (window.parent?.JE) return window.parent.JE;
+        if (window.parent?.JellyfinEnhanced) return window.parent.JellyfinEnhanced;
+        if (window.top?.JE) return window.top.JE;
+        if (window.top?.JellyfinEnhanced) return window.top.JellyfinEnhanced;
 
-    return null;
-  }
+        return null;
+    }
 
-  /**
+    /**
    * Initialize
    */
-  function init() {
+    function init() {
+        let attempts = 0;
+        const checkReady = setInterval(() => {
+            attempts += 1;
+            const je = getJE();
+            const ready = !!(je && je.userConfig && je.bookmarks);
 
-    let attempts = 0;
-    const checkReady = setInterval(() => {
-      attempts += 1;
-      const je = getJE();
-      const ready = !!(je && je.userConfig && je.bookmarks);
+            if (attempts % 10 === 0 || attempts <= 5) {
+            }
 
-      if (attempts % 10 === 0 || attempts <= 5) {
-      }
+            if (ready) {
+                clearInterval(checkReady);
+                // If JE is available only on parent/top, make it accessible locally for this script
+                if (!window.JE && je) {
+                    window.JE = je;
+                }
+                hookViewEvents();
+                document.addEventListener('je-bookmarks-updated', renderIfSectionExists);
 
-      if (ready) {
-        clearInterval(checkReady);
-        // If JE is available only on parent/top, make it accessible locally for this script
-        if (!window.JE && je) {
-          window.JE = je;
-        }
-        hookViewEvents();
-        document.addEventListener('je-bookmarks-updated', renderIfSectionExists);
+                // Watch for section being injected by CustomTabs
+                sectionObserver = new MutationObserver(() => renderIfSectionExists());
+                sectionObserver.observe(document.body, { childList: true, subtree: true });
 
-        // Watch for section being injected by CustomTabs
-        sectionObserver = new MutationObserver(() => renderIfSectionExists());
-        sectionObserver.observe(document.body, { childList: true, subtree: true });
+                // Try immediate render in case tab is already visible
+                renderIfSectionExists();
+            }
+        }, 100);
+    }
 
-        // Try immediate render in case tab is already visible
-        renderIfSectionExists();
-      }
-    }, 100);
-  }
-
-  /**
+    /**
    * Render when section exists or bookmarks updated
    */
-  function renderIfSectionExists() {
+    function renderIfSectionExists() {
     // Prevent re-entrant renders triggered by our own DOM mutations
-    if (isRendering) return;
-    const now = Date.now();
-    if (now - lastRenderTs < 150) return;
+        if (isRendering) return;
+        const now = Date.now();
+        if (now - lastRenderTs < 150) return;
 
-    const container = document.querySelector('.sections.bookmarks');
-    if (container) {
-      revealSection(container);
-      isRendering = true;
-      renderBookmarksLibrary(container).finally(() => {
-        isRendering = false;
-        lastRenderTs = Date.now();
-      });
-      // Disconnect observer once section is found to prevent self-triggering loops
-      if (sectionObserver) {
-        sectionObserver.disconnect();
-        sectionObserver = null;
-      }
+        const container = document.querySelector('.sections.bookmarks');
+        if (container) {
+            revealSection(container);
+            isRendering = true;
+            renderBookmarksLibrary(container).finally(() => {
+                isRendering = false;
+                lastRenderTs = Date.now();
+            });
+            // Disconnect observer once section is found to prevent self-triggering loops
+            if (sectionObserver) {
+                sectionObserver.disconnect();
+                sectionObserver = null;
+            }
+        }
     }
-  }
 
-  /**
+    /**
    * Bind to viewshow so CustomTabs triggers render
    */
-  function hookViewEvents() {
-    document.addEventListener('viewshow', (e) => {
-      // CustomTabs provides a view element on e.detail.view
-      const view = e.detail?.view || document;
-      const container = view.querySelector?.('.sections.bookmarks');
-      if (container) {
-        revealSection(container);
-        renderBookmarksLibrary(container);
-      }
-    });
-  }
+    function hookViewEvents() {
+        document.addEventListener('viewshow', (e) => {
+            // CustomTabs provides a view element on e.detail.view
+            const view = e.detail?.view || document;
+            const container = view.querySelector?.('.sections.bookmarks');
+            if (container) {
+                revealSection(container);
+                renderBookmarksLibrary(container);
+            }
+        });
+    }
 
-  /**
+    /**
    * Remove hidden styles often set by CustomTabs placeholders
    */
-  function revealSection(container) {
-    container.classList.remove('hide');
-    container.style.removeProperty('display');
-    container.style.removeProperty('visibility');
-  }
+    function revealSection(container) {
+        container.classList.remove('hide');
+        container.style.removeProperty('display');
+        container.style.removeProperty('visibility');
+    }
 
-  /**
+    /**
    * Render bookmarks library content
    */
-  async function renderBookmarksLibrary(container) {
-    const bookmarks = JE.userConfig.bookmark?.bookmarks || loadBookmarksFromCache();;
-    const bookmarkEntries = Object.entries(bookmarks);
+    async function renderBookmarksLibrary(container) {
+        const bookmarks = JE.userConfig.bookmark?.bookmarks || loadBookmarksFromCache();;
+        const bookmarkEntries = Object.entries(bookmarks);
 
-    // Group by item
-    const groupedByItem = {};
-    const typeCounts = {
-      tv: { items: 0, bookmarks: 0 },
-      movie: { items: 0, bookmarks: 0 }
-    };
-
-    for (const [id, bm] of bookmarkEntries) {
-      const key = bm.itemId || bm.tmdbId || bm.tvdbId || 'unknown';
-      const normalizedType = normalizeMediaType(bm.mediaType);
-      if (!groupedByItem[key]) {
-        groupedByItem[key] = {
-          details: bm,
-          bookmarks: [],
-          type: normalizedType
+        // Group by item
+        const groupedByItem = {};
+        const typeCounts = {
+            tv: { items: 0, bookmarks: 0 },
+            movie: { items: 0, bookmarks: 0 }
         };
-        if (typeCounts[normalizedType]) {
-          typeCounts[normalizedType].items += 1;
+
+        for (const [id, bm] of bookmarkEntries) {
+            const key = bm.itemId || bm.tmdbId || bm.tvdbId || 'unknown';
+            const normalizedType = normalizeMediaType(bm.mediaType);
+            if (!groupedByItem[key]) {
+                groupedByItem[key] = {
+                    details: bm,
+                    bookmarks: [],
+                    type: normalizedType
+                };
+                if (typeCounts[normalizedType]) {
+                    typeCounts[normalizedType].items += 1;
+                }
+            }
+            groupedByItem[key].bookmarks.push({ id, ...bm });
+            if (typeCounts[groupedByItem[key].type]) {
+                typeCounts[groupedByItem[key].type].bookmarks += 1;
+            }
         }
-      }
-      groupedByItem[key].bookmarks.push({ id, ...bm });
-      if (typeCounts[groupedByItem[key].type]) {
-        typeCounts[groupedByItem[key].type].bookmarks += 1;
-      }
-    }
 
-    // Sort bookmarks within each group by timestamp
-    Object.values(groupedByItem).forEach(group => {
-      group.bookmarks.sort((a, b) => a.timestamp - b.timestamp);
-    });
+        // Sort bookmarks within each group by timestamp
+        Object.values(groupedByItem).forEach(group => {
+            group.bookmarks.sort((a, b) => a.timestamp - b.timestamp);
+        });
 
-    const totalItems = Object.keys(groupedByItem).length;
-    const totalBookmarks = bookmarkEntries.length;
-    let currentTab = container.dataset.currentTab || 'movie';
-    if (currentTab === 'tv' && typeCounts.tv.items === 0 && typeCounts.movie.items > 0) {
-      currentTab = 'movie';
-    } else if (currentTab === 'movie' && typeCounts.movie.items === 0 && typeCounts.tv.items > 0) {
-      currentTab = 'tv';
-    }
-    container.dataset.currentTab = currentTab;
+        const totalItems = Object.keys(groupedByItem).length;
+        const totalBookmarks = bookmarkEntries.length;
+        let currentTab = container.dataset.currentTab || 'movie';
+        if (currentTab === 'tv' && typeCounts.tv.items === 0 && typeCounts.movie.items > 0) {
+            currentTab = 'movie';
+        } else if (currentTab === 'movie' && typeCounts.movie.items === 0 && typeCounts.tv.items > 0) {
+            currentTab = 'tv';
+        }
+        container.dataset.currentTab = currentTab;
 
-    // Create UI
-    container.innerHTML = `
+        // Create UI
+        container.innerHTML = `
       <div class="je-bookmarks-wrapper">
         <div class="je-bookmark-tabs">
           <button class="je-tab ${currentTab === 'movie' ? 'active' : ''}" data-tab="movie">
@@ -1108,161 +1107,161 @@
       </div>
     `;
 
-    // Attach button handlers
-    const findDuplicatesBtn = container.querySelector('.btnFindDuplicates');
-    const cleanupBtn = container.querySelector('.btnCleanupBookmarks');
-    const deleteAllBtn = container.querySelector('.btnDeleteAllBookmarks');
+        // Attach button handlers
+        const findDuplicatesBtn = container.querySelector('.btnFindDuplicates');
+        const cleanupBtn = container.querySelector('.btnCleanupBookmarks');
+        const deleteAllBtn = container.querySelector('.btnDeleteAllBookmarks');
 
-    findDuplicatesBtn?.addEventListener('click', async () => {
-      findDuplicatesBtn.disabled = true;
-      const label = findDuplicatesBtn.querySelector('span:last-child');
-      const origText = label.innerHTML;
-      label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
+        findDuplicatesBtn?.addEventListener('click', async () => {
+            findDuplicatesBtn.disabled = true;
+            const label = findDuplicatesBtn.querySelector('span:last-child');
+            const origText = label.innerHTML;
+            label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
 
-      // Surface duplicate bookmark groups and offer merging
-      showDuplicatesSyncModal(bookmarks);
+            // Surface duplicate bookmark groups and offer merging
+            showDuplicatesSyncModal(bookmarks);
 
-      findDuplicatesBtn.disabled = false;
-      label.innerHTML = origText;
-    });
-
-    cleanupBtn?.addEventListener('click', async () => {
-      cleanupBtn.disabled = true;
-      const label = cleanupBtn.querySelector('span:last-child');
-      const origText = label?.innerHTML;
-      if (label) label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
-
-      try {
-        const result = await JE.bookmarks.cleanupOrphaned();
-        JE.toast(JE.t('bookmark_cleanup_complete').replace('{count}', result.cleaned), 4000);
-        renderBookmarksLibrary(container);
-      } catch (error) {
-        console.error('Cleanup failed:', error);
-        JE.toast(JE.t('bookmark_cleanup_failed'), 3000);
-      } finally {
-        cleanupBtn.disabled = false;
-        if (label && origText) label.innerHTML = origText;
-      }
-    });
-
-    deleteAllBtn?.addEventListener('click', async () => {
-      if (!confirm(JE.t('bookmark_delete_all_confirm'))) return;
-
-      deleteAllBtn.disabled = true;
-      const label = deleteAllBtn.querySelector('span:last-child');
-      const origText = label?.innerHTML;
-      if (label) label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
-
-      try {
-        JE.userConfig.bookmark.bookmarks = {};
-        await JE.saveUserSettings();
-        JE.toast(JE.t('bookmark_deleted_all'), 3000);
-        renderBookmarksLibrary(container);
-      } catch (error) {
-        console.error('Delete failed:', error);
-        JE.toast(JE.t('bookmark_delete_failed'), 3000);
-      } finally {
-        deleteAllBtn.disabled = false;
-        if (label && origText) label.innerHTML = origText;
-      }
-    });
-
-    // Render items with posters
-    if (totalBookmarks > 0) {
-      const itemsContainer = container.querySelector('#bookmarks-items-container');
-      if (itemsContainer) {
-        await renderBookmarkItems(itemsContainer, groupedByItem, currentTab);
-
-        // Tab click handlers
-        container.querySelectorAll('.je-tab').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const tab = btn.dataset.tab;
-            container.dataset.currentTab = tab;
-            container.querySelectorAll('.je-tab').forEach(b => {
-              b.classList.toggle('active', b.dataset.tab === tab);
-            });
-            await renderBookmarkItems(itemsContainer, groupedByItem, tab);
-          });
+            findDuplicatesBtn.disabled = false;
+            label.innerHTML = origText;
         });
-      }
-    }
-  }
 
-  /**
+        cleanupBtn?.addEventListener('click', async () => {
+            cleanupBtn.disabled = true;
+            const label = cleanupBtn.querySelector('span:last-child');
+            const origText = label?.innerHTML;
+            if (label) label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
+
+            try {
+                const result = await JE.bookmarks.cleanupOrphaned();
+                JE.toast(JE.t('bookmark_cleanup_complete').replace('{count}', result.cleaned), 4000);
+                renderBookmarksLibrary(container);
+            } catch (error) {
+                console.error('Cleanup failed:', error);
+                JE.toast(JE.t('bookmark_cleanup_failed'), 3000);
+            } finally {
+                cleanupBtn.disabled = false;
+                if (label && origText) label.innerHTML = origText;
+            }
+        });
+
+        deleteAllBtn?.addEventListener('click', async () => {
+            if (!confirm(JE.t('bookmark_delete_all_confirm'))) return;
+
+            deleteAllBtn.disabled = true;
+            const label = deleteAllBtn.querySelector('span:last-child');
+            const origText = label?.innerHTML;
+            if (label) label.innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite;">refresh</span>';
+
+            try {
+                JE.userConfig.bookmark.bookmarks = {};
+                await JE.saveUserSettings();
+                JE.toast(JE.t('bookmark_deleted_all'), 3000);
+                renderBookmarksLibrary(container);
+            } catch (error) {
+                console.error('Delete failed:', error);
+                JE.toast(JE.t('bookmark_delete_failed'), 3000);
+            } finally {
+                deleteAllBtn.disabled = false;
+                if (label && origText) label.innerHTML = origText;
+            }
+        });
+
+        // Render items with posters
+        if (totalBookmarks > 0) {
+            const itemsContainer = container.querySelector('#bookmarks-items-container');
+            if (itemsContainer) {
+                await renderBookmarkItems(itemsContainer, groupedByItem, currentTab);
+
+                // Tab click handlers
+                container.querySelectorAll('.je-tab').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const tab = btn.dataset.tab;
+                        container.dataset.currentTab = tab;
+                        container.querySelectorAll('.je-tab').forEach(b => {
+                            b.classList.toggle('active', b.dataset.tab === tab);
+                        });
+                        await renderBookmarkItems(itemsContainer, groupedByItem, tab);
+                    });
+                });
+            }
+        }
+    }
+
+    /**
    * Render bookmark items with posters
    */
-  async function renderBookmarkItems(container, groupedByItem, currentTab) {
-    container.innerHTML = '';
-    const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-    if (!apiClient) {
-      container.innerHTML = '<p>API client not available</p>';
-      return;
-    }
+    async function renderBookmarkItems(container, groupedByItem, currentTab) {
+        container.innerHTML = '';
+        const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+        if (!apiClient) {
+            container.innerHTML = '<p>API client not available</p>';
+            return;
+        }
 
-    const userId = apiClient.getCurrentUserId();
-    const itemPromises = [];
+        const userId = apiClient.getCurrentUserId();
+        const itemPromises = [];
 
-    // Fetch all items
-    for (const [key, group] of Object.entries(groupedByItem)) {
-      const itemId = group.details.itemId;
-      if (itemId) {
-        itemPromises.push(
-          apiClient.getItem(userId, itemId)
-            .then(item => ({ key, group, item, orphaned: false }))
-            .catch(err => {
-              console.warn(`Failed to fetch item ${itemId}:`, err);
-              return { key, group, item: null, orphaned: true };
-            })
-        );
-      } else {
-        itemPromises.push(Promise.resolve({ key, group, item: null, orphaned: true }));
-      }
-    }
+        // Fetch all items
+        for (const [key, group] of Object.entries(groupedByItem)) {
+            const itemId = group.details.itemId;
+            if (itemId) {
+                itemPromises.push(
+                    apiClient.getItem(userId, itemId)
+                        .then(item => ({ key, group, item, orphaned: false }))
+                        .catch(err => {
+                            console.warn(`Failed to fetch item ${itemId}:`, err);
+                            return { key, group, item: null, orphaned: true };
+                        })
+                );
+            } else {
+                itemPromises.push(Promise.resolve({ key, group, item: null, orphaned: true }));
+            }
+        }
 
-    const results = await Promise.all(itemPromises);
+        const results = await Promise.all(itemPromises);
 
-    // Apply tab filter
-    const filtered = results.filter(({ group }) => {
-      if (currentTab === 'tv') return group.type === 'tv';
-      if (currentTab === 'movie') return group.type === 'movie';
-      return true;
-    });
+        // Apply tab filter
+        const filtered = results.filter(({ group }) => {
+            if (currentTab === 'tv') return group.type === 'tv';
+            if (currentTab === 'movie') return group.type === 'movie';
+            return true;
+        });
 
-    if (filtered.length === 0) {
-      const emptyTitle = currentTab === 'tv' ? JE.t('bookmark_empty_tv') : JE.t('bookmark_empty_movie');
-      const emptyHint = JE.t('bookmark_empty_hint');
-      container.innerHTML = `
+        if (filtered.length === 0) {
+            const emptyTitle = currentTab === 'tv' ? JE.t('bookmark_empty_tv') : JE.t('bookmark_empty_movie');
+            const emptyHint = JE.t('bookmark_empty_hint');
+            container.innerHTML = `
         <div class="je-bookmarks-empty">
           <div class="je-bookmarks-empty-icon material-icons" aria-hidden="true">bookmark_border</div>
           <div class="je-bookmarks-empty-title">${emptyTitle}</div>
           <div class="je-bookmarks-empty-hint">${emptyHint}</div>
         </div>`;
-      return;
-    }
+            return;
+        }
 
-    // Render each item
-    for (const { key, group, item, orphaned } of filtered) {
-      const itemCard = document.createElement('div');
-      itemCard.className = 'je-bookmark-item';
-      if (orphaned) {
-        itemCard.classList.add('je-bookmark-item-orphaned');
-      }
+        // Render each item
+        for (const { key, group, item, orphaned } of filtered) {
+            const itemCard = document.createElement('div');
+            itemCard.className = 'je-bookmark-item';
+            if (orphaned) {
+                itemCard.classList.add('je-bookmark-item-orphaned');
+            }
 
-      const posterUrl = item ? apiClient.getImageUrl(item.Id, {
-        type: 'Primary',
-        maxWidth: 260,
-        tag: item.ImageTags?.Primary
-      }) : '';
+            const posterUrl = item ? apiClient.getImageUrl(item.Id, {
+                type: 'Primary',
+                maxWidth: 260,
+                tag: item.ImageTags?.Primary
+            }) : '';
 
-      // Build header content
-      let titleDisplay = escapeHtml(group.details.name || 'Unknown Item');
-      // For TV episodes, show series name and episode number/name
-      if (group.type === 'tv' && item && item.Type === 'Episode' && item.SeriesName) {
-        titleDisplay = `${escapeHtml(item.SeriesName)}<br><small class="je-episode-title">S${item.ParentIndexNumber || '?'}:E${item.IndexNumber || '?'} ${item.Name ? escapeHtml(item.Name) : ''}</small>`;
-      }
+            // Build header content
+            let titleDisplay = escapeHtml(group.details.name || 'Unknown Item');
+            // For TV episodes, show series name and episode number/name
+            if (group.type === 'tv' && item && item.Type === 'Episode' && item.SeriesName) {
+                titleDisplay = `${escapeHtml(item.SeriesName)}<br><small class="je-episode-title">S${item.ParentIndexNumber || '?'}:E${item.IndexNumber || '?'} ${item.Name ? escapeHtml(item.Name) : ''}</small>`;
+            }
 
-      // Create the card header HTML
-      const headerHtml = `
+            // Create the card header HTML
+            const headerHtml = `
         <div class="je-bookmark-item-header">
           ${posterUrl ? `
             <img src="${posterUrl}"
@@ -1292,408 +1291,407 @@
         <div class="je-bookmarks-list bookmarks-list-${key}"></div>
       `;
 
-      itemCard.innerHTML = headerHtml;
-      container.appendChild(itemCard);
+            itemCard.innerHTML = headerHtml;
+            container.appendChild(itemCard);
 
-      // Add Find Replacement handler
-      const findBtn = itemCard.querySelector('.btnFindReplacement');
-      if (findBtn) {
-        findBtn.addEventListener('click', async () => {
-          await findAndOfferReplacement(group, findBtn);
-        });
-      }
+            // Add Find Replacement handler
+            const findBtn = itemCard.querySelector('.btnFindReplacement');
+            if (findBtn) {
+                findBtn.addEventListener('click', async () => {
+                    await findAndOfferReplacement(group, findBtn);
+                });
+            }
 
-      // Add Offset Adjustment handler
-      const offsetBtn = itemCard.querySelector('.btnAdjustOffset');
-      if (offsetBtn) {
-        offsetBtn.addEventListener('click', () => {
-          showOffsetAdjustmentModal(group);
-        });
-      }
+            // Add Offset Adjustment handler
+            const offsetBtn = itemCard.querySelector('.btnAdjustOffset');
+            if (offsetBtn) {
+                offsetBtn.addEventListener('click', () => {
+                    showOffsetAdjustmentModal(group);
+                });
+            }
 
-      // Add poster click handler
-      const poster = itemCard.querySelector('.bookmark-item-poster');
-      if (poster) {
-        poster.addEventListener('click', () => {
-          const itemId = poster.dataset.itemId;
-          if (itemId) {
-            window.Emby?.Page?.show(`/details?id=${itemId}`);
-          }
-        });
-      }
+            // Add poster click handler
+            const poster = itemCard.querySelector('.bookmark-item-poster');
+            if (poster) {
+                poster.addEventListener('click', () => {
+                    const itemId = poster.dataset.itemId;
+                    if (itemId) {
+                        window.Emby?.Page?.show(`/details?id=${itemId}`);
+                    }
+                });
+            }
 
-      // Render bookmarks for this item
-      const bookmarksList = itemCard.querySelector(`.bookmarks-list-${key}`);
-      if (bookmarksList) {
-        group.bookmarks.forEach(bm => {
-          const bmEl = document.createElement('div');
-          bmEl.className = 'je-bookmark-row';
+            // Render bookmarks for this item
+            const bookmarksList = itemCard.querySelector(`.bookmarks-list-${key}`);
+            if (bookmarksList) {
+                group.bookmarks.forEach(bm => {
+                    const bmEl = document.createElement('div');
+                    bmEl.className = 'je-bookmark-row';
 
-          const row = document.createElement('div');
-          row.className = 'je-bookmark-main';
+                    const row = document.createElement('div');
+                    row.className = 'je-bookmark-main';
 
-          const bar = document.createElement('div');
-          bar.className = 'je-bookmark-bar';
+                    const bar = document.createElement('div');
+                    bar.className = 'je-bookmark-bar';
 
-          const info = document.createElement('div');
-          info.className = 'je-bookmark-info';
-          info.innerHTML = `
+                    const info = document.createElement('div');
+                    info.className = 'je-bookmark-info';
+                    info.innerHTML = `
             ${bm.label ? `<div class="je-bookmark-label">${escapeHtml(bm.label)}</div>` : ''}
             <div class="je-bm-time" data-item-id="${bm.itemId}" data-time="${bm.timestamp}">
               <span>${bm.progress ? `${bm.progress}% • ` : ''}${formatTimestamp(bm.timestamp)}</span>
             </div>
           `;
 
-          const actions = document.createElement('div');
-          actions.className = 'je-bookmark-actions';
+                    const actions = document.createElement('div');
+                    actions.className = 'je-bookmark-actions';
 
-          const deleteBtn = document.createElement('button');
-          deleteBtn.className = 'btnDeleteBookmark je-btn je-btn-delete';
-          deleteBtn.innerHTML = '<span class="material-icons" aria-hidden="true">delete</span>';
-          deleteBtn.dataset.bookmarkId = bm.id;
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btnDeleteBookmark je-btn je-btn-delete';
+                    deleteBtn.innerHTML = '<span class="material-icons" aria-hidden="true">delete</span>';
+                    deleteBtn.dataset.bookmarkId = bm.id;
 
-          // Only add play and edit buttons if not orphaned
-          if (!orphaned) {
-            const playBtn = document.createElement('button');
-            playBtn.className = 'btnPlayBookmark je-btn';
-            playBtn.innerHTML = '<span class="material-icons" aria-hidden="true">play_arrow</span>';
-            playBtn.dataset.itemId = bm.itemId;
-            playBtn.dataset.time = bm.timestamp;
+                    // Only add play and edit buttons if not orphaned
+                    if (!orphaned) {
+                        const playBtn = document.createElement('button');
+                        playBtn.className = 'btnPlayBookmark je-btn';
+                        playBtn.innerHTML = '<span class="material-icons" aria-hidden="true">play_arrow</span>';
+                        playBtn.dataset.itemId = bm.itemId;
+                        playBtn.dataset.time = bm.timestamp;
 
-            const editBtn = document.createElement('button');
-            editBtn.className = 'btnEditBookmark je-btn';
-            editBtn.innerHTML = '<span class="material-icons" aria-hidden="true">edit</span>';
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'btnEditBookmark je-btn';
+                        editBtn.innerHTML = '<span class="material-icons" aria-hidden="true">edit</span>';
 
-            actions.appendChild(playBtn);
-            actions.appendChild(editBtn);
-          }
+                        actions.appendChild(playBtn);
+                        actions.appendChild(editBtn);
+                    }
 
-          actions.appendChild(deleteBtn);
+                    actions.appendChild(deleteBtn);
 
-          row.appendChild(bar);
-          row.appendChild(info);
-          row.appendChild(actions);
+                    row.appendChild(bar);
+                    row.appendChild(info);
+                    row.appendChild(actions);
 
-          const editRow = document.createElement('div');
-          editRow.className = 'je-btn-edit-row';
+                    const editRow = document.createElement('div');
+                    editRow.className = 'je-btn-edit-row';
 
-          const timeInput = document.createElement('input');
-          timeInput.type = 'text';
-          timeInput.className = 'je-input';
-          timeInput.value = formatTimestamp(bm.timestamp);
-          timeInput.placeholder = JE.t('bookmark_time_placeholder');
+                    const timeInput = document.createElement('input');
+                    timeInput.type = 'text';
+                    timeInput.className = 'je-input';
+                    timeInput.value = formatTimestamp(bm.timestamp);
+                    timeInput.placeholder = JE.t('bookmark_time_placeholder');
 
-          const labelInput = document.createElement('input');
-          labelInput.type = 'text';
-          labelInput.className = 'je-input je-input-label';
-          labelInput.value = bm.label || '';
-          labelInput.placeholder = JE.t('bookmark_label_placeholder');
-          labelInput.maxLength = 100;
+                    const labelInput = document.createElement('input');
+                    labelInput.type = 'text';
+                    labelInput.className = 'je-input je-input-label';
+                    labelInput.value = bm.label || '';
+                    labelInput.placeholder = JE.t('bookmark_label_placeholder');
+                    labelInput.maxLength = 100;
 
-          const saveBtn = document.createElement('button');
-          saveBtn.className = 'je-btn-action';
-          saveBtn.innerHTML = '<span class="material-icons" aria-hidden="true">save</span>';
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'je-btn-action';
+                    saveBtn.innerHTML = '<span class="material-icons" aria-hidden="true">save</span>';
 
-          const cancelBtn = document.createElement('button');
-          cancelBtn.className = 'je-btn-action je-btn-cancel';
-          cancelBtn.innerHTML = '<span class="material-icons" aria-hidden="true">close</span>';
+                    const cancelBtn = document.createElement('button');
+                    cancelBtn.className = 'je-btn-action je-btn-cancel';
+                    cancelBtn.innerHTML = '<span class="material-icons" aria-hidden="true">close</span>';
 
-          editRow.appendChild(timeInput);
-          editRow.appendChild(labelInput);
-          editRow.appendChild(saveBtn);
-          editRow.appendChild(cancelBtn);
+                    editRow.appendChild(timeInput);
+                    editRow.appendChild(labelInput);
+                    editRow.appendChild(saveBtn);
+                    editRow.appendChild(cancelBtn);
 
-          bmEl.appendChild(row);
-          bmEl.appendChild(editRow);
-          bookmarksList.appendChild(bmEl);
+                    bmEl.appendChild(row);
+                    bmEl.appendChild(editRow);
+                    bookmarksList.appendChild(bmEl);
 
-          // Play button handler (only if not orphaned)
-          const playBtn = actions.querySelector('.btnPlayBookmark');
-          if (playBtn) {
-            playBtn.addEventListener('click', async () => {
-              const itemId = playBtn.dataset.itemId;
-              const time = parseFloat(playBtn.dataset.time);
-              await playItemAtTime(itemId, time);
-            });
-          }
+                    // Play button handler (only if not orphaned)
+                    const playBtn = actions.querySelector('.btnPlayBookmark');
+                    if (playBtn) {
+                        playBtn.addEventListener('click', async () => {
+                            const itemId = playBtn.dataset.itemId;
+                            const time = parseFloat(playBtn.dataset.time);
+                            await playItemAtTime(itemId, time);
+                        });
+                    }
 
-          // Edit button handler (only if not orphaned)
-          const editBtn = actions.querySelector('.btnEditBookmark');
-          if (editBtn) {
-            editBtn.addEventListener('click', () => {
-              editRow.classList.toggle('show');
-              if (editRow.classList.contains('show')) {
-                timeInput.focus();
-              }
-            });
-          }
+                    // Edit button handler (only if not orphaned)
+                    const editBtn = actions.querySelector('.btnEditBookmark');
+                    if (editBtn) {
+                        editBtn.addEventListener('click', () => {
+                            editRow.classList.toggle('show');
+                            if (editRow.classList.contains('show')) {
+                                timeInput.focus();
+                            }
+                        });
+                    }
 
-          cancelBtn.addEventListener('click', () => {
-            editRow.classList.remove('show');
-            timeInput.value = formatTimestamp(bm.timestamp);
-            labelInput.value = bm.label || '';
-          });
+                    cancelBtn.addEventListener('click', () => {
+                        editRow.classList.remove('show');
+                        timeInput.value = formatTimestamp(bm.timestamp);
+                        labelInput.value = bm.label || '';
+                    });
 
-          saveBtn.addEventListener('click', async () => {
-            const parsedTime = parseTimestampInput(timeInput.value);
-            if (parsedTime === null) {
-              JE.toast(JE.t('bookmark_time_format_hint'), 3000);
-              return;
+                    saveBtn.addEventListener('click', async () => {
+                        const parsedTime = parseTimestampInput(timeInput.value);
+                        if (parsedTime === null) {
+                            JE.toast(JE.t('bookmark_time_format_hint'), 3000);
+                            return;
+                        }
+
+                        saveBtn.disabled = true;
+                        editBtn.disabled = true;
+                        try {
+                            const ok = await JE.bookmarks.update(bm.id, {
+                                timestamp: parsedTime,
+                                label: labelInput.value.trim()
+                            });
+                            if (ok) {
+                                JE.toast(JE.t('toast_bookmark_updated'), 2000);
+                                const bookmarksSection = document.querySelector('.sections.bookmarks');
+                                if (bookmarksSection) {
+                                    renderBookmarksLibrary(bookmarksSection);
+                                }
+                            } else {
+                                JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
+                            }
+                        } catch (err) {
+                            console.error('Bookmark update failed', err);
+                            JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
+                        } finally {
+                            saveBtn.disabled = false;
+                            editBtn.disabled = false;
+                        }
+                    });
+
+                    // Delete button handler
+                    deleteBtn.addEventListener('click', async () => {
+                        const bookmarkId = deleteBtn.dataset.bookmarkId;
+                        await JE.bookmarks.delete(bookmarkId);
+                        JE.toast(JE.t('toast_bookmark_deleted'), 2000);
+
+                        // Re-render
+                        const bookmarksSection = document.querySelector('.sections.bookmarks');
+                        if (bookmarksSection) {
+                            renderBookmarksLibrary(bookmarksSection);
+                        }
+                    });
+
+                    // Timestamp click-to-play
+                    const ts = info.querySelector('.je-bm-time');
+                    ts?.addEventListener('click', async () => {
+                        const t = parseFloat(ts.dataset.time);
+                        await playItemAtTime(ts.dataset.itemId, t);
+                    });
+                });
             }
-
-            saveBtn.disabled = true;
-            editBtn.disabled = true;
-            try {
-              const ok = await JE.bookmarks.update(bm.id, {
-                timestamp: parsedTime,
-                label: labelInput.value.trim()
-              });
-              if (ok) {
-                JE.toast(JE.t('toast_bookmark_updated'), 2000);
-                const bookmarksSection = document.querySelector('.sections.bookmarks');
-                if (bookmarksSection) {
-                  renderBookmarksLibrary(bookmarksSection);
-                }
-              } else {
-                JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
-              }
-            } catch (err) {
-              console.error('Bookmark update failed', err);
-              JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
-            } finally {
-              saveBtn.disabled = false;
-              editBtn.disabled = false;
-            }
-          });
-
-          // Delete button handler
-          deleteBtn.addEventListener('click', async () => {
-            const bookmarkId = deleteBtn.dataset.bookmarkId;
-            await JE.bookmarks.delete(bookmarkId);
-            JE.toast(JE.t('toast_bookmark_deleted'), 2000);
-
-            // Re-render
-            const bookmarksSection = document.querySelector('.sections.bookmarks');
-            if (bookmarksSection) {
-              renderBookmarksLibrary(bookmarksSection);
-            }
-          });
-
-          // Timestamp click-to-play
-          const ts = info.querySelector('.je-bm-time');
-          ts?.addEventListener('click', async () => {
-            const t = parseFloat(ts.dataset.time);
-            await playItemAtTime(ts.dataset.itemId, t);
-          });
-        });
-      }
+        }
     }
-  }
 
-  /**
+    /**
    * Play item at specific time
    */
-  async function playItemAtTime(itemId, startTime) {
-    try {
-      // Get the API client
-      const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-      if (!apiClient) {
-        console.warn(`${logPrefix} API client not available`);
-        JE.toast(JE.t('toast_api_client_unavailable'), 3000);
-        return;
-      }
+    async function playItemAtTime(itemId, startTime) {
+        try {
+            // Get the API client
+            const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+            if (!apiClient) {
+                console.warn(`${logPrefix} API client not available`);
+                JE.toast(JE.t('toast_api_client_unavailable'), 3000);
+                return;
+            }
 
-      // Get device ID to find our session
-      const deviceId = apiClient._deviceId || apiClient.deviceId();
+            // Get device ID to find our session
+            const deviceId = apiClient._deviceId || apiClient.deviceId();
 
-      // Query sessions to find our current session
-      const sessionsUrl = apiClient.getUrl('Sessions');
-      const sessions = await apiClient.ajax({
-        type: 'GET',
-        url: sessionsUrl,
-        dataType: 'json'
-      });
+            // Query sessions to find our current session
+            const sessionsUrl = apiClient.getUrl('Sessions');
+            const sessions = await apiClient.ajax({
+                type: 'GET',
+                url: sessionsUrl,
+                dataType: 'json'
+            });
 
-      // Find our session by device ID
-      const currentSession = sessions.find(s => s.DeviceId === deviceId);
+            // Find our session by device ID
+            const currentSession = sessions.find(s => s.DeviceId === deviceId);
 
-      if (!currentSession) {
-        console.warn(`${logPrefix} Could not find current session`);
-        JE.toast(JE.t('toast_session_not_found'), 3000);
-        return;
-      }
+            if (!currentSession) {
+                console.warn(`${logPrefix} Could not find current session`);
+                JE.toast(JE.t('toast_session_not_found'), 3000);
+                return;
+            }
 
-      const sessionId = currentSession.Id;
+            const sessionId = currentSession.Id;
 
-      // Use Jellyfin Sessions API to start playback with query parameters
-      const startTicks = Math.floor(startTime * 10000000);
-      const url = `Sessions/${sessionId}/Playing?playCommand=PlayNow&itemIds=${itemId}&startPositionTicks=${startTicks}`;
+            // Use Jellyfin Sessions API to start playback with query parameters
+            const startTicks = Math.floor(startTime * 10000000);
+            const url = `Sessions/${sessionId}/Playing?playCommand=PlayNow&itemIds=${itemId}&startPositionTicks=${startTicks}`;
 
-      await apiClient.ajax({
-        type: 'POST',
-        url: apiClient.getUrl(url)
-      });
+            await apiClient.ajax({
+                type: 'POST',
+                url: apiClient.getUrl(url)
+            });
 
-      JE.toast(JE.t('toast_playing'), 2000);
+            JE.toast(JE.t('toast_playing'), 2000);
 
-      // Wait for navigation to complete, then trigger bookmark marker update
-      setTimeout(() => {
-        if (window.JE?.isVideoPage?.() && typeof window.JE.bookmarks?.updateMarkers === 'function') {
-          window.JE.bookmarks.updateMarkers();
+            // Wait for navigation to complete, then trigger bookmark marker update
+            setTimeout(() => {
+                if (window.JE?.isVideoPage?.() && typeof window.JE.bookmarks?.updateMarkers === 'function') {
+                    window.JE.bookmarks.updateMarkers();
+                }
+            }, 1500);
+        } catch (e) {
+            console.error(`${logPrefix} Failed to play item:`, e);
+            JE.toast(JE.t('toast_playback_failed').replace('{error}', e.message || 'Unknown error'), 3000);
         }
-      }, 1500);
-
-    } catch (e) {
-      console.error(`${logPrefix} Failed to play item:`, e);
-      JE.toast(JE.t('toast_playback_failed').replace('{error}', e.message || 'Unknown error'), 3000);
     }
-  }
 
-  /**
+    /**
    * Format timestamp (seconds) to HH:MM:SS
    */
-  function formatTimestamp(seconds) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    function formatTimestamp(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
     }
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }
 
-  /**
+    /**
    * Format date string
    */
-  function formatDate(dateStr) {
-    if (!dateStr) return 'Unknown';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
+    function formatDate(dateStr) {
+        if (!dateStr) return 'Unknown';
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return dateStr;
+        }
     }
-  }
 
-  /**
+    /**
    * Escape HTML
    */
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function normalizeMediaType(mediaType) {
-    const type = (mediaType || '').toLowerCase();
-    if (type === 'series' || type === 'episode' || type === 'tvshow' || type === 'tv') return 'tv';
-    if (type === 'movie' || type === 'film') return 'movie';
-    return 'other';
-  }
-
-  // Parse HH:MM:SS or MM:SS or seconds into numeric seconds
-  function parseTimestampInput(value) {
-    if (!value && value !== 0) return null;
-    const str = String(value).trim();
-    if (!str) return null;
-
-    if (!str.includes(':')) {
-      const num = parseFloat(str);
-      return Number.isFinite(num) && num >= 0 ? num : null;
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
-    const parts = str.split(':').map(p => parseFloat(p));
-    if (parts.some(p => Number.isNaN(p) || p < 0)) return null;
-
-    let seconds = 0;
-    for (const part of parts) {
-      seconds = seconds * 60 + part;
+    function normalizeMediaType(mediaType) {
+        const type = (mediaType || '').toLowerCase();
+        if (type === 'series' || type === 'episode' || type === 'tvshow' || type === 'tv') return 'tv';
+        if (type === 'movie' || type === 'film') return 'movie';
+        return 'other';
     }
-    return seconds;
-  }
 
-  /**
+    // Parse HH:MM:SS or MM:SS or seconds into numeric seconds
+    function parseTimestampInput(value) {
+        if (!value && value !== 0) return null;
+        const str = String(value).trim();
+        if (!str) return null;
+
+        if (!str.includes(':')) {
+            const num = parseFloat(str);
+            return Number.isFinite(num) && num >= 0 ? num : null;
+        }
+
+        const parts = str.split(':').map(p => parseFloat(p));
+        if (parts.some(p => Number.isNaN(p) || p < 0)) return null;
+
+        let seconds = 0;
+        for (const part of parts) {
+            seconds = seconds * 60 + part;
+        }
+        return seconds;
+    }
+
+    /**
    * Search Jellyfin for items matching a TMDB/TVDB ID
    */
-  async function searchForReplacementItem(tmdbId, tvdbId, mediaType) {
-    const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-    if (!apiClient) return null;
+    async function searchForReplacementItem(tmdbId, tvdbId, mediaType) {
+        const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+        if (!apiClient) return null;
 
-    const userId = apiClient.getCurrentUserId();
+        const userId = apiClient.getCurrentUserId();
 
-    try {
-      // Search using Jellyfin's provider ID filtering
-      const itemTypes = mediaType === 'tv' ? 'Series,Episode' : 'Movie';
+        try {
+            // Search using Jellyfin's provider ID filtering
+            const itemTypes = mediaType === 'tv' ? 'Series,Episode' : 'Movie';
 
-      // Fetch all items of this type and filter by provider ID client-side
-      // This is more reliable than relying on AnyProviderIdEquals
-      const url = `Users/${userId}/Items?Recursive=true&IncludeItemTypes=${itemTypes}&SortBy=DateCreated&SortOrder=Descending&Limit=500`;
+            // Fetch all items of this type and filter by provider ID client-side
+            // This is more reliable than relying on AnyProviderIdEquals
+            const url = `Users/${userId}/Items?Recursive=true&IncludeItemTypes=${itemTypes}&SortBy=DateCreated&SortOrder=Descending&Limit=500`;
 
-      let response = await apiClient.ajax({
-        type: 'GET',
-        url: apiClient.getUrl(url),
-        dataType: 'json'
-      });
+            let response = await apiClient.ajax({
+                type: 'GET',
+                url: apiClient.getUrl(url),
+                dataType: 'json'
+            });
 
-      // Handle if response is a string (shouldn't happen but be safe)
-      if (typeof response === 'string') {
-        response = JSON.parse(response);
-      }
+            // Handle if response is a string (shouldn't happen but be safe)
+            if (typeof response === 'string') {
+                response = JSON.parse(response);
+            }
 
-      const items = response?.Items || [];
+            const items = response?.Items || [];
 
-      if (!Array.isArray(items) || items.length === 0) {
-        console.warn(`🪼 Jellyfin Enhanced: Bookmarks Library: No items found or items is not an array`);
-        return null;
-      }
+            if (!Array.isArray(items) || items.length === 0) {
+                console.warn('🪼 Jellyfin Enhanced: Bookmarks Library: No items found or items is not an array');
+                return null;
+            }
 
-      // Filter items by matching provider IDs
-      // Check both ProviderIds and UserData.Key (TMDB ID is often stored there)
-      const matches = items.filter(item => {
-        const providerIds = item.ProviderIds || {};
-        const userData = item.UserData || {};
+            // Filter items by matching provider IDs
+            // Check both ProviderIds and UserData.Key (TMDB ID is often stored there)
+            const matches = items.filter(item => {
+                const providerIds = item.ProviderIds || {};
+                const userData = item.UserData || {};
 
-        if (tmdbId) {
-          // Check ProviderIds.Tmdb
-          if (providerIds.Tmdb === String(tmdbId)) return true;
-          // Check UserData.Key for TMDB ID
-          if (userData.Key === String(tmdbId)) return true;
+                if (tmdbId) {
+                    // Check ProviderIds.Tmdb
+                    if (providerIds.Tmdb === String(tmdbId)) return true;
+                    // Check UserData.Key for TMDB ID
+                    if (userData.Key === String(tmdbId)) return true;
+                }
+
+                if (tvdbId) {
+                    // Check ProviderIds.Tvdb
+                    if (providerIds.Tvdb === String(tvdbId)) return true;
+                }
+
+                return false;
+            });
+
+            return matches.length > 0 ? matches : null;
+        } catch (e) {
+            console.error('Failed to search for replacement:', e);
+            return null;
         }
-
-        if (tvdbId) {
-          // Check ProviderIds.Tvdb
-          if (providerIds.Tvdb === String(tvdbId)) return true;
-        }
-
-        return false;
-      });
-
-      return matches.length > 0 ? matches : null;
-    } catch (e) {
-      console.error('Failed to search for replacement:', e);
-      return null;
     }
-  }
 
-  /**
+    /**
    * Show modal to adjust time offset for synced bookmarks
    */
-  function showOffsetAdjustmentModal(group) {
-    const syncedBookmarks = group.bookmarks.filter(bm => bm.syncedFrom);
-    if (syncedBookmarks.length === 0) {
-      JE.toast(JE.t('bookmark_no_synced'), 2000);
-      return;
-    }
+    function showOffsetAdjustmentModal(group) {
+        const syncedBookmarks = group.bookmarks.filter(bm => bm.syncedFrom);
+        if (syncedBookmarks.length === 0) {
+            JE.toast(JE.t('bookmark_no_synced'), 2000);
+            return;
+        }
 
-    const modal = document.createElement('div');
-    modal.className = 'je-bm-library-modal-overlay';
-    modal.innerHTML = `
+        const modal = document.createElement('div');
+        modal.className = 'je-bm-library-modal-overlay';
+        modal.innerHTML = `
       <div class="je-bm-library-modal-container" style="max-width: 550px;">
         <button class="je-bm-library-modal-close">×</button>
         <div class="je-bm-library-modal-content">
@@ -1740,102 +1738,102 @@
       </div>
     `;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    const closeDialog = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => modal.remove(), 200);
-    };
+        const closeDialog = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 200);
+        };
 
-    modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
-    modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeDialog();
-    });
+        modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
+        modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDialog();
+        });
 
-    // Apply offset button handler
-    modal.querySelector('.btnApplyOffset').addEventListener('click', async () => {
-      const offset = parseFloat(modal.querySelector('#offset-adjustment-input').value) || 0;
+        // Apply offset button handler
+        modal.querySelector('.btnApplyOffset').addEventListener('click', async () => {
+            const offset = parseFloat(modal.querySelector('#offset-adjustment-input').value) || 0;
 
-      const btn = modal.querySelector('.btnApplyOffset');
-      btn.disabled = true;
-      btn.querySelector('span:last-child').innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite; font-size: 18px;">refresh</span>';
+            const btn = modal.querySelector('.btnApplyOffset');
+            btn.disabled = true;
+            btn.querySelector('span:last-child').innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite; font-size: 18px;">refresh</span>';
 
-      try {
-        let updatedCount = 0;
+            try {
+                let updatedCount = 0;
 
-        // Update each synced bookmark
-        for (const bm of syncedBookmarks) {
-          const newTimestamp = Math.max(0, bm.timestamp + offset);
-          const ok = await JE.bookmarks.update(bm.id, {
-            timestamp: newTimestamp,
-            syncedFrom: '' // Clear syncedFrom to remove the icon
-          });
-          if (ok) updatedCount++;
-        }
+                // Update each synced bookmark
+                for (const bm of syncedBookmarks) {
+                    const newTimestamp = Math.max(0, bm.timestamp + offset);
+                    const ok = await JE.bookmarks.update(bm.id, {
+                        timestamp: newTimestamp,
+                        syncedFrom: '' // Clear syncedFrom to remove the icon
+                    });
+                    if (ok) updatedCount++;
+                }
 
-        if (updatedCount > 0) {
-          const message = offset === 0
-            ? JE.t('bookmark_offset_cleared').replace('{count}', updatedCount)
-            : JE.t('bookmark_offset_applied').replace('{count}', updatedCount).replace('{offset}', `${offset > 0 ? '+' : ''}${offset}s`);
-          JE.toast(message, 3000);
-          closeDialog();
+                if (updatedCount > 0) {
+                    const message = offset === 0 ?
+                        JE.t('bookmark_offset_cleared').replace('{count}', updatedCount) :
+                        JE.t('bookmark_offset_applied').replace('{count}', updatedCount).replace('{offset}', `${offset > 0 ? '+' : ''}${offset}s`);
+                    JE.toast(message, 3000);
+                    closeDialog();
 
-          // Refresh the library view
-          const container = document.querySelector('.sections.bookmarks');
-          if (container) {
-            setTimeout(() => renderBookmarksLibrary(container), 300);
-          }
-        } else {
-          JE.toast(JE.t('bookmark_update_failed'), 3000);
-          btn.disabled = false;
-          btn.querySelector('span:last-child').textContent = JE.t('bookmark_apply_offset');
-        }
-      } catch (e) {
-        console.error('Failed to apply offset:', e);
-        JE.toast(JE.t('bookmark_offset_failed'), 3000);
-        btn.disabled = false;
-        btn.querySelector('span:last-child').textContent = JE.t('bookmark_apply_offset');
-      }
-    });
+                    // Refresh the library view
+                    const container = document.querySelector('.sections.bookmarks');
+                    if (container) {
+                        setTimeout(() => renderBookmarksLibrary(container), 300);
+                    }
+                } else {
+                    JE.toast(JE.t('bookmark_update_failed'), 3000);
+                    btn.disabled = false;
+                    btn.querySelector('span:last-child').textContent = JE.t('bookmark_apply_offset');
+                }
+            } catch (e) {
+                console.error('Failed to apply offset:', e);
+                JE.toast(JE.t('bookmark_offset_failed'), 3000);
+                btn.disabled = false;
+                btn.querySelector('span:last-child').textContent = JE.t('bookmark_apply_offset');
+            }
+        });
 
-    // Fade in
-    setTimeout(() => modal.style.opacity = '1', 10);
-  }
-
-  /**
-   * Find replacement for orphaned item and offer migration
-   */
-  async function findAndOfferReplacement(group, triggerBtn) {
-    triggerBtn.disabled = true;
-
-    const matches = await searchForReplacementItem(
-      group.details.tmdbId,
-      group.details.tvdbId,
-      group.details.mediaType
-    );
-
-    if (!matches || matches.length === 0) {
-      JE.toast(JE.t('bookmark_no_replacement'), 3000);
-      triggerBtn.disabled = false;
-      return;
+        // Fade in
+        setTimeout(() => modal.style.opacity = '1', 10);
     }
 
-    showReplacementSelectionModal(group, matches);
-    triggerBtn.disabled = false;
-  }
+    /**
+   * Find replacement for orphaned item and offer migration
+   */
+    async function findAndOfferReplacement(group, triggerBtn) {
+        triggerBtn.disabled = true;
 
-  /**
+        const matches = await searchForReplacementItem(
+            group.details.tmdbId,
+            group.details.tvdbId,
+            group.details.mediaType
+        );
+
+        if (!matches || matches.length === 0) {
+            JE.toast(JE.t('bookmark_no_replacement'), 3000);
+            triggerBtn.disabled = false;
+            return;
+        }
+
+        showReplacementSelectionModal(group, matches);
+        triggerBtn.disabled = false;
+    }
+
+    /**
    * Show modal to select replacement item and migrate bookmarks
    */
-  function showReplacementSelectionModal(oldGroup, replacementItems) {
-    const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-    if (!apiClient) return;
+    function showReplacementSelectionModal(oldGroup, replacementItems) {
+        const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+        if (!apiClient) return;
 
-    const modal = document.createElement('div');
-    modal.className = 'je-bm-library-modal-overlay';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
-    modal.innerHTML = `
+        const modal = document.createElement('div');
+        modal.className = 'je-bm-library-modal-overlay';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
+        modal.innerHTML = `
       <div class="je-bm-library-modal-container je-replacement-modal-container">
         <button class="je-bm-library-modal-close">×</button>
         <div class="je-bm-library-modal-content" style="padding: 28px;">
@@ -1856,12 +1854,12 @@
           <div class="je-replacement-section-title">Select Replacement:</div>
           <div class="je-replacement-options">
             ${replacementItems.map((item, idx) => {
-      const posterUrl = apiClient.getImageUrl(item.Id, {
-        type: 'Primary',
-        maxWidth: 120,
-        tag: item.ImageTags?.Primary
-      });
-      return `
+        const posterUrl = apiClient.getImageUrl(item.Id, {
+            type: 'Primary',
+            maxWidth: 120,
+            tag: item.ImageTags?.Primary
+        });
+        return `
                 <div class="replacement-option" data-item-index="${idx}" style="display: flex; gap: 12px; background: rgba(76,175,80,0.05); border: 2px solid rgba(76,175,80,0.2); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; align-items: center;">
                   ${posterUrl ? `<img src="${posterUrl}" style="width: 60px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">` : '<div style="width: 60px; height: 90px; background: rgba(255,255,255,0.05); border-radius: 6px; flex-shrink: 0;"></div>'}
                   <div style="flex: 1;">
@@ -1888,165 +1886,165 @@
       </div>
     `;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    let selectedItem = null;
+        let selectedItem = null;
 
-    const closeDialog = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => modal.remove(), 200);
-    };
+        const closeDialog = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 200);
+        };
 
-    modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
-    modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeDialog();
-    });
-
-    // Selection handlers
-    modal.querySelectorAll('.replacement-option').forEach(option => {
-      option.addEventListener('click', () => {
-        const idx = parseInt(option.dataset.itemIndex);
-        selectedItem = replacementItems[idx];
-
-        modal.querySelectorAll('.replacement-option').forEach(opt => {
-          opt.style.borderColor = 'rgba(76,175,80,0.2)';
-          opt.style.background = 'rgba(76,175,80,0.05)';
-          opt.querySelector('.material-icons').style.display = 'none';
+        modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
+        modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDialog();
         });
 
-        option.style.borderColor = '#4caf50';
-        option.style.background = 'rgba(76,175,80,0.15)';
-        option.querySelector('.material-icons').style.display = 'block';
+        // Selection handlers
+        modal.querySelectorAll('.replacement-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const idx = parseInt(option.dataset.itemIndex);
+                selectedItem = replacementItems[idx];
 
-        const submitBtn = modal.querySelector('.je-bookmark-btn-submit');
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-      });
-    });
+                modal.querySelectorAll('.replacement-option').forEach(opt => {
+                    opt.style.borderColor = 'rgba(76,175,80,0.2)';
+                    opt.style.background = 'rgba(76,175,80,0.05)';
+                    opt.querySelector('.material-icons').style.display = 'none';
+                });
 
-    // Migrate handler
-    modal.querySelector('.je-bookmark-btn-submit').addEventListener('click', async () => {
-      if (!selectedItem) return;
+                option.style.borderColor = '#4caf50';
+                option.style.background = 'rgba(76,175,80,0.15)';
+                option.querySelector('.material-icons').style.display = 'block';
 
-      const btn = modal.querySelector('.je-bookmark-btn-submit');
-      btn.disabled = true;
-      btn.querySelector('span:last-child').textContent = 'Migrating...';
+                const submitBtn = modal.querySelector('.je-bookmark-btn-submit');
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+            });
+        });
 
-      try {
-        // Fetch full details for new item
-        const userId = apiClient.getCurrentUserId();
-        const fullItem = await apiClient.getItem(userId, selectedItem.Id);
+        // Migrate handler
+        modal.querySelector('.je-bookmark-btn-submit').addEventListener('click', async () => {
+            if (!selectedItem) return;
 
-        const newDetails = {
-          itemId: fullItem.Id,
-          tmdbId: fullItem.ProviderIds?.Tmdb || oldGroup.details.tmdbId,
-          tvdbId: fullItem.ProviderIds?.Tvdb || oldGroup.details.tvdbId,
-          mediaType: oldGroup.details.mediaType,
-          name: fullItem.Name
-        };
+            const btn = modal.querySelector('.je-bookmark-btn-submit');
+            btn.disabled = true;
+            btn.querySelector('span:last-child').textContent = 'Migrating...';
 
-        // Delete old bookmarks BEFORE syncing to prevent race condition with re-render
-        for (const bm of oldGroup.bookmarks) {
-          delete JE.userConfig.bookmark.bookmarks[bm.id];
-        }
+            try {
+                // Fetch full details for new item
+                const userId = apiClient.getCurrentUserId();
+                const fullItem = await apiClient.getItem(userId, selectedItem.Id);
 
-        // Sync bookmarks to new item (no offset)
-        const synced = await JE.bookmarks.syncBookmarks(oldGroup.bookmarks, newDetails, 0);
+                const newDetails = {
+                    itemId: fullItem.Id,
+                    tmdbId: fullItem.ProviderIds?.Tmdb || oldGroup.details.tmdbId,
+                    tvdbId: fullItem.ProviderIds?.Tvdb || oldGroup.details.tvdbId,
+                    mediaType: oldGroup.details.mediaType,
+                    name: fullItem.Name
+                };
 
-        JE.toast(JE.t('bookmark_migrated').replace('{count}', synced.length).replace('{name}', fullItem.Name), 4000);
+                // Delete old bookmarks BEFORE syncing to prevent race condition with re-render
+                for (const bm of oldGroup.bookmarks) {
+                    delete JE.userConfig.bookmark.bookmarks[bm.id];
+                }
 
-        closeDialog();
+                // Sync bookmarks to new item (no offset)
+                const synced = await JE.bookmarks.syncBookmarks(oldGroup.bookmarks, newDetails, 0);
 
-        // Refresh the library view
-        const container = document.querySelector('.sections.bookmarks');
-        if (container) {
-          setTimeout(() => renderBookmarksLibrary(container), 500);
-        }
-      } catch (e) {
-        console.error('Migration failed:', e);
-        JE.toast(JE.t('bookmark_migration_failed'), 3000);
-        btn.disabled = false;
-        btn.querySelector('span:last-child').textContent = JE.t('bookmark_migrate');
-      }
-    });
+                JE.toast(JE.t('bookmark_migrated').replace('{count}', synced.length).replace('{name}', fullItem.Name), 4000);
 
-    setTimeout(() => modal.style.opacity = '1', 10);
-  }
+                closeDialog();
 
-  /**
+                // Refresh the library view
+                const container = document.querySelector('.sections.bookmarks');
+                if (container) {
+                    setTimeout(() => renderBookmarksLibrary(container), 500);
+                }
+            } catch (e) {
+                console.error('Migration failed:', e);
+                JE.toast(JE.t('bookmark_migration_failed'), 3000);
+                btn.disabled = false;
+                btn.querySelector('span:last-child').textContent = JE.t('bookmark_migrate');
+            }
+        });
+
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    /**
    * Find all orphaned bookmarks and offer migration
    */
-  async function findAllOrphanedAndOfferMigration(bookmarks) {
-    const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-    if (!apiClient) {
-      JE.toast(JE.t('toast_api_client_unavailable'), 3000);
-      return;
-    }
-
-    const userId = apiClient.getCurrentUserId();
-    const orphanedGroups = [];
-
-    // Group by item ID
-    const byItem = {};
-    for (const [id, bm] of Object.entries(bookmarks)) {
-      if (!byItem[bm.itemId]) {
-        byItem[bm.itemId] = {
-          details: bm,
-          bookmarks: []
-        };
-      }
-      byItem[bm.itemId].bookmarks.push({ id, ...bm });
-    }
-
-    // Check each item
-    for (const [itemId, group] of Object.entries(byItem)) {
-      try {
-        await apiClient.getItem(userId, itemId);
-        // Item exists, not orphaned
-      } catch (e) {
-        // Item doesn't exist, it's orphaned
-        if (group.details.tmdbId || group.details.tvdbId) {
-          orphanedGroups.push(group);
+    async function findAllOrphanedAndOfferMigration(bookmarks) {
+        const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+        if (!apiClient) {
+            JE.toast(JE.t('toast_api_client_unavailable'), 3000);
+            return;
         }
-      }
+
+        const userId = apiClient.getCurrentUserId();
+        const orphanedGroups = [];
+
+        // Group by item ID
+        const byItem = {};
+        for (const [id, bm] of Object.entries(bookmarks)) {
+            if (!byItem[bm.itemId]) {
+                byItem[bm.itemId] = {
+                    details: bm,
+                    bookmarks: []
+                };
+            }
+            byItem[bm.itemId].bookmarks.push({ id, ...bm });
+        }
+
+        // Check each item
+        for (const [itemId, group] of Object.entries(byItem)) {
+            try {
+                await apiClient.getItem(userId, itemId);
+                // Item exists, not orphaned
+            } catch (e) {
+                // Item doesn't exist, it's orphaned
+                if (group.details.tmdbId || group.details.tvdbId) {
+                    orphanedGroups.push(group);
+                }
+            }
+        }
+
+        if (orphanedGroups.length === 0) {
+            JE.toast(JE.t('bookmark_no_orphaned'), 3000);
+            return;
+        }
+
+        // Search for replacements for all orphaned items
+        const replacementResults = [];
+        for (const group of orphanedGroups) {
+            const matches = await searchForReplacementItem(
+                group.details.tmdbId,
+                group.details.tvdbId,
+                group.details.mediaType
+            );
+            if (matches && matches.length > 0) {
+                replacementResults.push({ group, matches });
+            }
+        }
+
+        if (replacementResults.length === 0) {
+            JE.toast(JE.t('bookmark_orphaned_no_replacement').replace('{count}', orphanedGroups.length), 4000);
+            return;
+        }
+
+        // Show summary modal
+        showOrphanedSummaryModal(replacementResults);
     }
 
-    if (orphanedGroups.length === 0) {
-      JE.toast(JE.t('bookmark_no_orphaned'), 3000);
-      return;
-    }
-
-    // Search for replacements for all orphaned items
-    const replacementResults = [];
-    for (const group of orphanedGroups) {
-      const matches = await searchForReplacementItem(
-        group.details.tmdbId,
-        group.details.tvdbId,
-        group.details.mediaType
-      );
-      if (matches && matches.length > 0) {
-        replacementResults.push({ group, matches });
-      }
-    }
-
-    if (replacementResults.length === 0) {
-      JE.toast(JE.t('bookmark_orphaned_no_replacement').replace('{count}', orphanedGroups.length), 4000);
-      return;
-    }
-
-    // Show summary modal
-    showOrphanedSummaryModal(replacementResults);
-  }
-
-  /**
+    /**
    * Show summary of all orphaned items with replacements
    */
-  function showOrphanedSummaryModal(replacementResults) {
-    const modal = document.createElement('div');
-    modal.className = 'je-bm-library-modal-overlay';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
-    modal.innerHTML = `
+    function showOrphanedSummaryModal(replacementResults) {
+        const modal = document.createElement('div');
+        modal.className = 'je-bm-library-modal-overlay';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
+        modal.innerHTML = `
       <div class="je-bm-library-modal-container" style="max-width: 700px; background: #181818; border-radius: 12px; padding: 24px; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.8);">
         <button class="je-bm-library-modal-close" style="position: absolute; top: 16px; right: 16px; background: transparent; border: none; color: #fff; font-size: 32px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s;">×</button>
         <div class="je-bm-library-modal-content">
@@ -2086,85 +2084,85 @@
       </div>
     `;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    const closeDialog = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => modal.remove(), 200);
-    };
+        const closeDialog = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 200);
+        };
 
-    modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
-    modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeDialog();
-    });
+        modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
+        modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDialog();
+        });
 
-    // Migrate button handlers
-    modal.querySelectorAll('.btnMigrateOrphaned').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.resultIndex);
-        const result = replacementResults[idx];
-        closeDialog();
-        setTimeout(() => showReplacementSelectionModal(result.group, result.matches), 300);
-      });
-    });
+        // Migrate button handlers
+        modal.querySelectorAll('.btnMigrateOrphaned').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.resultIndex);
+                const result = replacementResults[idx];
+                closeDialog();
+                setTimeout(() => showReplacementSelectionModal(result.group, result.matches), 300);
+            });
+        });
 
-    setTimeout(() => modal.style.opacity = '1', 10);
-  }
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
 
-  /**
+    /**
    * Find duplicate bookmarks (same TMDB/TVDB but different item IDs)
    */
-  function findDuplicateBookmarks(bookmarks) {
-    const byProvider = {}; // Group by TMDB/TVDB ID
-    const duplicateGroups = [];
+    function findDuplicateBookmarks(bookmarks) {
+        const byProvider = {}; // Group by TMDB/TVDB ID
+        const duplicateGroups = [];
 
-    for (const [id, bm] of Object.entries(bookmarks)) {
-      const tmdbKey = bm.tmdbId ? `tmdb:${bm.tmdbId}` : null;
-      const tvdbKey = bm.tvdbId ? `tvdb:${bm.tvdbId}` : null;
+        for (const [id, bm] of Object.entries(bookmarks)) {
+            const tmdbKey = bm.tmdbId ? `tmdb:${bm.tmdbId}` : null;
+            const tvdbKey = bm.tvdbId ? `tvdb:${bm.tvdbId}` : null;
 
-      for (const key of [tmdbKey, tvdbKey].filter(Boolean)) {
-        if (!byProvider[key]) {
-          byProvider[key] = {};
+            for (const key of [tmdbKey, tvdbKey].filter(Boolean)) {
+                if (!byProvider[key]) {
+                    byProvider[key] = {};
+                }
+                if (!byProvider[key][bm.itemId]) {
+                    byProvider[key][bm.itemId] = [];
+                }
+                byProvider[key][bm.itemId].push({ id, ...bm });
+            }
         }
-        if (!byProvider[key][bm.itemId]) {
-          byProvider[key][bm.itemId] = [];
+
+        // Find groups with multiple item IDs
+        for (const [providerKey, itemGroups] of Object.entries(byProvider)) {
+            const itemIds = Object.keys(itemGroups);
+            if (itemIds.length > 1) {
+                duplicateGroups.push({
+                    providerKey,
+                    itemGroups,
+                    totalBookmarks: Object.values(itemGroups).flat().length,
+                    name: Object.values(itemGroups)[0][0].name || 'Unknown'
+                });
+            }
         }
-        byProvider[key][bm.itemId].push({ id, ...bm });
-      }
+
+        return duplicateGroups;
     }
 
-    // Find groups with multiple item IDs
-    for (const [providerKey, itemGroups] of Object.entries(byProvider)) {
-      const itemIds = Object.keys(itemGroups);
-      if (itemIds.length > 1) {
-        duplicateGroups.push({
-          providerKey,
-          itemGroups,
-          totalBookmarks: Object.values(itemGroups).flat().length,
-          name: Object.values(itemGroups)[0][0].name || 'Unknown'
-        });
-      }
-    }
-
-    return duplicateGroups;
-  }
-
-  /**
+    /**
    * Show modal to sync duplicate bookmarks
    */
-  function showDuplicatesSyncModal(bookmarks) {
-    const duplicates = findDuplicateBookmarks(bookmarks);
+    function showDuplicatesSyncModal(bookmarks) {
+        const duplicates = findDuplicateBookmarks(bookmarks);
 
-    if (duplicates.length === 0) {
-      JE.toast(JE.t('bookmark_no_duplicates'), 3000);
-      return;
-    }
+        if (duplicates.length === 0) {
+            JE.toast(JE.t('bookmark_no_duplicates'), 3000);
+            return;
+        }
 
-    const modal = document.createElement('div');
-    modal.className = 'je-bm-library-modal-overlay';
-    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
-    modal.innerHTML = `
+        const modal = document.createElement('div');
+        modal.className = 'je-bm-library-modal-overlay';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;';
+        modal.innerHTML = `
       <div class="je-bm-library-modal-container" style="max-width: 700px; background: #181818; border-radius: 12px; padding: 24px; position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.8); max-height: 85vh; overflow-y: auto;">
         <button class="je-bm-library-modal-close" style="position: absolute; top: 16px; right: 16px; background: transparent; border: none; color: #fff; font-size: 32px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s;">×</button>
         <div class="je-bm-library-modal-content">
@@ -2177,18 +2175,18 @@
           </div>
           <div style="margin-top: 20px;">
             ${duplicates.map((dup, idx) => {
-      const itemIds = Object.keys(dup.itemGroups);
-      return `
+        const itemIds = Object.keys(dup.itemGroups);
+        return `
                 <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
                   <div style="font-weight: 600; margin-bottom: 12px; color: #ff9800;">${escapeHtml(dup.name)}</div>
                   <div style="font-size: 12px; color: #888; margin-bottom: 12px;">
                     ${JE.t('bookmark_split_versions')
-          .replace('{count}', dup.totalBookmarks)
-          .replace('{versions}', itemIds.length)}
+        .replace('{count}', dup.totalBookmarks)
+        .replace('{versions}', itemIds.length)}
                   </div>
                   ${itemIds.map((itemId, versionIdx) => {
-            const bms = dup.itemGroups[itemId];
-            return `
+        const bms = dup.itemGroups[itemId];
+        return `
                       <div style="background: rgba(255,255,255,0.02); border-left: 3px solid ${versionIdx === 0 ? '#4caf50' : '#ff9800'}; padding: 8px 12px; margin-bottom: 8px; border-radius: 4px;">
                         <div style="font-size: 11px; color: ${versionIdx === 0 ? '#4caf50' : '#ff9800'}; font-weight: 600; margin-bottom: 4px;">
                           ${versionIdx === 0 ? JE.t('bookmark_primary_version') : JE.t('bookmark_old_version')}
@@ -2205,7 +2203,7 @@
                         </button>
                       </div>
                     `;
-          }).join('')}
+    }).join('')}
                   <button class="je-btn" data-dup-index="${idx}" style="margin-top: 8px; background: rgba(255, 152, 0, 0.15); border-color: #ff9800; color: #ff9800;">
                     <span class="material-icons" aria-hidden="true" style="font-size: 16px;">merge</span>
                     <span>${JE.t('bookmark_merge_primary')}</span>
@@ -2224,102 +2222,101 @@
       </div>
     `;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    const closeDialog = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => modal.remove(), 200);
-    };
-
-    modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
-    modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeDialog();
-    });
-
-    // Adjust Offset button handlers
-    modal.querySelectorAll('[data-sync-from]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const dupIndex = parseInt(btn.dataset.dupIndex);
-        const versionIndex = parseInt(btn.dataset.syncFrom);
-        const dup = duplicates[dupIndex];
-        const itemIds = Object.keys(dup.itemGroups);
-        const targetItemId = itemIds[versionIndex];
-        const bookmarksForItem = dup.itemGroups[targetItemId];
-
-        closeDialog();
-
-        // Show offset adjustment modal for these bookmarks
-        const groupObj = {
-          bookmarks: bookmarksForItem,
-          details: { name: dup.name }
+        const closeDialog = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 200);
         };
-        showOffsetAdjustmentModal(groupObj);
-      });
-    });
 
-    // Merge button handlers
-    modal.querySelectorAll('button.je-btn:not([data-sync-from])').forEach(btn => {
-      if (!btn.dataset.dupIndex) return;
+        modal.querySelector('.je-bm-library-modal-close').addEventListener('click', closeDialog);
+        modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDialog();
+        });
 
-      btn.addEventListener('click', async () => {
-        const dupIndex = parseInt(btn.dataset.dupIndex);
-        const dup = duplicates[dupIndex];
-        const itemIds = Object.keys(dup.itemGroups);
+        // Adjust Offset button handlers
+        modal.querySelectorAll('[data-sync-from]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const dupIndex = parseInt(btn.dataset.dupIndex);
+                const versionIndex = parseInt(btn.dataset.syncFrom);
+                const dup = duplicates[dupIndex];
+                const itemIds = Object.keys(dup.itemGroups);
+                const targetItemId = itemIds[versionIndex];
+                const bookmarksForItem = dup.itemGroups[targetItemId];
 
-        if (itemIds.length < 2) return;
+                closeDialog();
 
-        const primaryItemId = itemIds[0]; // First one is primary
-        const oldItemIds = itemIds.slice(1);
+                // Show offset adjustment modal for these bookmarks
+                const groupObj = {
+                    bookmarks: bookmarksForItem,
+                    details: { name: dup.name }
+                };
+                showOffsetAdjustmentModal(groupObj);
+            });
+        });
 
-        const primaryBookmarks = dup.itemGroups[primaryItemId];
-        const oldBookmarks = oldItemIds.flatMap(id => dup.itemGroups[id]);
+        // Merge button handlers
+        modal.querySelectorAll('button.je-btn:not([data-sync-from])').forEach(btn => {
+            if (!btn.dataset.dupIndex) return;
 
-        if (!confirm(JE.t('bookmark_merge_confirm').replace('{count}', oldBookmarks.length))) {
-          return;
-        }
+            btn.addEventListener('click', async () => {
+                const dupIndex = parseInt(btn.dataset.dupIndex);
+                const dup = duplicates[dupIndex];
+                const itemIds = Object.keys(dup.itemGroups);
 
-        btn.disabled = true;
-        btn.querySelector('span:last-child').innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite; font-size: 18px;">refresh</span>';
+                if (itemIds.length < 2) return;
 
-        try {
-          // Get primary item details from first primary bookmark
-          const primaryDetails = {
-            itemId: primaryItemId,
-            tmdbId: primaryBookmarks[0].tmdbId,
-            tvdbId: primaryBookmarks[0].tvdbId,
-            mediaType: primaryBookmarks[0].mediaType,
-            name: primaryBookmarks[0].name
-          };
+                const primaryItemId = itemIds[0]; // First one is primary
+                const oldItemIds = itemIds.slice(1);
 
-          // Sync old bookmarks to primary
-          const synced = await JE.bookmarks.syncBookmarks(oldBookmarks, primaryDetails, 0);
-          JE.toast(JE.t('bookmark_merge_success').replace('{count}', synced.length), 3000);
+                const primaryBookmarks = dup.itemGroups[primaryItemId];
+                const oldBookmarks = oldItemIds.flatMap(id => dup.itemGroups[id]);
 
-          closeDialog();
+                if (!confirm(JE.t('bookmark_merge_confirm').replace('{count}', oldBookmarks.length))) {
+                    return;
+                }
 
-          // Refresh the library view
-          const container = document.querySelector('.sections.bookmarks');
-          if (container) {
-            setTimeout(() => renderBookmarksLibrary(container), 500);
-          }
-        } catch (e) {
-          console.error('Merge failed:', e);
-          JE.toast(JE.t('bookmark_merge_failed'), 3000);
-          btn.disabled = false;
-          btn.querySelector('span:last-child').textContent = JE.t('bookmark_merge_primary');
-        }
-      });
-    });
+                btn.disabled = true;
+                btn.querySelector('span:last-child').innerHTML = '<span class="material-icons" style="animation: spin 1s linear infinite; font-size: 18px;">refresh</span>';
 
-    setTimeout(() => modal.style.opacity = '1', 10);
-  }
+                try {
+                    // Get primary item details from first primary bookmark
+                    const primaryDetails = {
+                        itemId: primaryItemId,
+                        tmdbId: primaryBookmarks[0].tmdbId,
+                        tvdbId: primaryBookmarks[0].tvdbId,
+                        mediaType: primaryBookmarks[0].mediaType,
+                        name: primaryBookmarks[0].name
+                    };
 
-  // Initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+                    // Sync old bookmarks to primary
+                    const synced = await JE.bookmarks.syncBookmarks(oldBookmarks, primaryDetails, 0);
+                    JE.toast(JE.t('bookmark_merge_success').replace('{count}', synced.length), 3000);
 
+                    closeDialog();
+
+                    // Refresh the library view
+                    const container = document.querySelector('.sections.bookmarks');
+                    if (container) {
+                        setTimeout(() => renderBookmarksLibrary(container), 500);
+                    }
+                } catch (e) {
+                    console.error('Merge failed:', e);
+                    JE.toast(JE.t('bookmark_merge_failed'), 3000);
+                    btn.disabled = false;
+                    btn.querySelector('span:last-child').textContent = JE.t('bookmark_merge_primary');
+                }
+            });
+        });
+
+        setTimeout(() => modal.style.opacity = '1', 10);
+    }
+
+    // Initialize
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 })();

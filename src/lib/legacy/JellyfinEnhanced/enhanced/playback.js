@@ -15,7 +15,7 @@
      * @returns {HTMLElement|null} The settings button element.
      */
     const settingsBtn = () => document.querySelector(
-    '.videoOsdBottom .btnVideoOsdSettings, .videoOsdBottom button[title="Settings"], .videoOsdBottom button[aria-label="Settings"]'
+        '.videoOsdBottom .btnVideoOsdSettings, .videoOsdBottom button[title="Settings"], .videoOsdBottom button[aria-label="Settings"]'
     );
 
     JE.openSettings = (cb) => {
@@ -84,7 +84,7 @@
             const buttonText = skipButton.textContent || '';
             skipButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
             skipButton.click();
-            
+
             if (buttonText.includes('Skip Intro')) {
                 JE.toast(JE.t('toast_skipped_intro'));
             } else if (buttonText.includes('Skip Outro')) {
@@ -120,7 +120,7 @@
                 return;
             }
 
-            let currentIndex = subtitleOptions.findIndex(option => {
+            const currentIndex = subtitleOptions.findIndex(option => {
                 const checkIcon = option.querySelector('.listItemIcon.check');
                 return checkIcon && getComputedStyle(checkIcon).visibility !== 'hidden';
             });
@@ -160,7 +160,7 @@
                 return;
             }
 
-            let currentIndex = audioOptions.findIndex(option => {
+            const currentIndex = audioOptions.findIndex(option => {
                 const checkIcon = option.querySelector('.actionsheetMenuItemIcon.listItemIcon.check');
                 return checkIcon && getComputedStyle(checkIcon).visibility !== 'hidden';
             });
@@ -268,7 +268,7 @@
         DURATION: 500,
         SPEED_NORMAL: 1.0,
         SPEED_FAST: 2.0,
-        MOVEMENT_THRESHOLD: 10, // pixels - ignore small movements
+        MOVEMENT_THRESHOLD: 10 // pixels - ignore small movements
     };
 
     let pressTimer = null;
@@ -329,7 +329,7 @@
             isLongPress = true;
             // Make sure video is playing when we activate speed boost
             if (videoElement.paused) {
-                videoElement.play().catch(err => console.warn("🪼 Play blocked:", err));
+                videoElement.play().catch(err => console.warn('🪼 Play blocked:', err));
             }
             videoElement.playbackRate = LONG_PRESS_CONFIG.SPEED_FAST;
             showOverlay(LONG_PRESS_CONFIG.SPEED_FAST);
@@ -407,5 +407,4 @@
             return;
         }
     };
-
 })(window.JellyfinEnhanced);

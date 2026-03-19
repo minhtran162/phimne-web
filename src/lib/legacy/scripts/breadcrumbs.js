@@ -66,7 +66,7 @@
             elements: [],
             item: item
         };
-        
+
         const protocol = window.location.protocol;
         const host = window.location.host;
 
@@ -119,7 +119,6 @@
             // Get season details for the season name
             const seasonDetails = await getItemDetails(item.ParentId);
             const seasonName = seasonDetails ? (seasonDetails.Name || `Season ${seasonDetails.IndexNumber}`) : `Season ${item.ParentIndexNumber}`;
-
 
             structure.elements = [
                 { text: 'TVShows', url: `#/tv${urlSuffix}${queryParams}&tab=0`, clickable: true },
@@ -538,9 +537,9 @@
             if (item.Type === 'Season' || item.Type === 'Episode') {
                 displayText = item.Name || `Season ${item.IndexNumber}`;
             } else if (item.Type === 'Audio') {
-                displayText = item.IndexNumber
-                    ? `${padNumber(item.IndexNumber)}. ${item.Name}`
-                    : item.Name;
+                displayText = item.IndexNumber ?
+                    `${padNumber(item.IndexNumber)}. ${item.Name}` :
+                    item.Name;
             }
 
             link.textContent = displayText;

@@ -109,7 +109,7 @@ const jeScriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'arr-tag-links.js': () => import('../../lib/legacy/JellyfinEnhanced/arr-tag-links.js'),
     // @ts-ignore
-    'letterboxd-links.js': () => import('../../lib/legacy/JellyfinEnhanced/letterboxd-links.js'),
+    'letterboxd-links.js': () => import('../../lib/legacy/JellyfinEnhanced/letterboxd-links.js')
 };
 
 // Configuration defaults
@@ -133,156 +133,156 @@ const DEFAULT_ENABLED_SCRIPTS: Record<string, boolean> = {
     seriesInfo: true,
     collections: true,
     settings: true,
-    skinManager: !browser.tizen ? true : false,
+    skinManager: !browser.tizen
 };
 
 const DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS = {
-    "autoPauseEnabled": true,
-    "autoResumeEnabled": false,
-    "autoPipEnabled": false,
-    "autoSkipIntro": false,
-    "autoSkipOutro": false,
-    "selectedStylePresetIndex": 1,
-    "selectedFontSizePresetIndex": 5,
-    "selectedFontFamilyPresetIndex": 0,
-    "disableCustomSubtitleStyles": false,
-    "randomButtonEnabled": false,
-    "randomIncludeMovies": true,
-    "randomIncludeShows": true,
-    "randomUnwatchedOnly": false,
-    "showWatchProgress": true,
-    "showFileSizes": true,
-    "showAudioLanguages": true,
-    "removeContinueWatchingEnabled": false,
-    "pauseScreenEnabled": true,
-    "qualityTagsEnabled": false,
-    "genreTagsEnabled": false,
-    "languageTagsEnabled": false,
-    "ratingTagsEnabled": false,
-    "qualityTagsPosition": "top-left",
-    "genreTagsPosition": "top-right",
-    "languageTagsPosition": "bottom-left",
-    "ratingTagsPosition": "bottom-right",
-    "showRatingInPlayer": true,
-    "reviewsExpandedByDefault": false,
-    "disableAllShortcuts": false,
-    "longPress2xEnabled": false,
-    "lastOpenedTab": "settings",
-    "Shortcuts": [
+    'autoPauseEnabled': true,
+    'autoResumeEnabled': false,
+    'autoPipEnabled': false,
+    'autoSkipIntro': false,
+    'autoSkipOutro': false,
+    'selectedStylePresetIndex': 1,
+    'selectedFontSizePresetIndex': 5,
+    'selectedFontFamilyPresetIndex': 0,
+    'disableCustomSubtitleStyles': false,
+    'randomButtonEnabled': false,
+    'randomIncludeMovies': true,
+    'randomIncludeShows': true,
+    'randomUnwatchedOnly': false,
+    'showWatchProgress': true,
+    'showFileSizes': true,
+    'showAudioLanguages': true,
+    'removeContinueWatchingEnabled': false,
+    'pauseScreenEnabled': true,
+    'qualityTagsEnabled': false,
+    'genreTagsEnabled': false,
+    'languageTagsEnabled': false,
+    'ratingTagsEnabled': false,
+    'qualityTagsPosition': 'top-left',
+    'genreTagsPosition': 'top-right',
+    'languageTagsPosition': 'bottom-left',
+    'ratingTagsPosition': 'bottom-right',
+    'showRatingInPlayer': true,
+    'reviewsExpandedByDefault': false,
+    'disableAllShortcuts': false,
+    'longPress2xEnabled': false,
+    'lastOpenedTab': 'settings',
+    'Shortcuts': [
         {
-            "Name": "OpenSearch",
-            "Key": "/",
-            "Label": "Open Search",
-            "Category": "Global"
+            'Name': 'OpenSearch',
+            'Key': '/',
+            'Label': 'Open Search',
+            'Category': 'Global'
         },
         {
-            "Name": "GoToHome",
-            "Key": "Shift+H",
-            "Label": "Go to Home",
-            "Category": "Global"
+            'Name': 'GoToHome',
+            'Key': 'Shift+H',
+            'Label': 'Go to Home',
+            'Category': 'Global'
         },
         {
-            "Name": "GoToDashboard",
-            "Key": "D",
-            "Label": "Go to Dashboard",
-            "Category": "Global"
+            'Name': 'GoToDashboard',
+            'Key': 'D',
+            'Label': 'Go to Dashboard',
+            'Category': 'Global'
         },
         {
-            "Name": "QuickConnect",
-            "Key": "Q",
-            "Label": "Quick Connect",
-            "Category": "Global"
+            'Name': 'QuickConnect',
+            'Key': 'Q',
+            'Label': 'Quick Connect',
+            'Category': 'Global'
         },
         {
-            "Name": "PlayRandomItem",
-            "Key": "R",
-            "Label": "Play Random Item",
-            "Category": "Global"
+            'Name': 'PlayRandomItem',
+            'Key': 'R',
+            'Label': 'Play Random Item',
+            'Category': 'Global'
         },
         {
-            "Name": "ClearAllBookmarks",
-            "Key": "Ctrl+Shift+B",
-            "Label": "Clear All Bookmarks",
-            "Category": "Global"
+            'Name': 'ClearAllBookmarks',
+            'Key': 'Ctrl+Shift+B',
+            'Label': 'Clear All Bookmarks',
+            'Category': 'Global'
         },
         {
-            "Name": "CycleAspectRatio",
-            "Key": "A",
-            "Label": "Cycle Aspect Ratio",
-            "Category": "Player"
+            'Name': 'CycleAspectRatio',
+            'Key': 'A',
+            'Label': 'Cycle Aspect Ratio',
+            'Category': 'Player'
         },
         {
-            "Name": "ShowPlaybackInfo",
-            "Key": "I",
-            "Label": "Show Playback Info",
-            "Category": "Player"
+            'Name': 'ShowPlaybackInfo',
+            'Key': 'I',
+            'Label': 'Show Playback Info',
+            'Category': 'Player'
         },
         {
-            "Name": "SubtitleMenu",
-            "Key": "S",
-            "Label": "Subtitle Menu",
-            "Category": "Player"
+            'Name': 'SubtitleMenu',
+            'Key': 'S',
+            'Label': 'Subtitle Menu',
+            'Category': 'Player'
         },
         {
-            "Name": "CycleSubtitleTracks",
-            "Key": "C",
-            "Label": "Cycle Subtitle Tracks",
-            "Category": "Player"
+            'Name': 'CycleSubtitleTracks',
+            'Key': 'C',
+            'Label': 'Cycle Subtitle Tracks',
+            'Category': 'Player'
         },
         {
-            "Name": "CycleAudioTracks",
-            "Key": "V",
-            "Label": "Cycle Audio Tracks",
-            "Category": "Player"
+            'Name': 'CycleAudioTracks',
+            'Key': 'V',
+            'Label': 'Cycle Audio Tracks',
+            'Category': 'Player'
         },
         {
-            "Name": "IncreasePlaybackSpeed",
-            "Key": "+",
-            "Label": "Increase Playback Speed",
-            "Category": "Player"
+            'Name': 'IncreasePlaybackSpeed',
+            'Key': '+',
+            'Label': 'Increase Playback Speed',
+            'Category': 'Player'
         },
         {
-            "Name": "DecreasePlaybackSpeed",
-            "Key": "-",
-            "Label": "Decrease Playback Speed",
-            "Category": "Player"
+            'Name': 'DecreasePlaybackSpeed',
+            'Key': '-',
+            'Label': 'Decrease Playback Speed',
+            'Category': 'Player'
         },
         {
-            "Name": "ResetPlaybackSpeed",
-            "Key": "R",
-            "Label": "Reset Playback Speed",
-            "Category": "Player"
+            'Name': 'ResetPlaybackSpeed',
+            'Key': 'R',
+            'Label': 'Reset Playback Speed',
+            'Category': 'Player'
         },
         {
-            "Name": "BookmarkCurrentTime",
-            "Key": "B",
-            "Label": "Bookmark Current Time",
-            "Category": "Player"
+            'Name': 'BookmarkCurrentTime',
+            'Key': 'B',
+            'Label': 'Bookmark Current Time',
+            'Category': 'Player'
         },
         {
-            "Name": "GoToSavedBookmark",
-            "Key": "Shift+B",
-            "Label": "Go to Saved Bookmark",
-            "Category": "Player"
+            'Name': 'GoToSavedBookmark',
+            'Key': 'Shift+B',
+            'Label': 'Go to Saved Bookmark',
+            'Category': 'Player'
         },
         {
-            "Name": "OpenEpisodePreview",
-            "Key": "P",
-            "Label": "Open Episode Preview",
-            "Category": "Player"
+            'Name': 'OpenEpisodePreview',
+            'Key': 'P',
+            'Label': 'Open Episode Preview',
+            'Category': 'Player'
         }
     ],
 
-    "ToastDuration": 1500,
-    "HelpPanelAutocloseDelay": 15000,
-    "EnableCustomSplashScreen": false,
-    "SplashScreenImageUrl": "",
-    "ElsewhereEnabled": false,
-    "DEFAULT_REGION": "US",
-    "DEFAULT_PROVIDERS": "",
-    "IGNORE_PROVIDERS": "",
-    "ElsewhereCustomBrandingText": "",
-    "ElsewhereCustomBrandingImageUrl": "",
+    'ToastDuration': 1500,
+    'HelpPanelAutocloseDelay': 15000,
+    'EnableCustomSplashScreen': false,
+    'SplashScreenImageUrl': '',
+    'ElsewhereEnabled': false,
+    'DEFAULT_REGION': 'US',
+    'DEFAULT_PROVIDERS': '',
+    'IGNORE_PROVIDERS': '',
+    'ElsewhereCustomBrandingText': '',
+    'ElsewhereCustomBrandingImageUrl': ''
 };
 
 interface ScriptDefinition {
@@ -347,7 +347,7 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Skin selection and management'
     },
     {
-        name: 'infiniteScroll', script: 'infiniteScroll.tsx', css: null, dependencies: ['cardBuilder'], tier: 'medium',
+        name: 'infiniteScroll', script: 'infiniteScroll.js', css: null, dependencies: ['cardBuilder'], tier: 'medium',
         description: 'Infinite scroll functionality'
     },
 
@@ -367,12 +367,12 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Watchlist functionality'
     },
     {
-        name: 'subtitleSearch', script: 'subtitleSearch.tsx', css: 'subtitleSearch.css',
+        name: 'subtitleSearch', script: 'subtitleSearch.js', css: 'subtitleSearch.css',
         dependencies: ['toaster'], tier: 'low', lazyLoad: true,
         description: 'Subtitle search functionality'
     },
     {
-        name: 'playlist', script: 'playlist.tsx', css: null,
+        name: 'playlist', script: 'playlist.js', css: null,
         dependencies: ['cardBuilder', 'utils', 'modal'], tier: 'low', lazyLoad: true,
         description: 'Playlist enhancements'
     },
@@ -383,59 +383,59 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Injects Watchlist tab'
     },
     {
-        name: 'headerTabs', script: 'headerTabs.tsx', css: null, dependencies: [], tier: 'low',
+        name: 'headerTabs', script: 'headerTabs.js', css: null, dependencies: [], tier: 'low',
         description: 'Header tab improvements'
     },
     {
-        name: 'customMenuLinks', script: 'customMenuLinks.tsx', css: null, dependencies: ['utils'], tier: 'low', lazyLoad: true,
+        name: 'customMenuLinks', script: 'customMenuLinks.js', css: null, dependencies: ['utils'], tier: 'low', lazyLoad: true,
         description: 'Custom menu links'
     },
     {
-        name: 'exclusiveElsewhere', script: 'exclusiveElsewhere.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'exclusiveElsewhere', script: 'exclusiveElsewhere.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Elsewhere functionality modifications'
     },
     {
-        name: 'backdropLeakFix', script: 'backdropLeakFix.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'backdropLeakFix', script: 'backdropLeakFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Fixes backdrop image leak'
     },
     {
-        name: 'updoot', script: 'updoot.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'updoot', script: 'updoot.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Upvote functionality'
     },
     {
-        name: 'dashboardButtonFix', script: 'dashboardButtonFix.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'dashboardButtonFix', script: 'dashboardButtonFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Dashboard button fix'
     },
     {
-        name: 'removeContinue', script: 'removeContinue.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'removeContinue', script: 'removeContinue.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Remove from continue watching'
     },
     {
-        name: 'breadcrumbs', script: 'breadcrumbs.tsx', css: 'breadcrumbNav.css', dependencies: ['utils'], tier: 'medium',
+        name: 'breadcrumbs', script: 'breadcrumbs.js', css: 'breadcrumbNav.css', dependencies: ['utils'], tier: 'medium',
         description: 'Breadcrumb navigation'
     },
     {
-        name: 'itemDetailsCollections', script: 'itemDetailsCollections.tsx', css: null,
+        name: 'itemDetailsCollections', script: 'itemDetailsCollections.js', css: null,
         dependencies: ['indexedDBCache', 'utils', 'cardBuilder'], tier: 'low', lazyLoad: true,
         description: 'Related collections on item details'
     },
     {
-        name: 'flattenSingleSeasonShows', script: 'flattenSingleSeasonShows.tsx', css: 'seriesEpisodes.css',
+        name: 'flattenSingleSeasonShows', script: 'seriesEpisodes.js', css: 'seriesEpisodes.css',
         dependencies: ['cardBuilder', 'utils'], tier: 'low', lazyLoad: true,
         description: 'Display episodes on series page'
     },
     {
-        name: 'seriesInfo', script: 'seriesInfo.tsx', css: null, dependencies: ['utils'], tier: 'medium',
+        name: 'seriesInfo', script: 'seriesInfo.js', css: null, dependencies: ['utils'], tier: 'medium',
         description: 'Series and season information'
     },
     {
-        name: 'collections', script: 'collections.tsx', css: null, dependencies: ['utils', 'modal'], tier: 'low', lazyLoad: true,
+        name: 'collections', script: 'collections.js', css: null, dependencies: ['utils', 'modal'], tier: 'low', lazyLoad: true,
         description: 'Collection sorting functionality'
     },
     {
         name: 'skinConfigLegacyDefaults', script: 'skinConfig-0.3.5-defaults.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Legacy skin defaults'
-    },
+    }
 ];
 
 // Map for script imports
@@ -473,35 +473,35 @@ const scriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'search': () => import('../../lib/legacy/scripts/search.js'),
     // @ts-ignore
-    'headerTabs': () => import('./tweaks/HeaderTabs').then(m => m.default),
+    'headerTabs': () => import('../../lib/legacy/scripts/headerTabs.js'),
     // @ts-ignore
-    'customMenuLinks': () => import('./tweaks/CustomMenuLinks').then(m => m.default),
+    'customMenuLinks': () => import('../../lib/legacy/scripts/customMenuLinks.js'),
     // @ts-ignore
-    'exclusiveElsewhere': () => import('./tweaks/ExclusiveElsewhere').then(m => m.default),
+    'exclusiveElsewhere': () => import('../../lib/legacy/scripts/exclusiveElsewhere.js'),
     // @ts-ignore
-    'backdropLeakFix': () => import('./tweaks/BackdropLeakFix').then(m => m.default),
+    'backdropLeakFix': () => import('../../lib/legacy/scripts/backdropLeakFix.js'),
     // @ts-ignore
-    'updoot': () => import('./tweaks/Updoot').then(m => m.default),
+    'updoot': () => import('../../lib/legacy/scripts/updoot.js'),
     // @ts-ignore
-    'dashboardButtonFix': () => import('./tweaks/DashboardButtonFix').then(m => m.default),
+    'dashboardButtonFix': () => import('../../lib/legacy/scripts/dashboardButtonFix.js'),
     // @ts-ignore
-    'infiniteScroll': () => import('./tweaks/InfiniteScroll').then(m => m.default),
+    'infiniteScroll': () => import('../../lib/legacy/scripts/infiniteScroll.js'),
     // @ts-ignore
     'removeContinue': () => import('./tweaks/RemoveContinue').then(m => m.default),
     // @ts-ignore
-    'subtitleSearch': () => import('./tweaks/SubtitleSearch').then(m => m.default),
+    'subtitleSearch': () => import('../../lib/legacy/scripts/subtitleSearch.js'),
     // @ts-ignore
-    'breadcrumbs': () => import('./tweaks/Breadcrumbs').then(m => m.default),
+    'breadcrumbs': () => import('../../lib/legacy/scripts/breadcrumbs.js'),
     // @ts-ignore
-    'playlist': () => import('./tweaks/Playlist').then(m => m.default),
+    'playlist': () => import('../../lib/legacy/scripts/playlist.js'),
     // @ts-ignore
-    'itemDetailsCollections': () => import('./tweaks/ItemDetailsCollections').then(m => m.default),
+    'itemDetailsCollections': () => import('../../lib/legacy/scripts/itemDetailsCollections.js'),
     // @ts-ignore
-    'flattenSingleSeasonShows': () => import('./tweaks/FlattenSingleSeasonShows').then(m => m.default),
+    'flattenSingleSeasonShows': () => import('../../lib/legacy/scripts/seriesEpisodes.js'),
     // @ts-ignore
-    'seriesInfo': () => import('./tweaks/SeriesInfo').then(m => m.default),
+    'seriesInfo': () => import('../../lib/legacy/scripts/seriesInfo.js'),
     // @ts-ignore
-    'collections': () => import('./tweaks/Collections').then(m => m.default),
+    'collections': () => import('../../lib/legacy/scripts/collections.js')
 };
 
 // Map for CSS imports
@@ -523,13 +523,13 @@ const cssImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'breadcrumbNav.css': () => import('../../assets/jellyfintweaks/scripts/breadcrumbNav.css'),
     // @ts-ignore
-    'seriesEpisodes.css': () => import('../../assets/jellyfintweaks/scripts/seriesEpisodes.css'),
+    'seriesEpisodes.css': () => import('../../assets/jellyfintweaks/scripts/seriesEpisodes.css')
 };
 
 // ===== TRANSLATION: Load Core Dictionary =====
 const ensureTranslationsLoaded = async () => {
     try {
-        if (userSettings.language() === null) return
+        if (userSettings.language() === null) return;
         await loadCoreDictionary();
         console.log('[KefinTweaks] Core translations loaded');
         return true;
@@ -734,14 +734,14 @@ const initializeJellyfinEnhanced = async () => {
                 if (response.ok) {
                     return await response.json();
                 } else {
-                    throw new Error("Failed to load English fallback translations");
+                    throw new Error('Failed to load English fallback translations');
                 }
             }
         } catch (error) {
             console.error('🪼 Jellyfin Enhanced: Failed to load translations:', error);
             return {}; // Return empty object on catastrophic failure
         }
-    }
+    };
 
     // Setup minimal global namespace
     if (!window.JellyfinEnhanced) {
@@ -856,7 +856,6 @@ const initializeJellyfinEnhanced = async () => {
 
             loadJEScripts();
         }, { timeout: 3000 });
-
     } catch (error) {
         console.error('[KefinTweaks] JE init failed', error);
         if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
@@ -1047,7 +1046,6 @@ const KefinTweaksLoader: React.FC = () => {
                     // Fallback: load after 5 seconds
                     setTimeout(loadOnInteraction, 5000);
                 }
-
             } catch (error) {
                 console.error('[KefinTweaks] Initialization error', error);
             }

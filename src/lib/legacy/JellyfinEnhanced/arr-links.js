@@ -17,7 +17,7 @@
             // Not cached, fetch user and check
             try {
                 let user = null;
-                for (let i = 0; i < 20; i++) {  // ~10s retry window
+                for (let i = 0; i < 20; i++) { // ~10s retry window
                     try {
                         user = await ApiClient.getCurrentUser();
                         if (user) break;
@@ -119,7 +119,7 @@
                 // Cleanup stale links from any non-visible pages to prevent future conflicts
                 document.querySelectorAll('#itemDetailPage.hide .arr-link').forEach(staleLink => {
                     if (staleLink.previousSibling && staleLink.previousSibling.nodeType === Node.TEXT_NODE) {
-                       staleLink.previousSibling.remove();
+                        staleLink.previousSibling.remove();
                     }
                     staleLink.remove();
                 });
@@ -149,20 +149,20 @@
                         const seriesSlug = slugify(item.Name);
                         const url = `${JE.pluginConfig.SonarrUrl}/series/${seriesSlug}`;
                         anchorElement.appendChild(document.createTextNode(' '));
-                        anchorElement.appendChild(createLinkButton("Sonarr", url, "arr-link-sonarr"));
+                        anchorElement.appendChild(createLinkButton('Sonarr', url, 'arr-link-sonarr'));
                     }
 
                     if (item.Type === 'Movie' && ids.tmdb && JE.pluginConfig.RadarrUrl) {
                         const url = `${JE.pluginConfig.RadarrUrl}/movie/${ids.tmdb}`;
                         anchorElement.appendChild(document.createTextNode(' '));
-                        anchorElement.appendChild(createLinkButton("Radarr", url, "arr-link-radarr"));
+                        anchorElement.appendChild(createLinkButton('Radarr', url, 'arr-link-radarr'));
                     }
 
                     if ((item.Type === 'Series' || item.Type === 'Movie') && JE.pluginConfig.BazarrUrl) {
                         const path = item.Type === 'Series' ? 'series' : 'movies';
                         const url = `${JE.pluginConfig.BazarrUrl}/${path}/`;
                         anchorElement.appendChild(document.createTextNode(' '));
-                        anchorElement.appendChild(createLinkButton("Bazarr", url, "arr-link-bazarr"));
+                        anchorElement.appendChild(createLinkButton('Bazarr', url, 'arr-link-bazarr'));
                     }
                 } finally {
                     isAddingLinks = false;
@@ -225,7 +225,6 @@
                     }
                 }
             });
-
         } catch (err) {
             console.error(`${logPrefix} Failed to initialize`, err);
         }

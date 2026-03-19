@@ -197,5 +197,4 @@
             this.detectActiveTheme();
         }
     };
-
 })(window.JellyfinEnhanced);

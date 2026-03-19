@@ -32,13 +32,13 @@
      */
     JE.saveUserSettings = async (fileName, settings) => {
         if (typeof ApiClient === 'undefined' || !ApiClient.getCurrentUserId) {
-            console.error("🪼 Jellyfin Enhanced: ApiClient not available");
+            console.error('🪼 Jellyfin Enhanced: ApiClient not available');
             return;
         }
         try {
             const userId = ApiClient.getCurrentUserId();
             if (!userId) {
-                console.error("🪼 Jellyfin Enhanced: User ID not available");
+                console.error('🪼 Jellyfin Enhanced: User ID not available');
                 return;
             }
 
@@ -110,22 +110,21 @@
         const pluginDefaults = JE.pluginConfig || {};
         const userShortcutsConfig = JE.userConfig?.shortcuts || {};
 
-        const defaultShortcuts = Array.isArray(pluginDefaults.Shortcuts)
-            ? pluginDefaults.Shortcuts.reduce((acc, s) => {
+        const defaultShortcuts = Array.isArray(pluginDefaults.Shortcuts) ?
+            pluginDefaults.Shortcuts.reduce((acc, s) => {
                 if (s && s.Name && s.Key !== undefined) acc[s.Name] = s.Key;
                 return acc;
-              }, {})
-            : {};
+            }, {}) :
+            {};
 
-        const userShortcuts = Array.isArray(userShortcutsConfig.Shortcuts)
-            ? userShortcutsConfig.Shortcuts.reduce((acc, s) => {
+        const userShortcuts = Array.isArray(userShortcutsConfig.Shortcuts) ?
+            userShortcutsConfig.Shortcuts.reduce((acc, s) => {
                 if (s && s.Name && s.Key !== undefined) acc[s.Name] = s.Key;
                 return acc;
-              }, {})
-            : {};
+            }, {}) :
+            {};
 
         JE.state.activeShortcuts = JE.state.activeShortcuts || {};
         Object.assign(JE.state.activeShortcuts, defaultShortcuts, userShortcuts);
     };
-
 })(window.JellyfinEnhanced);

@@ -9,9 +9,8 @@
             return;
         }
 
-
         let isAddingLinks = false;
-        let processedItems = new Set(); // Track items that have been processed
+        const processedItems = new Set(); // Track items that have been processed
         let debounceTimer = null;
 
         function slugifyTagName(name) {
@@ -160,7 +159,6 @@
 
                 // Mark item as processed after successfully adding links
                 processedItems.add(itemId);
-
             } catch (err) {
                 console.error(`${logPrefix} Error adding tag links:`, err);
             } finally {
@@ -202,6 +200,5 @@
             attributes: true,
             attributeFilter: ['class']
         });
-
     };
 })(window.JellyfinEnhanced);

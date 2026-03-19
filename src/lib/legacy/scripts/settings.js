@@ -69,7 +69,7 @@
         modal.appendChild(dialog);
 
         document.body.appendChild(modal);
-        
+
         // Trap focus if possible, or just focus the dialog
         dialog.focus();
     }
@@ -115,15 +115,15 @@
 
         // Group scripts by some category? Or just list them.
         // Let's just list them alphabetically or by priority.
-        
+
         const list = document.createElement('div');
         list.className = 'paperList';
 
         definitions.forEach(script => {
             // Skip internal scripts if needed, but 'settings' is internal so maybe hide it?
             if (script.name === 'settings' || script.name === 'utils' || script.name === 'cardBuilder') {
-                 // Maybe hide core dependencies? Or let user disable them (risky)?
-                 // Let's show them but maybe mark as "Core"
+                // Maybe hide core dependencies? Or let user disable them (risky)?
+                // Let's show them but maybe mark as "Core"
             }
 
             const item = document.createElement('div');
@@ -135,7 +135,7 @@
 
             const textContainer = document.createElement('div');
             textContainer.style.flex = '1';
-            
+
             const title = document.createElement('div');
             title.className = 'listItemBodyText';
             title.textContent = script.name;
@@ -151,7 +151,7 @@
             const checkboxContainer = document.createElement('div');
             const label = document.createElement('label');
             label.className = 'emby-checkbox-label';
-            
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.className = 'emby-checkbox';
@@ -166,10 +166,10 @@
             // If not, we don't know the default.
             // Let's assume true if undefined? Or false?
             // Most scripts are enabled by default.
-            
-            const isEnabled = currentScripts[script.name] !== false; 
+
+            const isEnabled = currentScripts[script.name] !== false;
             checkbox.checked = isEnabled;
-            
+
             checkbox.dataset.scriptName = script.name;
 
             const span = document.createElement('span');
@@ -239,7 +239,7 @@
         const card = document.createElement('div');
         card.className = 'card backdropCard scalableCard backdropCard-scalable';
         card.setAttribute('data-id', 'kefinTweaksPlugin');
-        
+
         // Simple card structure mimicking Jellyfin cards
         card.innerHTML = `
             <div class="cardBox visualCardBox">
@@ -276,9 +276,9 @@
             const pluginsPage = document.querySelector('#pluginsPage:not(.hide)');
             if (pluginsPage) {
                 // Try different selectors for installed plugins container
-                let installedPlugins = pluginsPage.querySelector('.installedPlugins') || 
-                                     pluginsPage.querySelector('.sectionTitle + div'); // Fallback
-                
+                const installedPlugins = pluginsPage.querySelector('.installedPlugins')
+                                     || pluginsPage.querySelector('.sectionTitle + div'); // Fallback
+
                 if (installedPlugins) {
                     addKefinTweaksPluginCard(installedPlugins);
                 } else {
@@ -292,9 +292,9 @@
     function init() {
         // Hook into viewshow
         document.addEventListener('viewshow', (e) => {
-             checkForPluginsPage(e.target, e.target, window.location.hash);
+            checkForPluginsPage(e.target, e.target, window.location.hash);
         }, true);
-        
+
         // Check current view immediately
         checkForPluginsPage(null, null, window.location.hash);
     }
@@ -304,5 +304,4 @@
     } else {
         init();
     }
-
 })();

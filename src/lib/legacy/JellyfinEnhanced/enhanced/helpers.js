@@ -5,7 +5,6 @@
 (function (JE) {
     'use strict';
 
-
     // Store the original onViewShow function
     let originalOnViewShow = null;
 
@@ -85,7 +84,6 @@
             // Notify all registered handlers
             notifyHandlers(view, element, hash);
         };
-
     }
 
     /**
@@ -216,10 +214,10 @@
         if (!visiblePage) return null;
 
         // Try to get view from data attributes or id
-        return visiblePage.dataset.type ||
-            visiblePage.id ||
-            visiblePage.getAttribute('data-role') ||
-            null;
+        return visiblePage.dataset.type
+            || visiblePage.id
+            || visiblePage.getAttribute('data-role')
+            || null;
     }
 
     /**
@@ -387,10 +385,10 @@
 
         const rect = element.getBoundingClientRect();
         return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            rect.top >= 0
+            && rect.left >= 0
+            && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
+            && rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         );
     }
 
@@ -440,7 +438,6 @@
         style.id = id;
         style.textContent = css;
         document.head.appendChild(style);
-
     }
 
     /**
@@ -490,6 +487,4 @@
         getHandlerCount: () => handlers.length,
         getObserverCount: () => activeObservers.size
     };
-
-
 })(window.JellyfinEnhanced);

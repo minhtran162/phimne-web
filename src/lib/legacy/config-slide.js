@@ -17,6 +17,6 @@ export {};
         'a24ad0b7fc6f459bda5b8c1bba40b9fb',
         '79c42b8779d82a4bd71eee30618e15c7',
         'b451bf05e959481a1ce811aba3e8de09',
-        '1660b77cb7e9cb16af449951d6587ec6',
+        '1660b77cb7e9cb16af449951d6587ec6'
     ];
 })();

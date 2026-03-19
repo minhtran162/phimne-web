@@ -150,8 +150,8 @@ export function useSlideshowController({
         // Backdrop: Fill the viewport
         const backdropW = Math.round(screenWidth * ratio);
         const backdropH = Math.round(screenHeight * ratio);
-        
-        // Logo: Usually an overlay, so we don't need 4K logos. 
+
+        // Logo: Usually an overlay, so we don't need 4K logos.
         // Cap width at 800px (scaled by ratio) or screen width, whichever is smaller.
         const logoW = Math.min(Math.round(800 * ratio), backdropW);
 
@@ -399,9 +399,9 @@ export function useSlideshowController({
             if (!api) return;
 
             const userId =
-                typeof api.getCurrentUserId === 'function'
-                    ? api.getCurrentUserId()
-                    : api._currentUser?.Id;
+                typeof api.getCurrentUserId === 'function' ?
+                    api.getCurrentUserId() :
+                    api._currentUser?.Id;
 
             if (!userId) return;
             if (!window.slideShowItems || window.slideShowItems.length === 0) return;
@@ -423,10 +423,10 @@ export function useSlideshowController({
                     deviceId: api._deviceId || null,
                     accessToken: serverInfo.AccessToken || null,
                     serverAddress:
-                        serverInfo.Address ||
-                        api._serverAddress ||
-                        serverInfo.LocalAddress ||
-                        null,
+                        serverInfo.Address
+                        || api._serverAddress
+                        || serverInfo.LocalAddress
+                        || null,
                     serverId: serverInfo.Id || null
                 },
                 slideshow: { ...prev.slideshow, hasInitialized: true },

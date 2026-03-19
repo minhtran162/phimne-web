@@ -102,7 +102,7 @@
 
             // Method 5: Look for version in any script tags (common pattern)
             const scripts = document.getElementsByTagName('script');
-            for (let script of scripts) {
+            for (const script of scripts) {
                 if (script.src) {
                     const versionMatch = script.src.match(/serverVersion=([0-9.]+)/i);
                     if (versionMatch && versionMatch[1]) {
@@ -116,8 +116,8 @@
 
             // Method 6: Check localStorage or sessionStorage for cached version
             try {
-                const storedVersion = localStorage.getItem('jellyfin_server_version') ||
-                    sessionStorage.getItem('jellyfin_server_version');
+                const storedVersion = localStorage.getItem('jellyfin_server_version')
+                    || sessionStorage.getItem('jellyfin_server_version');
                 if (storedVersion) {
                     cachedServerVersion = getMajorServerVersion(storedVersion);
                     if (cachedServerVersion !== null) {
@@ -202,9 +202,9 @@
             if (matchingUrlObjects.length === 0) {
                 // If no match, try to find a URL object that doesn't specify versions (catch-all)
                 const catchAllUrlObjects = skin.url.filter(urlObj =>
-                    !urlObj.majorServerVersions ||
-                    !Array.isArray(urlObj.majorServerVersions) ||
-                    urlObj.majorServerVersions.length === 0
+                    !urlObj.majorServerVersions
+                    || !Array.isArray(urlObj.majorServerVersions)
+                    || urlObj.majorServerVersions.length === 0
                 );
 
                 if (catchAllUrlObjects.length > 0) {

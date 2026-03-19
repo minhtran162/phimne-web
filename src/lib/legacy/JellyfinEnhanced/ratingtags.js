@@ -17,7 +17,6 @@
         const MEDIA_TYPES = new Set(['Movie', 'Episode', 'Series', 'Season']);
         const MUTATION_DEBOUNCE = 400;
 
-
         // CSS selectors for elements that should NOT have rating tags applied.
         const IGNORE_SELECTORS = [
             '#itemDetailPage .infoWrapper .cardImageContainer',
@@ -68,8 +67,8 @@
             return null;
         }
 
-        let processedElements = new WeakSet();
-        let requestQueue = [];
+        const processedElements = new WeakSet();
+        const requestQueue = [];
         let isProcessingQueue = false;
         const queuedItemIds = new Set();
         let mutationDebounceTimer = null;
@@ -79,8 +78,7 @@
         }, { rootMargin: '200px', threshold: 0.1 });
 
         function saveCache() {
-            try { localStorage.setItem(CACHE_KEY, JSON.stringify(ratingCache)); }
-            catch (e) { console.warn(`${logPrefix} Failed to save cache`, e); }
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(ratingCache)); } catch (e) { console.warn(`${logPrefix} Failed to save cache`, e); }
         }
 
         function cleanupOldCaches() {
@@ -139,9 +137,9 @@
                     }
                 }
 
-                const tmdbRating = sourceItem.CommunityRating != null
-                    ? parseFloat(sourceItem.CommunityRating).toFixed(1)
-                    : null;
+                const tmdbRating = sourceItem.CommunityRating != null ?
+                    parseFloat(sourceItem.CommunityRating).toFixed(1) :
+                    null;
 
                 const criticPercent = normalizeCriticPercent(sourceItem.CriticRating);
 
@@ -401,7 +399,6 @@
 
             // Observe for new elements
             observeDOM();
-
         }
 
         initialize();
@@ -420,5 +417,4 @@
         // Trigger a fresh initialization which will set up everything with current settings
         JE.initializeRatingTags();
     };
-
 })(window.JellyfinEnhanced = window.JellyfinEnhanced || {});

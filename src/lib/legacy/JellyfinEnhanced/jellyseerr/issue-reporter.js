@@ -263,11 +263,11 @@
                                 const status = issue.status;
                                 const typeLabel = issueTypeLabels[issue.issueType] || 'Other';
                                 const createdBy = escapeHtml(
-                                    issue.createdBy?.jellyfinUsername ||
-                                    issue.createdBy?.displayName ||
-                                    issue.createdBy?.username ||
-                                    issue.createdBy?.email ||
-                                    'Someone'
+                                    issue.createdBy?.jellyfinUsername
+                                    || issue.createdBy?.displayName
+                                    || issue.createdBy?.username
+                                    || issue.createdBy?.email
+                                    || 'Someone'
                                 );
                                 const createdAt = fmtDate(issue.createdAt);
                                 const comments = Array.isArray(issue.comments) ? issue.comments : [];
@@ -277,11 +277,11 @@
 
                                 const commentHtml = restComments.map(c => {
                                     const who = escapeHtml(
-                                        c.user?.jellyfinUsername ||
-                                        c.user?.displayName ||
-                                        c.user?.username ||
-                                        c.user?.email ||
-                                        ''
+                                        c.user?.jellyfinUsername
+                                        || c.user?.displayName
+                                        || c.user?.username
+                                        || c.user?.email
+                                        || ''
                                     );
                                     const when = fmtDate(c.createdAt);
                                     const msg = escapeHtml(c.message || '');
@@ -313,7 +313,6 @@
                     }).join('');
 
                 if (bodyEl) bodyEl.innerHTML = sections;
-
             } catch (err) {
                 console.error(`${logPrefix} Failed to load existing issues:`, err);
                 renderEmpty(JE.t('jellyseerr_load_issues_error'));
@@ -523,7 +522,6 @@
                             populateEpisodesForSeason(parseInt(val));
                         }
                     });
-
                 } catch (err) {
                     console.debug(`${logPrefix} Error building tv controls:`, err);
                 }
@@ -954,7 +952,7 @@
                 '.mainDetailButtons',
                 '.detailButtonsContainer',
                 '[class*="primaryActions"]',
-                '.topBarSecondaryMenus + *'  // Element after topBarSecondaryMenus
+                '.topBarSecondaryMenus + *' // Element after topBarSecondaryMenus
             ];
 
             for (const selector of selectors) {
@@ -1060,5 +1058,4 @@
 
     // Expose the module on the global JE object
     JE.jellyseerrIssueReporter = issueReporter;
-
 })(window.JellyfinEnhanced);

@@ -50,7 +50,7 @@ function getDeviceProfile(item) {
     return new Promise(function (resolve) {
         let profile;
 
-        if (window.NativeShell && typeof window.NativeShell.AppHost.getDeviceProfile === "function") {
+        if (window.NativeShell && typeof window.NativeShell.AppHost.getDeviceProfile === 'function') {
             profile = window.NativeShell.AppHost.getDeviceProfile(profileBuilder, __PACKAGE_JSON_VERSION__);
         } else {
             const builderOpts = getBaseProfileOptions(item);
@@ -294,7 +294,7 @@ const supportedFeatures = function () {
      */
 function doExit() {
     try {
-        if (window.NativeShell && typeof window.NativeShell.AppHost.exit === "function") {
+        if (window.NativeShell && typeof window.NativeShell.AppHost.exit === 'function') {
             window.NativeShell.AppHost.exit();
         } else if (browser.tizen) {
             tizen.application.getCurrentApplication().exit();
@@ -353,7 +353,7 @@ export const appHost = {
         }
     },
     supports: function (command) {
-        if (window.NativeShell && typeof window.NativeShell.supports === "function") {
+        if (window.NativeShell && typeof window.NativeShell.supports === 'function') {
             return window.NativeShell.AppHost.supports(command);
         }
 
@@ -361,7 +361,7 @@ export const appHost = {
     },
     preferVisualCards: browser.android || browser.chrome,
     getDefaultLayout: function () {
-        if (window.NativeShell && typeof window.NativeShell.getDefaultLayout === "function") {
+        if (window.NativeShell && typeof window.NativeShell.getDefaultLayout === 'function') {
             return window.NativeShell.AppHost.getDefaultLayout();
         }
         return getDefaultLayout();

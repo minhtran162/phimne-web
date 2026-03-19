@@ -44,8 +44,8 @@
         const Hot = (JE._hotCache = JE._hotCache || { ttl: CACHE_TTL });
         Hot.language = Hot.language || new Map();
 
-        let processedElements = new WeakSet();
-        let requestQueue = [];
+        const processedElements = new WeakSet();
+        const requestQueue = [];
         let isProcessingQueue = false;
         const queuedItemIds = new Set();
         let mutationDebounceTimer = null;
@@ -55,8 +55,7 @@
         }, { rootMargin: '200px', threshold: 0.1 });
 
         function saveCache() {
-            try { localStorage.setItem(CACHE_KEY, JSON.stringify(langCache)); }
-            catch (e) { console.warn(`${logPrefix} Failed to save cache`, e); }
+            try { localStorage.setItem(CACHE_KEY, JSON.stringify(langCache)); } catch (e) { console.warn(`${logPrefix} Failed to save cache`, e); }
         }
 
         function cleanupOldCaches() {
@@ -216,16 +215,14 @@
                     // Handle legacy cache that stored ["en", "fr", ...]
                     const code = entry.split('-')[0].toLowerCase();
                     let name = null;
-                    try { name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code.toUpperCase(); }
-                    catch { name = code.toUpperCase(); }
+                    try { name = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code.toUpperCase(); } catch { name = code.toUpperCase(); }
                     obj = { name, code };
                 } else if (typeof entry === 'object') {
                     const code = (entry.code || entry.Code || '').toString().split('-')[0];
                     const name = entry.name || entry.Name || null;
                     if (code) {
                         let resolvedName = name;
-                        try { if (!resolvedName) resolvedName = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code.toUpperCase(); }
-                        catch { resolvedName = (name || code.toUpperCase()); }
+                        try { if (!resolvedName) resolvedName = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code.toUpperCase(); } catch { resolvedName = (name || code.toUpperCase()); }
                         obj = { name: resolvedName, code };
                     }
                 }
@@ -306,10 +303,10 @@
                 if (match && match[1]) return match[1];
             }
             if (el.dataset?.itemid) return el.dataset.itemid;
-            let parent = el.closest('[data-itemid]');
+            const parent = el.closest('[data-itemid]');
             if (parent) return parent.dataset.itemid;
             // Fallback to legacy data-id
-            let parent2 = el.closest('[data-id]');
+            const parent2 = el.closest('[data-id]');
             return parent2 ? parent2.dataset.id : null;
         }
 
@@ -357,7 +354,7 @@
                 return;
             }
             // Persisted cache
-            let cached = langCache[itemId];
+            const cached = langCache[itemId];
             if (cached && cached.length) {
                 const normalized = normalizeLanguages(cached);
                 Hot.language.set(itemId, { value: normalized, timestamp: Date.now() });
@@ -478,5 +475,4 @@
         // Trigger a fresh initialization which will set up everything with current settings
         JE.initializeLanguageTags();
     };
-
 })(window.JellyfinEnhanced);

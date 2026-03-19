@@ -386,7 +386,7 @@ import browser from 'scripts/browser';
                     imgType = 'Primary';
                     imgTag = ImageTags.Primary;
                     itemId = Id;
-                    
+
                     if (primaryImageAspectRatio && uiAspect) {
                         coverImage = (Math.abs(primaryImageAspectRatio - uiAspect) / uiAspect) <= 0.2;
                     }
@@ -404,7 +404,7 @@ import browser from 'scripts/browser';
                     imgType = 'Primary';
                     imgTag = ImageTags.Primary;
                     itemId = Id;
-                    
+
                     if (primaryImageAspectRatio && uiAspect) {
                         coverImage = (Math.abs(primaryImageAspectRatio - uiAspect) / uiAspect) <= 0.2;
                     }
@@ -416,7 +416,7 @@ import browser from 'scripts/browser';
                     imgType = 'Primary';
                     imgTag = AlbumPrimaryImageTag;
                     itemId = AlbumId;
-                    
+
                     if (primaryImageAspectRatio && uiAspect) {
                         coverImage = (Math.abs(primaryImageAspectRatio - uiAspect) / uiAspect) <= 0.2;
                     }
@@ -451,7 +451,7 @@ import browser from 'scripts/browser';
         // Build the URL if we have an image
         if (imgTag && imgType && itemId) {
             imgUrl = buildUrl(itemId, imgType, imgTag);
-            
+
             // Get blurhash if available
             if (ImageBlurHashes && ImageBlurHashes[imgType]) {
                 blurhash = ImageBlurHashes[imgType][imgTag];
@@ -581,10 +581,10 @@ import browser from 'scripts/browser';
         const cardImageContainer = document.createElement('a');
         cardImageContainer.href = `#/details?id=${item.Id}&serverId=${serverId}`;
         cardImageContainer.setAttribute('data-action', 'link');
-        
+
         // Get image info with blurhash support
         const imageInfo = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
-        
+
         // Set classes based on cover image detection
         // Always include coveredImage for proper background display
         const imageContainerClasses = ['cardImageContainer', 'coveredImage', 'cardContent', 'itemAction', 'lazy', 'lazy-image-fadein-fast'];
@@ -656,9 +656,9 @@ import browser from 'scripts/browser';
             episodeLink.setAttribute('data-isfolder', 'false');
             episodeLink.className = 'itemAction textActionButton';
 
-            const episodeTitle = item.IndexNumber && item.ParentIndexNumber
-                ? `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}`
-                : item.Name;
+            const episodeTitle = item.IndexNumber && item.ParentIndexNumber ?
+                `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}` :
+                item.Name;
             episodeLink.title = episodeTitle;
             episodeLink.setAttribute('data-action', 'link');
             episodeLink.textContent = episodeTitle;
@@ -715,7 +715,7 @@ import browser from 'scripts/browser';
 
         // Get image info with blurhash support
         const imageInfo = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
-        
+
         // Set classes based on cover image detection
         const imageContainerClasses = ['cardImageContainer', 'coveredImage', 'cardContent', 'itemAction', 'lazy', 'lazy-image-fadein-fast'];
         if (imageInfo.blurhash) {
@@ -908,12 +908,12 @@ import browser from 'scripts/browser';
 
         // Conditionally add coveredImage class based on item type and cover image detection
         const imageContainerClasses = ['cardImageContainer', 'cardContent', 'lazy', 'blurhashed'];
-        
+
         // Add coveredImage for non-Episode items or when detected as cover image
         if (item.Type !== 'Episode' || config.cardClass !== 'overflowBackdropCard' || imageInfo.coverImage) {
             imageContainerClasses.push('coveredImage');
         }
-        
+
         cardImageContainer.className = imageContainerClasses.join(' ');
 
         // Set background image directly for TV cards (lazy loading not working reliably)
@@ -979,9 +979,9 @@ import browser from 'scripts/browser';
             cardBox.appendChild(seriesText);
 
             // Episode number and name
-            const episodeName = item.IndexNumber && item.ParentIndexNumber
-                ? `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}`
-                : item.Name;
+            const episodeName = item.IndexNumber && item.ParentIndexNumber ?
+                `S${item.ParentIndexNumber}:E${item.IndexNumber} - ${item.Name}` :
+                item.Name;
             const secondaryText = document.createElement('div');
             secondaryText.className = 'cardText cardTextCentered cardText-secondary';
             secondaryText.innerHTML = `<bdi>${episodeName}</bdi>`;
@@ -1057,9 +1057,9 @@ import browser from 'scripts/browser';
         },
 
         renderCards: function (items, title, viewMoreUrl = null, overflowCard = false, cardFormat = null, sortOrder = null, sortOrderDirection = 'Ascending') {
-            let finalCardFormat = cardFormat === 'random' || cardFormat === 'Random'
-                ? getRandomCardFormat()
-                : cardFormat;
+            const finalCardFormat = cardFormat === 'random' || cardFormat === 'Random' ?
+                getRandomCardFormat() :
+                cardFormat;
 
             let sortedItems = items;
             if (sortOrder && sortOrder !== 'Random') {
@@ -1083,9 +1083,9 @@ import browser from 'scripts/browser';
                 });
                 const items = response.Items;
 
-                let finalCardFormat = cardFormat === 'random' || cardFormat === 'Random'
-                    ? getRandomCardFormat()
-                    : cardFormat;
+                const finalCardFormat = cardFormat === 'random' || cardFormat === 'Random' ?
+                    getRandomCardFormat() :
+                    cardFormat;
 
                 let sortedItems = items;
                 if (sortOrder && sortOrder !== 'Random') {
@@ -1138,7 +1138,7 @@ import browser from 'scripts/browser';
         const { serverId, serverAddress } = getCachedApiData();
         let currentIndex = 0;
         let autoPlayTimer = null;
-        let isPaused = false;
+        const isPaused = false;
 
         const container = document.createElement('div');
         container.className = 'spotlight-section padded-left';
@@ -1157,7 +1157,7 @@ import browser from 'scripts/browser';
                 titleLink.style.textDecoration = 'none';
 
                 const cssStyle = document.createElement('style');
-                cssStyle.textContent = `.spotlight-title-link:hover { text-decoration: underline !important; }`;
+                cssStyle.textContent = '.spotlight-title-link:hover { text-decoration: underline !important; }';
                 titleLink.appendChild(cssStyle);
 
                 if (typeof viewMoreUrl === 'function') {
@@ -1406,9 +1406,9 @@ import browser from 'scripts/browser';
         // Create the main vertical section container
         const verticalSection = document.createElement('div');
         // Conditionally set container classes based on platform
-        verticalSection.className = browser.tizen
-            ? 'verticalSection'
-            : 'verticalSection emby-scroller-container custom-scroller-container';
+        verticalSection.className = browser.tizen ?
+            'verticalSection' :
+            'verticalSection emby-scroller-container custom-scroller-container';
 
         // Create section title
         const sectionTitleContainer = document.createElement('div');
@@ -1467,7 +1467,7 @@ import browser from 'scripts/browser';
             scroller.setAttribute('data-scroll-mode-x', 'custom');
             scroller.style.overflow = 'hidden';
         } else {
-            scroller.setAttribute('data-horizontal', 'true');  // Critical for horizontal swipe
+            scroller.setAttribute('data-horizontal', 'true'); // Critical for horizontal swipe
             scroller.setAttribute('data-centerfocus', 'card'); // Proper focus handling
             scroller.setAttribute('data-scroll-mode-x', 'custom');
             scroller.style.overflow = '';
@@ -1544,13 +1544,13 @@ import browser from 'scripts/browser';
                 storeOriginalStyles();
 
                 // Calculate appropriate card size based on format
-                const isBackdrop = cardFormat === 'backdrop' ||
-                    (items.length > 0 && items[0].MediaType === 'Video' &&
-                        itemsContainer.querySelector('.overflowBackdropCard'));
+                const isBackdrop = cardFormat === 'backdrop'
+                    || (items.length > 0 && items[0].MediaType === 'Video'
+                        && itemsContainer.querySelector('.overflowBackdropCard'));
 
                 const cardWidth = isBackdrop ?
-                    'calc((100% - 24px) / 3)' :  // 3 backdrop cards per row
-                    'calc((100% - 30px) / 6)';   // 6 portrait cards per row
+                    'calc((100% - 24px) / 3)' : // 3 backdrop cards per row
+                    'calc((100% - 30px) / 6)'; // 6 portrait cards per row
 
                 const cardMargin = isBackdrop ? '8px' : '6px';
 

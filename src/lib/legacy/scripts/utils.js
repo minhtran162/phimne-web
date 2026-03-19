@@ -53,7 +53,7 @@
      * @param {Function} callback - Function to call when page view changes
      * @param {Object} options - Options for the handler
      */
-    function onViewPage(callback, options = {}) {        
+    function onViewPage(callback, options = {}) {
         if (typeof callback !== 'function') {
             ERR('Callback must be a function');
             return;
@@ -352,13 +352,13 @@
         try {
             // Save to localStorage for persistence
             localStorage.setItem('KefinTweaksConfig', JSON.stringify(configToSave));
-            console.log("save done")
+            console.log('save done');
             // Update global variable
             window.KefinTweaksConfig = configToSave;
-            
+
             // Dispatch event for other components
             window.dispatchEvent(new CustomEvent('KefinTweaksConfigChanged', { detail: configToSave }));
-            
+
             return true;
         } catch (err) {
             ERR('Error saving config to localStorage:', err);
@@ -437,8 +437,8 @@
         // But legacy scripts usually call this when they are setting up the view or handling navigation
         const tabs = document.querySelectorAll('.homeLibraryTabs .headerTabButton');
         for (let i = 0; i < tabs.length; i++) {
-            if (tabs[i].dataset.kefintweaksWatchlist ||
-                (tabs[i].textContent && tabs[i].textContent.trim() === 'Watchlist')) {
+            if (tabs[i].dataset.kefintweaksWatchlist
+                || (tabs[i].textContent && tabs[i].textContent.trim() === 'Watchlist')) {
                 _watchlistTabIndex = i;
                 return i;
             }

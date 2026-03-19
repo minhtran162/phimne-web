@@ -4,7 +4,6 @@
     const WARN = (...args) => console.warn('[KefinTweaks WatchlistInjector]', ...args);
 
     function injectWatchlistTab(view, element) {
-
         // Only run on home screen
         if (!view.classList.contains('homePage')) return;
 

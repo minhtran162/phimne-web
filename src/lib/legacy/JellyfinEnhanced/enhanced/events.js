@@ -29,11 +29,11 @@
         if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
         const key = e.key;
-        const combo = (e.shiftKey ? 'Shift+' : '') +
-                      (e.metaKey ? 'Meta+' : '') +
-                      (e.ctrlKey ? 'Ctrl+' : '') +
-                      (e.altKey ? 'Alt+' : '') +
-                      (key.match(/^[a-zA-Z]$/) ? key.toUpperCase() : key);
+        const combo = (e.shiftKey ? 'Shift+' : '')
+                      + (e.metaKey ? 'Meta+' : '')
+                      + (e.ctrlKey ? 'Ctrl+' : '')
+                      + (e.altKey ? 'Alt+' : '')
+                      + (key.match(/^[a-zA-Z]$/) ? key.toUpperCase() : key);
 
         const video = document.querySelector('video');
         const activeShortcuts = JE.state.activeShortcuts;
@@ -386,7 +386,7 @@
                     video.dataset.wasPlayingBeforeHidden = 'true';
                 }
                 if (JE.currentSettings.autoPipEnabled && !document.pictureInPictureElement) {
-                    video.requestPictureInPicture().catch(err => console.error("🪼 Jellyfin Enhanced: Auto PiP Error:", err));
+                    video.requestPictureInPicture().catch(err => console.error('🪼 Jellyfin Enhanced: Auto PiP Error:', err));
                 }
             } else {
                 if (video.paused && video.dataset.wasPlayingBeforeHidden === 'true' && JE.currentSettings.autoResumeEnabled) {
@@ -394,10 +394,9 @@
                 }
                 delete video.dataset.wasPlayingBeforeHidden;
                 if (JE.currentSettings.autoPipEnabled && document.pictureInPictureElement) {
-                    document.exitPictureInPicture().catch(err => console.error("🪼 Jellyfin Enhanced: Auto PiP Error:", err));
+                    document.exitPictureInPicture().catch(err => console.error('🪼 Jellyfin Enhanced: Auto PiP Error:', err));
                 }
             }
         });
     };
-
 })(window.JellyfinEnhanced);

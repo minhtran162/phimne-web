@@ -79,9 +79,9 @@
         const scrollerContainer = document.createElement('div');
         scrollerContainer.setAttribute('is', 'emby-scroller');
         scrollerContainer.className = 'padded-top-focusscale padded-bottom-focusscale no-padding emby-scroller';
-        scrollerContainer.dataset.horizontal = "true";
-        scrollerContainer.dataset.centerfocus = "card";
-        scrollerContainer.dataset.scrollModeX = "custom";
+        scrollerContainer.dataset.horizontal = 'true';
+        scrollerContainer.dataset.centerfocus = 'card';
+        scrollerContainer.dataset.scrollModeX = 'custom';
 
         // Enable smooth native horizontal touch scrolling (from KefinTweaks)
         scrollerContainer.style.scrollSnapType = 'none';
@@ -97,9 +97,9 @@
 
         // Add items to container
         results.forEach(item => {
-            const card = JE.jellyseerrUI && JE.jellyseerrUI.createJellyseerrCard
-                ? JE.jellyseerrUI.createJellyseerrCard(item, true, true)
-                : null;
+            const card = JE.jellyseerrUI && JE.jellyseerrUI.createJellyseerrCard ?
+                JE.jellyseerrUI.createJellyseerrCard(item, true, true) :
+                null;
             if (card) {
                 const titleLink = card.querySelector('.cardText-first a');
 
@@ -127,8 +127,6 @@
         section.appendChild(scrollerContainer);
         return section;
     }
-
-
 
     /**
      * Renders Similar and Recommended sections for an item
@@ -167,9 +165,9 @@
             const promises = [];
             if (showSimilar) {
                 promises.push(
-                    type === 'movie'
-                        ? JE.jellyseerrAPI.fetchSimilarMovies(tmdbId)
-                        : JE.jellyseerrAPI.fetchSimilarTvShows(tmdbId)
+                    type === 'movie' ?
+                        JE.jellyseerrAPI.fetchSimilarMovies(tmdbId) :
+                        JE.jellyseerrAPI.fetchSimilarTvShows(tmdbId)
                 );
             } else {
                 promises.push(Promise.resolve({ results: [] }));
@@ -177,9 +175,9 @@
 
             if (showRecommended) {
                 promises.push(
-                    type === 'movie'
-                        ? JE.jellyseerrAPI.fetchRecommendedMovies(tmdbId)
-                        : JE.jellyseerrAPI.fetchRecommendedTvShows(tmdbId)
+                    type === 'movie' ?
+                        JE.jellyseerrAPI.fetchRecommendedMovies(tmdbId) :
+                        JE.jellyseerrAPI.fetchRecommendedTvShows(tmdbId)
                 );
             } else {
                 promises.push(Promise.resolve({ results: [] }));
@@ -196,12 +194,12 @@
 
             // Filter items if configured to exclude library items
             const excludeLibraryItems = JE.pluginConfig?.JellyseerrExcludeLibraryItems === true;
-            const filteredSimilarResults = excludeLibraryItems
-                ? similarResults.filter(item => !item.mediaInfo?.jellyfinMediaId)
-                : similarResults;
-            const filteredRecommendedResults = excludeLibraryItems
-                ? recommendedResults.filter(item => !item.mediaInfo?.jellyfinMediaId)
-                : recommendedResults;
+            const filteredSimilarResults = excludeLibraryItems ?
+                similarResults.filter(item => !item.mediaInfo?.jellyfinMediaId) :
+                similarResults;
+            const filteredRecommendedResults = excludeLibraryItems ?
+                recommendedResults.filter(item => !item.mediaInfo?.jellyfinMediaId) :
+                recommendedResults;
 
             if (filteredSimilarResults.length === 0 && filteredRecommendedResults.length === 0) {
                 return;
@@ -260,7 +258,6 @@
                     }
                 }
             }
-
         } catch (error) {
             console.error(`${logPrefix} Error rendering similar and recommended sections:`, error);
         }
@@ -293,7 +290,6 @@
      * Initializes the item details handler
      */
     function initialize() {
-
         // Listen for hash changes (navigation)
         window.addEventListener('hashchange', () => {
             processedItems.clear(); // Clear cache on navigation
@@ -315,5 +311,4 @@
     } else {
         initialize();
     }
-
 })(window.JellyfinEnhanced);

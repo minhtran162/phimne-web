@@ -21,12 +21,12 @@ const BrowserName = {
     firefox: 'Firefox',
     opera: 'Opera',
     safari: 'Safari'
-}
+};
 
-let deviceId
-let deviceName
-let appName
-let appVersion
+let deviceId;
+let deviceName;
+let appName;
+let appVersion;
 
 function generateDeviceId() {
     const keys = [];
@@ -83,8 +83,8 @@ function getBrowserDeviceInfo() {
     return {
         deviceId: getDeviceId(),
         deviceName: getDeviceName(),
-        appName: "Phim Ne",
-        appVersion: "10.11.5"
+        appName: 'Phim Ne',
+        appVersion: '10.11.5'
     };
 }
 
@@ -94,7 +94,7 @@ window.NativeShell.AppHost = {
     init() {
         try {
             // Native environment
-            if (window.NativeInterface && typeof window.NativeInterface.getDeviceInformation === "function" ) {
+            if (window.NativeInterface && typeof window.NativeInterface.getDeviceInformation === 'function' ) {
                 const result = JSON.parse(window.NativeInterface.getDeviceInformation());
                 deviceId = result.deviceId;
                 deviceName = result.deviceName;
@@ -113,7 +113,7 @@ window.NativeShell.AppHost = {
                 deviceId,
                 deviceName,
                 appName,
-                appVersion,
+                appVersion
             });
         } catch (e) {
             return Promise.reject(e);
@@ -130,5 +130,5 @@ window.NativeShell.AppHost = {
     },
     appVersion() {
         return appVersion;
-    },
+    }
 };

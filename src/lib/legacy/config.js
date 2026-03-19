@@ -4,7 +4,6 @@ export {};
 
 // Wait for translations to be loaded
 function waitForTranslations(callback) {
-
     if (typeof globalize.translate === 'function') {
         try {
             const test = globalize.translate('RecentlyReleasedMovies');
@@ -22,7 +21,7 @@ function waitForTranslations(callback) {
 
 // Build configuration with safe translations
 function buildConfig() {
-    const protocol = window.location.protocol, host = window.location.host;
+    const protocol = window.location.protocol; const host = window.location.host;
     return {
         'kefinTweaksRoot': `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}assets/jellyfintweaks/`,
         'scripts': {
@@ -322,7 +321,7 @@ function buildConfig() {
                         'enabled': true
                     },
                     'genreMovies': {
-                      'itemLimit': 16,
+                        'itemLimit': 16,
                         'cardFormat': 'Poster',
                         'order': 100,
                         'isPlayed': null,

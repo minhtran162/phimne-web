@@ -1,487 +1,486 @@
 // /js/enhanced/bookmarks.js
 // Enhanced bookmarks system with multi-bookmark support, TMDB/TVDB tracking, and visual markers
 (function (JE) {
-  'use strict';
+    'use strict';
 
-  const logPrefix = '🪼 Jellyfin Enhanced: Bookmarks:';
+    const logPrefix = '🪼 Jellyfin Enhanced: Bookmarks:';
 
-  const BOOKMARK_CACHE_TTL = 5 * 60 * 1000;
-  const localStorageCache = new window.LocalStorageCache();
+    const BOOKMARK_CACHE_TTL = 5 * 60 * 1000;
+    const localStorageCache = new window.LocalStorageCache();
 
-  function getCurrentUserId() {
-    try {
-      const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-      return apiClient?.getCurrentUserId?.() || 'anonymous';
-    } catch (e) {
-      console.warn('Failed to get user ID', e);
-      return 'anonymous';
+    function getCurrentUserId() {
+        try {
+            const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
+            return apiClient?.getCurrentUserId?.() || 'anonymous';
+        } catch (e) {
+            console.warn('Failed to get user ID', e);
+            return 'anonymous';
+        }
     }
-  }
 
-  // Notify other views (e.g., CustomTabs library) when bookmarks change
-  function emitBookmarksUpdated(reason = 'updated') {
-    try {
-      document.dispatchEvent(new CustomEvent('je-bookmarks-updated', { detail: { reason } }));
-    } catch (e) {
-      console.warn(`${logPrefix} Failed to emit update event`, e);
+    // Notify other views (e.g., CustomTabs library) when bookmarks change
+    function emitBookmarksUpdated(reason = 'updated') {
+        try {
+            document.dispatchEvent(new CustomEvent('je-bookmarks-updated', { detail: { reason } }));
+        } catch (e) {
+            console.warn(`${logPrefix} Failed to emit update event`, e);
+        }
     }
-  }
 
-  const bookmarks = {
-    markers: [] // Visual markers for current video
-  };
+    const bookmarks = {
+        markers: [] // Visual markers for current video
+    };
 
-  /**
+    /**
    * Escape HTML to prevent XSS
    */
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
-  /**
+    /**
    * Get current video item data (similar to osd-rating.js)
    */
-  function getCurrentItemData() {
-    try {
-      // Get item ID from favorite/rating button
-      const btnUserRating = document.querySelector('.videoOsdBottom .btnUserRating[data-id]');
-      const itemId = btnUserRating?.dataset?.id || null;
+    function getCurrentItemData() {
+        try {
+            // Get item ID from favorite/rating button
+            const btnUserRating = document.querySelector('.videoOsdBottom .btnUserRating[data-id]');
+            const itemId = btnUserRating?.dataset?.id || null;
 
-      if (!itemId) {
-        console.debug(`${logPrefix} No item ID found`);
-        return null;
-      }
+            if (!itemId) {
+                console.debug(`${logPrefix} No item ID found`);
+                return null;
+            }
 
-      return { itemId };
-    } catch (e) {
-      console.warn(`${logPrefix} Error getting item data:`, e);
-      return null;
+            return { itemId };
+        } catch (e) {
+            console.warn(`${logPrefix} Error getting item data:`, e);
+            return null;
+        }
     }
-  }
 
-  const itemDetailsCache = { itemId: null, data: null, pending: null };
+    const itemDetailsCache = { itemId: null, data: null, pending: null };
 
-  /**
+    /**
    * Fetch full item details including TMDB/TVDB IDs (cached per item for a few seconds)
    */
-  async function fetchItemDetails(itemId) {
-    if (itemDetailsCache.itemId === itemId && itemDetailsCache.data) {
-      return itemDetailsCache.data;
-    }
-
-    if (itemDetailsCache.pending && itemDetailsCache.itemId === itemId) {
-      return itemDetailsCache.pending;
-    }
-
-    const fetchPromise = (async () => {
-      try {
-        const userId = ApiClient.getCurrentUserId?.();
-        if (!userId) return null;
-
-        const result = await ApiClient.ajax({
-          type: 'GET',
-          url: ApiClient.getUrl(`/Users/${userId}/Items`, {
-            Ids: itemId,
-            Fields: 'ProviderIds,Type,Name,SeriesId,ParentIndexNumber,IndexNumber'
-          }),
-          dataType: 'json'
-        });
-
-        const item = result?.Items?.[0];
-        if (!item) return null;
-
-        // For episodes/seasons, also get series TMDB/TVDB
-        let sourceItem = item;
-        if ((item.Type === 'Season' || item.Type === 'Episode') && item.SeriesId) {
-          try {
-            const seriesResult = await ApiClient.ajax({
-              type: 'GET',
-              url: ApiClient.getUrl(`/Users/${userId}/Items`, {
-                Ids: item.SeriesId,
-                Fields: 'ProviderIds,Type,Name'
-              }),
-              dataType: 'json'
-            });
-            const seriesItem = seriesResult?.Items?.[0];
-            if (seriesItem) {
-              // Merge: use series TMDB/TVDB but keep episode info
-              sourceItem = {
-                ...item,
-                ProviderIds: {
-                  ...(item.ProviderIds || {}),
-                  Tmdb: seriesItem.ProviderIds?.Tmdb || item.ProviderIds?.Tmdb,
-                  Tvdb: seriesItem.ProviderIds?.Tvdb || item.ProviderIds?.Tvdb
-                }
-              };
-            }
-          } catch (e) {
-            console.warn(`${logPrefix} Failed to fetch series info:`, e);
-          }
+    async function fetchItemDetails(itemId) {
+        if (itemDetailsCache.itemId === itemId && itemDetailsCache.data) {
+            return itemDetailsCache.data;
         }
 
-        const tmdbId = sourceItem.ProviderIds?.Tmdb || null;
-        const tvdbId = sourceItem.ProviderIds?.Tvdb || null;
-        const mediaType = item.Type === 'Movie' ? 'movie'
-          : (item.Type === 'Series' || item.Type === 'Episode' || item.Type === 'Season') ? 'tv'
-            : (item.Type || '').toString().toLowerCase();
+        if (itemDetailsCache.pending && itemDetailsCache.itemId === itemId) {
+            return itemDetailsCache.pending;
+        }
 
-        const details = {
-          itemId: item.Id,
-          tmdbId,
-          tvdbId,
-          mediaType,
-          name: item.Name || 'Unknown',
-          type: item.Type
-        };
+        const fetchPromise = (async () => {
+            try {
+                const userId = ApiClient.getCurrentUserId?.();
+                if (!userId) return null;
 
-        itemDetailsCache.data = details;
-        return details;
-      } catch (e) {
-        console.warn(`${logPrefix} Error fetching item details:`, e);
-        return null;
-      } finally {
-        itemDetailsCache.pending = null;
-      }
-    })();
+                const result = await ApiClient.ajax({
+                    type: 'GET',
+                    url: ApiClient.getUrl(`/Users/${userId}/Items`, {
+                        Ids: itemId,
+                        Fields: 'ProviderIds,Type,Name,SeriesId,ParentIndexNumber,IndexNumber'
+                    }),
+                    dataType: 'json'
+                });
 
-    itemDetailsCache.itemId = itemId;
-    itemDetailsCache.pending = fetchPromise;
-    return fetchPromise;
-  }
+                const item = result?.Items?.[0];
+                if (!item) return null;
 
-  /**
+                // For episodes/seasons, also get series TMDB/TVDB
+                let sourceItem = item;
+                if ((item.Type === 'Season' || item.Type === 'Episode') && item.SeriesId) {
+                    try {
+                        const seriesResult = await ApiClient.ajax({
+                            type: 'GET',
+                            url: ApiClient.getUrl(`/Users/${userId}/Items`, {
+                                Ids: item.SeriesId,
+                                Fields: 'ProviderIds,Type,Name'
+                            }),
+                            dataType: 'json'
+                        });
+                        const seriesItem = seriesResult?.Items?.[0];
+                        if (seriesItem) {
+                            // Merge: use series TMDB/TVDB but keep episode info
+                            sourceItem = {
+                                ...item,
+                                ProviderIds: {
+                                    ...(item.ProviderIds || {}),
+                                    Tmdb: seriesItem.ProviderIds?.Tmdb || item.ProviderIds?.Tmdb,
+                                    Tvdb: seriesItem.ProviderIds?.Tvdb || item.ProviderIds?.Tvdb
+                                }
+                            };
+                        }
+                    } catch (e) {
+                        console.warn(`${logPrefix} Failed to fetch series info:`, e);
+                    }
+                }
+
+                const tmdbId = sourceItem.ProviderIds?.Tmdb || null;
+                const tvdbId = sourceItem.ProviderIds?.Tvdb || null;
+                const mediaType = item.Type === 'Movie' ? 'movie' :
+                    (item.Type === 'Series' || item.Type === 'Episode' || item.Type === 'Season') ? 'tv' :
+                        (item.Type || '').toString().toLowerCase();
+
+                const details = {
+                    itemId: item.Id,
+                    tmdbId,
+                    tvdbId,
+                    mediaType,
+                    name: item.Name || 'Unknown',
+                    type: item.Type
+                };
+
+                itemDetailsCache.data = details;
+                return details;
+            } catch (e) {
+                console.warn(`${logPrefix} Error fetching item details:`, e);
+                return null;
+            } finally {
+                itemDetailsCache.pending = null;
+            }
+        })();
+
+        itemDetailsCache.itemId = itemId;
+        itemDetailsCache.pending = fetchPromise;
+        return fetchPromise;
+    }
+
+    /**
    * Generate unique bookmark ID
    */
-  function generateBookmarkId() {
-    return `bm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+    function generateBookmarkId() {
+        return `bm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
 
-  /**
+    /**
    * Find bookmarks for current item (by itemId or TMDB/TVDB fallback)
    * Returns both exact matches and provider ID matches separately
    */
-  function findBookmarksForItem(itemId, tmdbId, tvdbId) {
-    const allBookmarks = JE.userConfig?.bookmark?.bookmarks || {};
-    const exactMatches = [];
-    const providerMatches = [];
+    function findBookmarksForItem(itemId, tmdbId, tvdbId) {
+        const allBookmarks = JE.userConfig?.bookmark?.bookmarks || {};
+        const exactMatches = [];
+        const providerMatches = [];
 
-    for (const [bookmarkId, bookmark] of Object.entries(allBookmarks)) {
-      // Skip invalid bookmarks
-      if (typeof bookmark !== 'object' || bookmark === null) continue;
+        for (const [bookmarkId, bookmark] of Object.entries(allBookmarks)) {
+            // Skip invalid bookmarks
+            if (typeof bookmark !== 'object' || bookmark === null) continue;
 
-      // Direct itemId match (preferred)
-      if (bookmark.itemId === itemId) {
-        exactMatches.push({ id: bookmarkId, ...bookmark, exactMatch: true });
-        continue;
-      }
+            // Direct itemId match (preferred)
+            if (bookmark.itemId === itemId) {
+                exactMatches.push({ id: bookmarkId, ...bookmark, exactMatch: true });
+                continue;
+            }
 
-      // Fallback: TMDB/TVDB match (different item ID)
-      if (tmdbId && bookmark.tmdbId === tmdbId) {
-        providerMatches.push({ id: bookmarkId, ...bookmark, exactMatch: false });
-        continue;
-      }
+            // Fallback: TMDB/TVDB match (different item ID)
+            if (tmdbId && bookmark.tmdbId === tmdbId) {
+                providerMatches.push({ id: bookmarkId, ...bookmark, exactMatch: false });
+                continue;
+            }
 
-      if (tvdbId && bookmark.tvdbId === tvdbId) {
-        providerMatches.push({ id: bookmarkId, ...bookmark, exactMatch: false });
-      }
+            if (tvdbId && bookmark.tvdbId === tvdbId) {
+                providerMatches.push({ id: bookmarkId, ...bookmark, exactMatch: false });
+            }
+        }
+
+        // Use exact matches if available, otherwise use provider matches
+        const bookmarks = exactMatches.length > 0 ? exactMatches : providerMatches;
+        const hasIdMismatch = exactMatches.length === 0 && providerMatches.length > 0;
+
+        return { bookmarks, hasIdMismatch, exactMatches, providerMatches };
     }
 
-    // Use exact matches if available, otherwise use provider matches
-    const bookmarks = exactMatches.length > 0 ? exactMatches : providerMatches;
-    const hasIdMismatch = exactMatches.length === 0 && providerMatches.length > 0;
-
-    return { bookmarks, hasIdMismatch, exactMatches, providerMatches };
-  }
-
-  /**
+    /**
    * Add a new bookmark with optimized cache update
    */
-  async function addBookmark(timestamp, label = '') {
-    const itemData = getCurrentItemData();
-    if (!itemData) {
-      JE.toast(JE.t('toast_bookmark_no_item'), 3000);
-      return null;
+    async function addBookmark(timestamp, label = '') {
+        const itemData = getCurrentItemData();
+        if (!itemData) {
+            JE.toast(JE.t('toast_bookmark_no_item'), 3000);
+            return null;
+        }
+
+        const details = await fetchItemDetails(itemData.itemId);
+        if (!details) {
+            JE.toast(JE.t('toast_bookmark_fetch_failed'), 3000);
+            return null;
+        }
+
+        const bookmarkId = generateBookmarkId();
+        const now = new Date().toISOString();
+
+        const bookmark = {
+            itemId: details.itemId || '',
+            tmdbId: details.tmdbId || '',
+            tvdbId: details.tvdbId || '',
+            mediaType: details.mediaType || '',
+            name: details.name || '',
+            timestamp: timestamp,
+            label: label || '',
+            createdAt: now,
+            updatedAt: now,
+            syncedFrom: ''
+        };
+
+        if (!JE.userConfig.bookmark) {
+            JE.userConfig.bookmark = { bookmarks: {} };
+        }
+        if (!JE.userConfig.bookmark.bookmarks) {
+            JE.userConfig.bookmark.bookmarks = {};
+        }
+
+        JE.userConfig.bookmark.bookmarks[bookmarkId] = bookmark;
+
+        try {
+            // FIX: Get userId consistently
+            const userId = getCurrentUserId();
+
+            // Convert to array format for storage
+            const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+                id,
+                ...bm
+            }));
+
+            // FIX: Use consistent cache key with userId
+            localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
+            emitBookmarksUpdated('add');
+            return { id: bookmarkId, ...bookmark };
+        } catch (e) {
+            console.error(`${logPrefix} Failed to save bookmark:`, e);
+            delete JE.userConfig.bookmark.bookmarks[bookmarkId];
+            throw e;
+        }
     }
 
-    const details = await fetchItemDetails(itemData.itemId);
-    if (!details) {
-      JE.toast(JE.t('toast_bookmark_fetch_failed'), 3000);
-      return null;
-    }
-
-    const bookmarkId = generateBookmarkId();
-    const now = new Date().toISOString();
-
-    const bookmark = {
-      itemId: details.itemId || '',
-      tmdbId: details.tmdbId || '',
-      tvdbId: details.tvdbId || '',
-      mediaType: details.mediaType || '',
-      name: details.name || '',
-      timestamp: timestamp,
-      label: label || '',
-      createdAt: now,
-      updatedAt: now,
-      syncedFrom: ''
-    };
-
-    if (!JE.userConfig.bookmark) {
-      JE.userConfig.bookmark = { bookmarks: {} };
-    }
-    if (!JE.userConfig.bookmark.bookmarks) {
-      JE.userConfig.bookmark.bookmarks = {};
-    }
-
-    JE.userConfig.bookmark.bookmarks[bookmarkId] = bookmark;
-
-    try {
-      // FIX: Get userId consistently
-      const userId = getCurrentUserId();
-
-      // Convert to array format for storage
-      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
-        id,
-        ...bm
-      }));
-
-      // FIX: Use consistent cache key with userId
-      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
-
-      emitBookmarksUpdated('add');
-      return { id: bookmarkId, ...bookmark };
-    } catch (e) {
-      console.error(`${logPrefix} Failed to save bookmark:`, e);
-      delete JE.userConfig.bookmark.bookmarks[bookmarkId];
-      throw e;
-    }
-  }
-
-  /**
+    /**
    * Update an existing bookmark with optimized cache update
    */
-  async function updateBookmark(bookmarkId, updates) {
-    if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
-      console.warn(`${logPrefix} Bookmark not found:`, bookmarkId);
-      return false;
+    async function updateBookmark(bookmarkId, updates) {
+        if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
+            console.warn(`${logPrefix} Bookmark not found:`, bookmarkId);
+            return false;
+        }
+
+        const bookmark = JE.userConfig.bookmark.bookmarks[bookmarkId];
+        Object.assign(bookmark, updates, { updatedAt: new Date().toISOString() });
+
+        try {
+            // FIX: Get userId consistently
+            const userId = getCurrentUserId();
+
+            const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+                id,
+                ...bm
+            }));
+
+            // FIX: Use consistent cache key with userId
+            localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
+            emitBookmarksUpdated('update');
+            return true;
+        } catch (e) {
+            console.error(`${logPrefix} Failed to update bookmark:`, e);
+            return false;
+        }
     }
 
-    const bookmark = JE.userConfig.bookmark.bookmarks[bookmarkId];
-    Object.assign(bookmark, updates, { updatedAt: new Date().toISOString() });
-
-    try {
-      // FIX: Get userId consistently
-      const userId = getCurrentUserId();
-
-      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
-        id,
-        ...bm
-      }));
-
-      // FIX: Use consistent cache key with userId
-      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
-
-      emitBookmarksUpdated('update');
-      return true;
-    } catch (e) {
-      console.error(`${logPrefix} Failed to update bookmark:`, e);
-      return false;
-    }
-  }
-
-  /**
+    /**
    * Delete a bookmark with optimized cache update
    */
-  async function deleteBookmark(bookmarkId) {
-    if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
-      console.warn(`${logPrefix} Bookmark not found:`, bookmarkId);
-      return false;
+    async function deleteBookmark(bookmarkId) {
+        if (!JE.userConfig?.bookmark?.bookmarks?.[bookmarkId]) {
+            console.warn(`${logPrefix} Bookmark not found:`, bookmarkId);
+            return false;
+        }
+
+        delete JE.userConfig.bookmark.bookmarks[bookmarkId];
+
+        try {
+            // FIX: Get userId consistently
+            const userId = getCurrentUserId();
+
+            const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+                id,
+                ...bm
+            }));
+
+            // FIX: Use consistent cache key with userId
+            localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
+
+            emitBookmarksUpdated('delete');
+            return true;
+        } catch (e) {
+            console.error(`${logPrefix} Failed to delete bookmark:`, e);
+            return false;
+        }
     }
 
-    delete JE.userConfig.bookmark.bookmarks[bookmarkId];
-
-    try {
-      // FIX: Get userId consistently
-      const userId = getCurrentUserId();
-
-      const bookmarksArray = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
-        id,
-        ...bm
-      }));
-
-      // FIX: Use consistent cache key with userId
-      localStorageCache.set('bookmarks', bookmarksArray, userId, BOOKMARK_CACHE_TTL);
-
-      emitBookmarksUpdated('delete');
-      return true;
-    } catch (e) {
-      console.error(`${logPrefix} Failed to delete bookmark:`, e);
-      return false;
-    }
-  }
-
-  /**
+    /**
    * Sync bookmarks from old item ID to new item ID with optimized cache update
    * Creates duplicates with new item ID, keeps old ones
    */
-  async function syncBookmarks(oldBookmarks, newItemDetails, timeOffset = 0) {
-    const synced = [];
-    const now = new Date().toISOString();
+    async function syncBookmarks(oldBookmarks, newItemDetails, timeOffset = 0) {
+        const synced = [];
+        const now = new Date().toISOString();
 
-    for (const oldBookmark of oldBookmarks) {
-      const newBookmarkId = generateBookmarkId();
-      const newTimestamp = Math.max(0, oldBookmark.timestamp + timeOffset);
+        for (const oldBookmark of oldBookmarks) {
+            const newBookmarkId = generateBookmarkId();
+            const newTimestamp = Math.max(0, oldBookmark.timestamp + timeOffset);
 
-      const newBookmark = {
-        itemId: newItemDetails.itemId,
-        tmdbId: newItemDetails.tmdbId,
-        tvdbId: newItemDetails.tvdbId,
-        mediaType: newItemDetails.mediaType,
-        name: newItemDetails.name,
-        timestamp: newTimestamp,
-        label: oldBookmark.label || '',
-        createdAt: oldBookmark.createdAt || now,
-        updatedAt: now,
-        syncedFrom: oldBookmark.itemId // Track where it came from
-      };
+            const newBookmark = {
+                itemId: newItemDetails.itemId,
+                tmdbId: newItemDetails.tmdbId,
+                tvdbId: newItemDetails.tvdbId,
+                mediaType: newItemDetails.mediaType,
+                name: newItemDetails.name,
+                timestamp: newTimestamp,
+                label: oldBookmark.label || '',
+                createdAt: oldBookmark.createdAt || now,
+                updatedAt: now,
+                syncedFrom: oldBookmark.itemId // Track where it came from
+            };
 
-      JE.userConfig.bookmark.bookmarks[newBookmarkId] = newBookmark;
-      synced.push({ id: newBookmarkId, ...newBookmark });
+            JE.userConfig.bookmark.bookmarks[newBookmarkId] = newBookmark;
+            synced.push({ id: newBookmarkId, ...newBookmark });
+        }
+
+        try {
+            // Update localStorage cache using the same pattern as watchlist
+            const apiClient = window.ApiClient;
+            const userId = apiClient.getCurrentUserId();
+
+            // Optimize data for storage
+            const optimizedData = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
+                id,
+                ...bm
+            }));
+
+            localStorageCache.set('bookmarks', optimizedData, userId, BOOKMARK_CACHE_TTL);
+
+            emitBookmarksUpdated('sync');
+            return synced;
+        } catch (e) {
+            console.error(`${logPrefix} Failed to sync bookmarks:`, e);
+            // Rollback
+            synced.forEach(bm => delete JE.userConfig.bookmark.bookmarks[bm.id]);
+            throw e;
+        }
     }
 
-    try {
-      // Update localStorage cache using the same pattern as watchlist
-      const apiClient = window.ApiClient;
-      const userId = apiClient.getCurrentUserId();
-
-      // Optimize data for storage
-      const optimizedData = Object.entries(JE.userConfig.bookmark.bookmarks).map(([id, bm]) => ({
-        id,
-        ...bm
-      }));
-
-      localStorageCache.set('bookmarks', optimizedData, userId, BOOKMARK_CACHE_TTL);
-
-      emitBookmarksUpdated('sync');
-      return synced;
-    } catch (e) {
-      console.error(`${logPrefix} Failed to sync bookmarks:`, e);
-      // Rollback
-      synced.forEach(bm => delete JE.userConfig.bookmark.bookmarks[bm.id]);
-      throw e;
-    }
-  }
-
-  /**
+    /**
    * Delete bookmarks for items that no longer exist in Jellyfin
    */
-  async function cleanupOrphanedBookmarks() {
-    const allBookmarks = JE.userConfig?.bookmark?.bookmarks || {};
-    const itemIds = new Set();
-    const toDelete = [];
+    async function cleanupOrphanedBookmarks() {
+        const allBookmarks = JE.userConfig?.bookmark?.bookmarks || {};
+        const itemIds = new Set();
+        const toDelete = [];
 
-    // Collect all unique item IDs
-    for (const bookmark of Object.values(allBookmarks)) {
-      if (bookmark?.itemId) itemIds.add(bookmark.itemId);
-    }
-
-    // Check which items still exist
-    const userId = ApiClient.getCurrentUserId?.();
-    if (!userId) return { cleaned: 0, errors: 0 };
-
-    let cleaned = 0;
-    let errors = 0;
-
-    for (const itemId of itemIds) {
-      try {
-        await ApiClient.getItem(userId, itemId);
-        // Item exists, keep bookmarks
-      } catch (e) {
-        // Item doesn't exist, mark bookmarks for deletion
-        for (const [bookmarkId, bookmark] of Object.entries(allBookmarks)) {
-          if (bookmark?.itemId === itemId) {
-            toDelete.push(bookmarkId);
-          }
+        // Collect all unique item IDs
+        for (const bookmark of Object.values(allBookmarks)) {
+            if (bookmark?.itemId) itemIds.add(bookmark.itemId);
         }
-      }
+
+        // Check which items still exist
+        const userId = ApiClient.getCurrentUserId?.();
+        if (!userId) return { cleaned: 0, errors: 0 };
+
+        let cleaned = 0;
+        let errors = 0;
+
+        for (const itemId of itemIds) {
+            try {
+                await ApiClient.getItem(userId, itemId);
+                // Item exists, keep bookmarks
+            } catch (e) {
+                // Item doesn't exist, mark bookmarks for deletion
+                for (const [bookmarkId, bookmark] of Object.entries(allBookmarks)) {
+                    if (bookmark?.itemId === itemId) {
+                        toDelete.push(bookmarkId);
+                    }
+                }
+            }
+        }
+
+        // Delete orphaned bookmarks
+        for (const bookmarkId of toDelete) {
+            try {
+                await deleteBookmark(bookmarkId);
+                cleaned++;
+            } catch (e) {
+                errors++;
+            }
+        }
+
+        return { cleaned, errors };
     }
 
-    // Delete orphaned bookmarks
-    for (const bookmarkId of toDelete) {
-      try {
-        await deleteBookmark(bookmarkId);
-        cleaned++;
-      } catch (e) {
-        errors++;
-      }
-    }
-
-    return { cleaned, errors };
-  }
-
-  /**
+    /**
    * Format timestamp as HH:MM:SS or MM:SS
    */
-  function formatTimestamp(seconds) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    return h > 0
-      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m}:${s.toString().padStart(2, '0')}`;
-  }
+    function formatTimestamp(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        return h > 0 ?
+            `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` :
+            `${m}:${s.toString().padStart(2, '0')}`;
+    }
 
-  /**
+    /**
    * Create visual bookmark markers in video OSD
    */
-  function createBookmarkMarkers(video, bookmarksList) {
+    function createBookmarkMarkers(video, bookmarksList) {
+        if (!video || !bookmarksList.length) {
+            return;
+        }
 
-    if (!video || !bookmarksList.length) {
-      return;
-    }
+        // Find or create marker container
+        const osdBottom = document.querySelector('.videoOsdBottom');
+        if (!osdBottom) {
+            return;
+        }
 
-    // Find or create marker container
-    const osdBottom = document.querySelector('.videoOsdBottom');
-    if (!osdBottom) {
-      return;
-    }
+        // Find the position slider with expanded selectors
+        const positionSlider = osdBottom.querySelector('.osdPositionSlider, .sliderBubble, .mdl-slider, input[type="range"]');
+        if (!positionSlider) {
+            return;
+        }
 
-    // Find the position slider with expanded selectors
-    const positionSlider = osdBottom.querySelector('.osdPositionSlider, .sliderBubble, .mdl-slider, input[type="range"]');
-    if (!positionSlider) {
-      return;
-    }
+        const sliderContainer = positionSlider.closest('.osdPositionSliderContainer, .sliderContainer') || positionSlider.parentElement;
+        if (!sliderContainer) {
+            return;
+        }
 
-    const sliderContainer = positionSlider.closest('.osdPositionSliderContainer, .sliderContainer') || positionSlider.parentElement;
-    if (!sliderContainer) {
-      return;
-    }
+        // Ensure markers position relative to the slider container
+        const sliderPos = window.getComputedStyle(sliderContainer).position;
+        if (sliderPos === 'static') {
+            sliderContainer.style.position = 'relative';
+        }
 
-    // Ensure markers position relative to the slider container
-    const sliderPos = window.getComputedStyle(sliderContainer).position;
-    if (sliderPos === 'static') {
-      sliderContainer.style.position = 'relative';
-    }
+        // Remove existing markers
+        const existingMarkers = sliderContainer.querySelectorAll('.je-bookmark-marker');
+        existingMarkers.forEach(el => el.remove());
 
-    // Remove existing markers
-    const existingMarkers = sliderContainer.querySelectorAll('.je-bookmark-marker');
-    existingMarkers.forEach(el => el.remove());
+        const duration = video.duration;
+        if (!duration || !isFinite(duration)) {
+            return;
+        }
 
-    const duration = video.duration;
-    if (!duration || !isFinite(duration)) {
-      return;
-    }
+        // Create markers for each bookmark
+        bookmarksList.forEach(bookmark => {
+            const percent = (bookmark.timestamp / duration) * 100;
+            const markerColor = bookmark.exactMatch ? '#00d4ff' : '#ffa500';
 
-    // Create markers for each bookmark
-    bookmarksList.forEach(bookmark => {
-      const percent = (bookmark.timestamp / duration) * 100;
-      const markerColor = bookmark.exactMatch ? '#00d4ff' : '#ffa500';
-
-      const marker = document.createElement('div');
-      marker.className = 'je-bookmark-marker';
-      marker.style.cssText = `
+            const marker = document.createElement('div');
+            marker.className = 'je-bookmark-marker';
+            marker.style.cssText = `
         position: absolute;
         left: ${percent}%;
         bottom: 0%;
@@ -494,96 +493,92 @@
         justify-content: center;
       `;
 
-      const icon = document.createElement('span');
-      icon.className = 'material-icons';
-      icon.textContent = 'location_pin';
-      icon.style.cssText = `
+            const icon = document.createElement('span');
+            icon.className = 'material-icons';
+            icon.textContent = 'location_pin';
+            icon.style.cssText = `
         font-size: 24px;
         color: ${markerColor};
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
         pointer-events: none;
       `;
 
-      marker.appendChild(icon);
+            marker.appendChild(icon);
 
-      const labelText = bookmark.label || JE.t('bookmark_no_label');
-      const versionNote = !bookmark.exactMatch ? ` ${JE.t('bookmark_file_changed')}` : '';
-      marker.title = `${labelText} - ${formatTimestamp(bookmark.timestamp)}${versionNote}`;
+            const labelText = bookmark.label || JE.t('bookmark_no_label');
+            const versionNote = !bookmark.exactMatch ? ` ${JE.t('bookmark_file_changed')}` : '';
+            marker.title = `${labelText} - ${formatTimestamp(bookmark.timestamp)}${versionNote}`;
 
-      // Click to jump to bookmark
-      marker.addEventListener('click', (e) => {
-        e.stopPropagation();
-        video.currentTime = bookmark.timestamp;
-        JE.toast(`${JE.t('toast_jumped_to_bookmark')}: ${formatTimestamp(bookmark.timestamp)}`, 2000);
-      });
+            // Click to jump to bookmark
+            marker.addEventListener('click', (e) => {
+                e.stopPropagation();
+                video.currentTime = bookmark.timestamp;
+                JE.toast(`${JE.t('toast_jumped_to_bookmark')}: ${formatTimestamp(bookmark.timestamp)}`, 2000);
+            });
 
-      sliderContainer.appendChild(marker);
-    });
+            sliderContainer.appendChild(marker);
+        });
+    }
 
-  }
-
-
-  /**
+    /**
    * Update bookmark markers for current video
    */
-  async function updateBookmarkMarkersForCurrentVideo() {
+    async function updateBookmarkMarkersForCurrentVideo() {
+        const video = document.querySelector('.videoPlayerContainer video');
+        if (!video) {
+            return;
+        }
 
-    const video = document.querySelector('.videoPlayerContainer video');
-    if (!video) {
-      return;
+        const itemData = getCurrentItemData();
+        if (!itemData) {
+            return;
+        }
+
+        const details = await fetchItemDetails(itemData.itemId);
+        if (!details) {
+            return;
+        }
+
+        const { bookmarks: bookmarksList } = findBookmarksForItem(
+            details.itemId,
+            details.tmdbId,
+            details.tvdbId
+        );
+
+        createBookmarkMarkers(video, bookmarksList);
     }
 
-    const itemData = getCurrentItemData();
-    if (!itemData) {
-      return;
-    }
-
-    const details = await fetchItemDetails(itemData.itemId);
-    if (!details) {
-      return;
-    }
-
-    const { bookmarks: bookmarksList } = findBookmarksForItem(
-      details.itemId,
-      details.tmdbId,
-      details.tvdbId
-    );
-
-    createBookmarkMarkers(video, bookmarksList);
-  }
-
-  /**
+    /**
    * Show bookmark management modal
    */
-  async function showBookmarkModal(mode = 'add', existingBookmark = null) {
-    const video = document.querySelector('.videoPlayerContainer video');
-    const currentTime = video?.currentTime || 0;
+    async function showBookmarkModal(mode = 'add', existingBookmark = null) {
+        const video = document.querySelector('.videoPlayerContainer video');
+        const currentTime = video?.currentTime || 0;
 
-    const itemData = getCurrentItemData();
-    if (!itemData) {
-      JE.toast(JE.t('toast_bookmark_no_item'), 3000);
-      return;
-    }
+        const itemData = getCurrentItemData();
+        if (!itemData) {
+            JE.toast(JE.t('toast_bookmark_no_item'), 3000);
+            return;
+        }
 
-    const details = await fetchItemDetails(itemData.itemId);
-    if (!details) {
-      JE.toast(JE.t('toast_bookmark_fetch_failed'), 3000);
-      return;
-    }
+        const details = await fetchItemDetails(itemData.itemId);
+        if (!details) {
+            JE.toast(JE.t('toast_bookmark_fetch_failed'), 3000);
+            return;
+        }
 
-    const { bookmarks: existingBookmarks } = findBookmarksForItem(
-      details.itemId,
-      details.tmdbId,
-      details.tvdbId
-    );
+        const { bookmarks: existingBookmarks } = findBookmarksForItem(
+            details.itemId,
+            details.tmdbId,
+            details.tvdbId
+        );
 
+        const isEdit = mode === 'edit' && existingBookmark;
+        const title = isEdit ? JE.t('bookmark_edit_title') : (mode === 'view' ? 'Your Bookmarks' : JE.t('bookmark_add_title'));
+        const timestamp = isEdit ? existingBookmark.timestamp : currentTime;
+        const label = isEdit ? existingBookmark.label : '';
 
-    const isEdit = mode === 'edit' && existingBookmark;
-    const title = isEdit ? JE.t('bookmark_edit_title') : (mode === 'view' ? 'Your Bookmarks' : JE.t('bookmark_add_title'));
-    const timestamp = isEdit ? existingBookmark.timestamp : currentTime;
-    const label = isEdit ? existingBookmark.label : '';
-
-    const formHtml = `
+        const formHtml = `
       <style>
         .je-bm-player-modal-overlay {
           position: fixed;
@@ -902,10 +897,10 @@
       </div>
     `;
 
-    // Create custom modal
-    const modal = document.createElement('div');
-    modal.className = 'je-bm-player-modal-overlay';
-    modal.innerHTML = `
+        // Create custom modal
+        const modal = document.createElement('div');
+        modal.className = 'je-bm-player-modal-overlay';
+        modal.innerHTML = `
       <div class="je-bm-player-modal-container">
         <button class="je-bookmark-modal-close">×</button>
         ${formHtml}
@@ -919,280 +914,277 @@
       </div>
     `;
 
-    document.body.appendChild(modal);
+        document.body.appendChild(modal);
 
-    // Prevent keyboard shortcuts and wheel events from affecting video player
-    modal.addEventListener('keydown', (e) => e.stopPropagation());
-    modal.addEventListener('keyup', (e) => e.stopPropagation());
-    modal.addEventListener('keypress', (e) => e.stopPropagation());
-    modal.addEventListener('wheel', (e) => e.stopPropagation());
+        // Prevent keyboard shortcuts and wheel events from affecting video player
+        modal.addEventListener('keydown', (e) => e.stopPropagation());
+        modal.addEventListener('keyup', (e) => e.stopPropagation());
+        modal.addEventListener('keypress', (e) => e.stopPropagation());
+        modal.addEventListener('wheel', (e) => e.stopPropagation());
 
-    const closeDialog = () => {
-      modal.style.opacity = '0';
-      setTimeout(() => {
-        modal.remove();
-        // Remove navigation listener
-        document.removeEventListener('viewshow', closeDialog);
-      }, 200);
+        const closeDialog = () => {
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.remove();
+                // Remove navigation listener
+                document.removeEventListener('viewshow', closeDialog);
+            }, 200);
+        };
+
+        // Close modal when navigating away
+        document.addEventListener('viewshow', closeDialog);
+
+        // Close button
+        modal.querySelector('.je-bookmark-modal-close').addEventListener('click', closeDialog);
+        modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDialog();
+        });
+
+        // Focus label input after modal opens
+        setTimeout(() => {
+            const labelInput = modal.querySelector('#bookmark-label');
+            if (labelInput) labelInput.focus();
+            modal.style.opacity = '1';
+        }, 10);
+
+        // Submit
+        modal.querySelector('.je-bookmark-btn-submit').addEventListener('click', async () => {
+            const labelInput = modal.querySelector('#bookmark-label').value.trim();
+
+            try {
+                if (isEdit) {
+                    await updateBookmark(existingBookmark.id, { label: labelInput });
+                    JE.toast(JE.t('toast_bookmark_updated'), 2000);
+                } else {
+                    await addBookmark(timestamp, labelInput);
+                    JE.toast(JE.t('toast_bookmark_updated'), 2000);
+                }
+
+                // Refresh markers
+                updateBookmarkMarkersForCurrentVideo();
+                closeDialog();
+            } catch (e) {
+                JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
+            }
+        });
+
+        // Jump to bookmark buttons
+        modal.querySelectorAll('.je-bookmark-btn-jump').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const bookmarkId = btn.dataset.bookmarkId;
+                const bookmark = existingBookmarks.find(bm => bm.id === bookmarkId);
+                if (bookmark && video) {
+                    video.currentTime = bookmark.timestamp;
+                    JE.toast(`${JE.t('toast_jumped_to_bookmark')}: ${formatTimestamp(bookmark.timestamp)}`, 2000);
+                    closeDialog();
+                }
+            });
+        });
+
+        // Delete bookmark buttons
+        modal.querySelectorAll('.je-bookmark-btn-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const bookmarkId = btn.dataset.bookmarkId;
+                await deleteBookmark(bookmarkId);
+                JE.toast(JE.t('toast_bookmark_deleted'), 2000);
+                updateBookmarkMarkersForCurrentVideo();
+                closeDialog();
+                // Reopen modal to show updated list
+                setTimeout(() => showBookmarkModal(mode, existingBookmark), 300);
+            });
+        });
+    }
+
+    // Public API
+    JE.bookmarks = {
+        add: addBookmark,
+        update: updateBookmark,
+        delete: deleteBookmark,
+        findForItem: findBookmarksForItem,
+        showModal: showBookmarkModal,
+        updateMarkers: updateBookmarkMarkersForCurrentVideo,
+        formatTimestamp,
+        syncBookmarks,
+        cleanupOrphaned: cleanupOrphanedBookmarks
     };
 
-    // Close modal when navigating away
-    document.addEventListener('viewshow', closeDialog);
-
-    // Close button
-    modal.querySelector('.je-bookmark-modal-close').addEventListener('click', closeDialog);
-    modal.querySelector('.je-bookmark-btn-cancel').addEventListener('click', closeDialog);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeDialog();
-    });
-
-    // Focus label input after modal opens
-    setTimeout(() => {
-      const labelInput = modal.querySelector('#bookmark-label');
-      if (labelInput) labelInput.focus();
-      modal.style.opacity = '1';
-    }, 10);
-
-    // Submit
-    modal.querySelector('.je-bookmark-btn-submit').addEventListener('click', async () => {
-      const labelInput = modal.querySelector('#bookmark-label').value.trim();
-
-      try {
-        if (isEdit) {
-          await updateBookmark(existingBookmark.id, { label: labelInput });
-          JE.toast(JE.t('toast_bookmark_updated'), 2000);
-        } else {
-          await addBookmark(timestamp, labelInput);
-          JE.toast(JE.t('toast_bookmark_updated'), 2000);
-        }
-
-        // Refresh markers
-        updateBookmarkMarkersForCurrentVideo();
-        closeDialog();
-      } catch (e) {
-        JE.toast(JE.t('toast_bookmark_save_failed'), 3000);
-      }
-    });
-
-    // Jump to bookmark buttons
-    modal.querySelectorAll('.je-bookmark-btn-jump').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const bookmarkId = btn.dataset.bookmarkId;
-        const bookmark = existingBookmarks.find(bm => bm.id === bookmarkId);
-        if (bookmark && video) {
-          video.currentTime = bookmark.timestamp;
-          JE.toast(`${JE.t('toast_jumped_to_bookmark')}: ${formatTimestamp(bookmark.timestamp)}`, 2000);
-          closeDialog();
-        }
-      });
-    });
-
-    // Delete bookmark buttons
-    modal.querySelectorAll('.je-bookmark-btn-delete').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const bookmarkId = btn.dataset.bookmarkId;
-        await deleteBookmark(bookmarkId);
-        JE.toast(JE.t('toast_bookmark_deleted'), 2000);
-        updateBookmarkMarkersForCurrentVideo();
-        closeDialog();
-        // Reopen modal to show updated list
-        setTimeout(() => showBookmarkModal(mode, existingBookmark), 300);
-      });
-    });
-  }
-
-  // Public API
-  JE.bookmarks = {
-    add: addBookmark,
-    update: updateBookmark,
-    delete: deleteBookmark,
-    findForItem: findBookmarksForItem,
-    showModal: showBookmarkModal,
-    updateMarkers: updateBookmarkMarkersForCurrentVideo,
-    formatTimestamp,
-    syncBookmarks,
-    cleanupOrphaned: cleanupOrphanedBookmarks
-  };
-
-  /**
+    /**
    * Add bookmark button to the video player OSD
    */
-  function addOsdBookmarkButton() {
+    function addOsdBookmarkButton() {
     // Don't add if already exists
-    if (document.getElementById('jeBookmarkBtn')) return;
+        if (document.getElementById('jeBookmarkBtn')) return;
 
-    const controlsContainer = document.querySelector('.videoOsdBottom .buttons.focuscontainer-x');
-    if (!controlsContainer) return;
+        const controlsContainer = document.querySelector('.videoOsdBottom .buttons.focuscontainer-x');
+        if (!controlsContainer) return;
 
-    // Find the native settings button to insert before
-    const nativeSettingsButton = controlsContainer.querySelector('.btnVideoOsdSettings');
-    if (!nativeSettingsButton) return;
+        // Find the native settings button to insert before
+        const nativeSettingsButton = controlsContainer.querySelector('.btnVideoOsdSettings');
+        if (!nativeSettingsButton) return;
 
-    const bookmarkBtn = document.createElement('button');
-    bookmarkBtn.id = 'jeBookmarkBtn';
-    bookmarkBtn.setAttribute('is', 'paper-icon-button-light');
-    bookmarkBtn.className = 'autoSize paper-icon-button-light';
-    bookmarkBtn.title = JE.t('shortcut_BookmarkCurrentTime');
-    bookmarkBtn.innerHTML = '<span class="largePaperIconButton material-icons" aria-hidden="true">bookmark_add</span>';
+        const bookmarkBtn = document.createElement('button');
+        bookmarkBtn.id = 'jeBookmarkBtn';
+        bookmarkBtn.setAttribute('is', 'paper-icon-button-light');
+        bookmarkBtn.className = 'autoSize paper-icon-button-light';
+        bookmarkBtn.title = JE.t('shortcut_BookmarkCurrentTime');
+        bookmarkBtn.innerHTML = '<span class="largePaperIconButton material-icons" aria-hidden="true">bookmark_add</span>';
 
-    bookmarkBtn.onclick = (e) => {
-      e.stopPropagation();
-      showBookmarkModal('add');
-    };
+        bookmarkBtn.onclick = (e) => {
+            e.stopPropagation();
+            showBookmarkModal('add');
+        };
 
-    // Insert before the settings button
-    nativeSettingsButton.parentElement.insertBefore(bookmarkBtn, nativeSettingsButton);
-  }
-
-  function loadBookmarksFromLocalStorage() {
-    try {
-      const userId = getCurrentUserId();
-      const cached = localStorageCache.get('bookmarks', userId);
-
-      if (!cached) return;
-
-      // Initialize structure if needed
-      if (!JE.userConfig.bookmark) {
-        JE.userConfig.bookmark = { bookmarks: {} };
-      }
-
-      // Convert array to object if needed
-      if (Array.isArray(cached)) {
-        cached.forEach(bm => {
-          if (bm.id) {
-            const { id, ...data } = bm;
-            JE.userConfig.bookmark.bookmarks[id] = data;
-          }
-        });
-      }
-    } catch (e) {
-      console.error(`${logPrefix} Failed to load bookmarks from cache`, e);
+        // Insert before the settings button
+        nativeSettingsButton.parentElement.insertBefore(bookmarkBtn, nativeSettingsButton);
     }
-  }
-  /**
+
+    function loadBookmarksFromLocalStorage() {
+        try {
+            const userId = getCurrentUserId();
+            const cached = localStorageCache.get('bookmarks', userId);
+
+            if (!cached) return;
+
+            // Initialize structure if needed
+            if (!JE.userConfig.bookmark) {
+                JE.userConfig.bookmark = { bookmarks: {} };
+            }
+
+            // Convert array to object if needed
+            if (Array.isArray(cached)) {
+                cached.forEach(bm => {
+                    if (bm.id) {
+                        const { id, ...data } = bm;
+                        JE.userConfig.bookmark.bookmarks[id] = data;
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(`${logPrefix} Failed to load bookmarks from cache`, e);
+        }
+    }
+    /**
    * Initialize bookmarks system
    */
-  JE.initializeBookmarks = (function () {
-    let initialized = false;
-    let cleanupFunctions = [];
+    JE.initializeBookmarks = (function () {
+        let initialized = false;
+        let cleanupFunctions = [];
 
-    return function () {
-      // Prevent multiple initializations
-      if (initialized) {
-        return;
-      }
-      initialized = true;
+        return function () {
+            // Prevent multiple initializations
+            if (initialized) {
+                return;
+            }
+            initialized = true;
 
+            let updateTimeout = null;
+            const osdInjectionTimeout = null;
+            let lastVideoUrl = null;
+            let lastInjectedOsdKey = null;
+            const osdObserverId = 'je-bookmarks-osd';
+            const videoObserverId = 'je-bookmarks-video-changes';
+            loadBookmarksFromLocalStorage();
 
-      let updateTimeout = null;
-      let osdInjectionTimeout = null;
-      let lastVideoUrl = null;
-      let lastInjectedOsdKey = null;
-      const osdObserverId = 'je-bookmarks-osd';
-      const videoObserverId = 'je-bookmarks-video-changes';
-      loadBookmarksFromLocalStorage();
+            function getOsdKey() {
+                const video = document.querySelector('.videoPlayerContainer video');
+                return video?.currentSrc || video?.src || window.location.href;
+            }
 
-      function getOsdKey() {
-        const video = document.querySelector('.videoPlayerContainer video');
-        return video?.currentSrc || video?.src || window.location.href;
-      }
+            function debouncedUpdate() {
+                if (updateTimeout) clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(() => {
+                    const currentUrl = window.location.href;
+                    if (JE.isVideoPage() && currentUrl !== lastVideoUrl) {
+                        lastVideoUrl = currentUrl;
+                        updateBookmarkMarkersForCurrentVideo();
+                    }
+                }, 500);
+            }
 
-      function debouncedUpdate() {
-        if (updateTimeout) clearTimeout(updateTimeout);
-        updateTimeout = setTimeout(() => {
-          const currentUrl = window.location.href;
-          if (JE.isVideoPage() && currentUrl !== lastVideoUrl) {
-            lastVideoUrl = currentUrl;
-            updateBookmarkMarkersForCurrentVideo();
-          }
-        }, 500);
-      }
+            // Debounced OSD injection - prevents rapid re-injection
+            const debouncedOsdInjection = JE.helpers.debounce(() => {
+                if (!JE.isVideoPage()) return;
 
-      // Debounced OSD injection - prevents rapid re-injection
-      const debouncedOsdInjection = JE.helpers.debounce(() => {
-        if (!JE.isVideoPage()) return;
+                const osdBottom = document.querySelector('.videoOsdBottom');
+                const video = document.querySelector('.videoPlayerContainer video');
+                const currentOsdKey = getOsdKey();
 
-        const osdBottom = document.querySelector('.videoOsdBottom');
-        const video = document.querySelector('.videoPlayerContainer video');
-        const currentOsdKey = getOsdKey();
+                // Only inject if OSD exists and we haven't already injected for this video
+                if (osdBottom && video && currentOsdKey !== lastInjectedOsdKey) {
+                    updateBookmarkMarkersForCurrentVideo();
+                    addOsdBookmarkButton();
+                    lastInjectedOsdKey = currentOsdKey;
+                }
+            }, 200);
 
-        // Only inject if OSD exists and we haven't already injected for this video
-        if (osdBottom && video && currentOsdKey !== lastInjectedOsdKey) {
-          updateBookmarkMarkersForCurrentVideo();
-          addOsdBookmarkButton();
-          lastInjectedOsdKey = currentOsdKey;
-        }
-      }, 200);
+            // Managed observer: only watches when on video page
+            function ensureOsdObserver() {
+                if (!JE.isVideoPage()) {
+                    JE.helpers.disconnectObserver(osdObserverId);
+                    return;
+                }
 
-      // Managed observer: only watches when on video page
-      function ensureOsdObserver() {
-        if (!JE.isVideoPage()) {
-          JE.helpers.disconnectObserver(osdObserverId);
-          return;
-        }
+                // Create observer that watches for OSD appearance
+                JE.helpers.createObserver(
+                    osdObserverId,
+                    debouncedOsdInjection,
+                    document.body,
+                    { childList: true, subtree: true }
+                );
+            }
 
-        // Create observer that watches for OSD appearance
-        JE.helpers.createObserver(
-          osdObserverId,
-          debouncedOsdInjection,
-          document.body,
-          { childList: true, subtree: true }
-        );
-      }
+            // Debounced handlers for video events
+            const handlePlayingEvent = JE.helpers.debounce((e) => {
+                if (e.target.tagName === 'VIDEO' && JE.isVideoPage()) {
+                    debouncedOsdInjection();
+                }
+            }, 300);
 
-      // Debounced handlers for video events
-      const handlePlayingEvent = JE.helpers.debounce((e) => {
-        if (e.target.tagName === 'VIDEO' && JE.isVideoPage()) {
-          debouncedOsdInjection();
-        }
-      }, 300);
+            const handleMetadataEvent = JE.helpers.debounce((e) => {
+                if (e.target.tagName === 'VIDEO' && JE.isVideoPage()) {
+                    debouncedOsdInjection();
+                }
+            }, 300);
 
-      const handleMetadataEvent = JE.helpers.debounce((e) => {
-        if (e.target.tagName === 'VIDEO' && JE.isVideoPage()) {
-          debouncedOsdInjection();
-        }
-      }, 300);
+            const handleViewShow = () => {
+                if (JE.isVideoPage()) {
+                    lastInjectedOsdKey = null; // Reset for new page
+                    ensureOsdObserver();
+                    debouncedOsdInjection();
+                } else {
+                    // Clean up when leaving video page
+                    lastVideoUrl = null;
+                    lastInjectedOsdKey = null;
+                    JE.helpers.disconnectObserver(osdObserverId);
+                    JE.helpers.disconnectObserver(videoObserverId);
+                }
+            };
 
-      const handleViewShow = () => {
-        if (JE.isVideoPage()) {
-          lastInjectedOsdKey = null; // Reset for new page
-          ensureOsdObserver();
-          debouncedOsdInjection();
-        } else {
-          // Clean up when leaving video page
-          lastVideoUrl = null;
-          lastInjectedOsdKey = null;
-          JE.helpers.disconnectObserver(osdObserverId);
-          JE.helpers.disconnectObserver(videoObserverId);
-        }
-      };
+            // Register event listeners with cleanup tracking
+            document.addEventListener('playing', handlePlayingEvent, true);
+            cleanupFunctions.push(() => document.removeEventListener('playing', handlePlayingEvent, true));
 
-      // Register event listeners with cleanup tracking
-      document.addEventListener('playing', handlePlayingEvent, true);
-      cleanupFunctions.push(() => document.removeEventListener('playing', handlePlayingEvent, true));
+            document.addEventListener('loadedmetadata', handleMetadataEvent, true);
+            cleanupFunctions.push(() => document.removeEventListener('loadedmetadata', handleMetadataEvent, true));
 
-      document.addEventListener('loadedmetadata', handleMetadataEvent, true);
-      cleanupFunctions.push(() => document.removeEventListener('loadedmetadata', handleMetadataEvent, true));
+            document.addEventListener('viewshow', handleViewShow);
+            cleanupFunctions.push(() => document.removeEventListener('viewshow', handleViewShow));
 
-      document.addEventListener('viewshow', handleViewShow);
-      cleanupFunctions.push(() => document.removeEventListener('viewshow', handleViewShow));
+            // Initial setup if already on video page
+            if (JE.isVideoPage()) {
+                ensureOsdObserver();
+                debouncedOsdInjection();
+            }
 
-      // Initial setup if already on video page
-      if (JE.isVideoPage()) {
-        ensureOsdObserver();
-        debouncedOsdInjection();
-      }
-
-      // Store cleanup function globally
-      JE.cleanupBookmarks = function () {
-        cleanupFunctions.forEach(fn => fn());
-        cleanupFunctions = [];
-        JE.helpers.disconnectObserver(osdObserverId);
-        JE.helpers.disconnectObserver(videoObserverId);
-        initialized = false;
-      };
-
-    };
-  })();
-
+            // Store cleanup function globally
+            JE.cleanupBookmarks = function () {
+                cleanupFunctions.forEach(fn => fn());
+                cleanupFunctions = [];
+                JE.helpers.disconnectObserver(osdObserverId);
+                JE.helpers.disconnectObserver(videoObserverId);
+                initialized = false;
+            };
+        };
+    })();
 })(window.JellyfinEnhanced = window.JellyfinEnhanced || {});

@@ -231,7 +231,6 @@
                 if (serverSelect.value) {
                     updateServerDependentOptions();
                 }
-
             } else {
                 attempts++;
                 if (attempts > maxAttempts) {
@@ -244,5 +243,4 @@
 
     // Expose the modal module on the global JE object
     JE.jellyseerrModal = modal;
-
 })(window.JellyfinEnhanced);

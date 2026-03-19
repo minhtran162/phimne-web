@@ -489,7 +489,6 @@ function onLogoutClick() {
     Dashboard.logout();
 }
 
-
 function updateLibraryNavLinks(page) {
     const isLiveTvPage = page.classList.contains('liveTvPage');
     const isChannelsPage = page.classList.contains('channelsPage');

@@ -269,7 +269,6 @@
                 }
 
                 if (matches) {
-
                     // Return the settings to apply
                     const settings = {};
                     if (rule.profileId !== null && rule.profileId !== undefined) {
@@ -324,7 +323,7 @@
         }
 
         const body = { mediaType, mediaId: parseInt(tmdbId), ...advancedSettings };
-        if (mediaType === 'tv') body.seasons = "all";
+        if (mediaType === 'tv') body.seasons = 'all';
         if (is4k) body.is4k = true;
 
         const result = await post('/request', body);
@@ -459,7 +458,6 @@
             return { servers: [], tags: [] };
         }
     };
-
 
     /**
      * Checks if partial series requests are enabled in Jellyseerr settings.
@@ -656,9 +654,9 @@
 
         // Check if URL mappings are configured
         if (JE?.pluginConfig?.JellyseerrUrlMappings) {
-            const serverAddress = (typeof ApiClient !== 'undefined' && ApiClient.serverAddress)
-                ? ApiClient.serverAddress()
-                : window.location.origin;
+            const serverAddress = (typeof ApiClient !== 'undefined' && ApiClient.serverAddress) ?
+                ApiClient.serverAddress() :
+                window.location.origin;
 
             const currentUrl = serverAddress.replace(/\/+$/, '').toLowerCase();
             const mappings = JE.pluginConfig.JellyseerrUrlMappings.toString().split('\n').map(line => line.trim()).filter(Boolean);
@@ -686,5 +684,4 @@
 
     // Expose the API module on the global JE object
     JE.jellyseerrAPI = api;
-
 })(window.JellyfinEnhanced);

@@ -72,7 +72,6 @@
         clearButton.onmouseover = () => clearButton.style.background = '#E57373';
         clearButton.onmouseout = () => clearButton.style.background = '#f44336';
 
-
         migrateButton.addEventListener('click', async () => {
             if (!confirm('This will overwrite your current server-side settings with the settings stored in this browser. Do you want to continue?')) {
                 return;
@@ -87,7 +86,6 @@
             };
             // Clean up properties that belong in other files
             ['Shortcuts', 'Bookmarks', 'ElsewhereRegion', 'ElsewhereRegions', 'ElsewhereServices'].forEach(key => delete userSettings[key]);
-
 
             // --- Prepare UserShortcuts ---
             const userShortcuts = { Shortcuts: [] };
@@ -122,7 +120,7 @@
         });
 
         clearButton.addEventListener('click', () => {
-             if (!confirm('Are you sure you want to permanently delete the old settings from this browser? This cannot be undone.')) {
+            if (!confirm('Are you sure you want to permanently delete the old settings from this browser? This cannot be undone.')) {
                 return;
             }
             clearLocalStorage();
@@ -149,5 +147,4 @@
             }
         };
     };
-
 })(window.JellyfinEnhanced);

@@ -213,7 +213,6 @@ function loadForm(context, user, userSettings, systemInfo, apiClient) {
 
     if (userId === loggedInUserId && (user.Policy.EnableVideoPlaybackTranscoding || user.Policy.EnableAudioPlaybackTranscoding)) {
         context.querySelector('.qualitySections').classList.remove('hide');
-
     } else {
         context.querySelector('.qualitySections').classList.add('hide');
         context.querySelector('.fldChromecastQuality').classList.add('hide');

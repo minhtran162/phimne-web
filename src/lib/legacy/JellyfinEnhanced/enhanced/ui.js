@@ -131,7 +131,7 @@
             fontSize: '14px',
             fontWeight: '500',
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            backdropFilter: `blur(50px)`,
+            backdropFilter: 'blur(50px)',
             border: panelBorder,
             width: '600px',
             maxWidth: '90vw',
@@ -482,7 +482,7 @@
         const kbdBackground = themeVars.altAccent;
         const presetBoxBackground = themeVars.altAccent;
         const panelBlurValue = themeVars.blur;
-        const githubButtonBg = `rgba(102, 179, 255, 0.1)`;
+        const githubButtonBg = 'rgba(102, 179, 255, 0.1)';
         const releaseNotesBg = primaryAccentColor;
         const checkUpdatesBorder = `1px solid ${primaryAccentColor}`;
         const releaseNotesTextColor = themeVars.textColor;
@@ -583,7 +583,7 @@
                 }
                 return `
                     <div class="preset-box ${type}-preset" data-preset-index="${index}" title="${preset.name}" style="display: flex; justify-content: center; align-items: center; padding: 8px; border: 2px solid transparent; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: ${presetBoxBackground}; min-height: 30px;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='${presetBoxBackground}'">
-                        <span style="display: inline-block; ${type === 'style' ? `width: 40px; height: 25px; border-radius: 4px; line-height: 25px;` : ''} ${previewStyle} text-align: center; font-weight: bold;">${preset.previewText}</span>
+                        <span style="display: inline-block; ${type === 'style' ? 'width: 40px; height: 25px; border-radius: 4px; line-height: 25px;' : ''} ${previewStyle} text-align: center; font-weight: bold;">${preset.previewText}</span>
                     </div>`;
             }).join('');
         };
@@ -931,7 +931,7 @@
                     }
 
                     // Update or add the shortcut override
-                    let userShortcut = JE.userConfig.shortcuts.Shortcuts.find(s => s.Name === action);
+                    const userShortcut = JE.userConfig.shortcuts.Shortcuts.find(s => s.Name === action);
                     if (userShortcut) {
                         userShortcut.Key = combo;
                     } else {
@@ -1089,7 +1089,7 @@
                 }
 
                 if (requiresRefresh) {
-                    toastMessage += ".<br> Refresh page to apply.";
+                    toastMessage += '.<br> Refresh page to apply.';
                 }
                 JE.toast(toastMessage);
                 if (id === 'randomButtonToggle') JE.addRandomButton();
@@ -1174,7 +1174,7 @@
                     }
                 }
 
-                JE.toast(`Position updated!`);
+                JE.toast('Position updated!');
                 resetAutoCloseTimer();
             });
         });
@@ -1200,7 +1200,7 @@
 
                 // Custom languages not in Jellyfin's official culture list
                 const CUSTOM_LANGUAGES = {
-                    'pr': { Name: 'Pirate', DisplayName: "Pirate", TwoLetterISOLanguageName: 'pr' },
+                    'pr': { Name: 'Pirate', DisplayName: 'Pirate', TwoLetterISOLanguageName: 'pr' }
                 };
 
                 let supportedJELanguages = [];
@@ -1251,7 +1251,6 @@
                             // Translation file doesn't exist
                         }
                     }
-
 
                     // Cache the results
                     try {
@@ -1325,7 +1324,7 @@
                 }
 
                 if (newLang && !translationExists) {
-                    JE.toast(`⚠️ Translation file not available for selected language. Falling back to English.`);
+                    JE.toast('⚠️ Translation file not available for selected language. Falling back to English.');
                 } else {
                     JE.toast(JE.t('toast_language_changed'));
                 }
@@ -1364,7 +1363,7 @@
         if (clearBrowserCacheButton) {
             clearBrowserCacheButton.addEventListener('click', () => {
                 caches.keys().then((names) => {
-                    for (let name of names) {
+                    for (const name of names) {
                         caches.delete(name);
                     }
                 });
@@ -1441,5 +1440,4 @@
         setupPresetHandlers('font-size-presets-container', JE.fontSizePresets, 'font-size');
         setupPresetHandlers('font-family-presets-container', JE.fontFamilyPresets, 'font-family');
     };
-
 })(window.JellyfinEnhanced);

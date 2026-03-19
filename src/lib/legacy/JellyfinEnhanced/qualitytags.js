@@ -91,13 +91,13 @@
 
         // --- CONFIGURATION ---
         const config = {
-            MAX_CONCURRENT_REQUESTS: 4,      // Max number of simultaneous API requests.
-            QUEUE_PROCESS_INTERVAL: 400,   // Delay between processing batches from the queue.
-            MUTATION_DEBOUNCE: 600,        // Delay to wait for DOM changes to settle before processing.
-            RENDER_DEBOUNCE: 400,          // Delay for re-rendering tags on navigation.
+            MAX_CONCURRENT_REQUESTS: 4, // Max number of simultaneous API requests.
+            QUEUE_PROCESS_INTERVAL: 400, // Delay between processing batches from the queue.
+            MUTATION_DEBOUNCE: 600, // Delay to wait for DOM changes to settle before processing.
+            RENDER_DEBOUNCE: 400, // Delay for re-rendering tags on navigation.
             CACHE_TTL: (JE.pluginConfig?.TagsCacheTtlDays || 30) * 24 * 60 * 60 * 1000, // Cache TTL from server config (default 30 days)
-            REQUEST_TIMEOUT: 8000,           // Timeout for API requests.
-            MAX_RETRIES: 2                     // Number of times to retry a failed API request.
+            REQUEST_TIMEOUT: 8000, // Timeout for API requests.
+            MAX_RETRIES: 2 // Number of times to retry a failed API request.
         };
 
         // --- STATE VARIABLES ---
@@ -109,10 +109,10 @@
             genre: new Map()
         });
         let processedElements = new WeakSet(); // Stores elements that have been processed to avoid re-work.
-        let requestQueue = []; // A queue for API requests to avoid server overload.
+        const requestQueue = []; // A queue for API requests to avoid server overload.
         let isProcessingQueue = false;
         const queuedItemIds = new Set(); // De-duplicate queued requests per itemId
-        let mutationDebounceTimer = null;
+        const mutationDebounceTimer = null;
         let renderDebounceTimer = null;
 
         // --- OBSERVERS ---
@@ -129,9 +129,9 @@
          */
         function getUserId() {
             try {
-                return (window.ApiClient?._serverInfo?.UserId) ||
-                       (window.Dashboard?.getCurrentUserId?.()) ||
-                       null;
+                return (window.ApiClient?._serverInfo?.UserId)
+                       || (window.Dashboard?.getCurrentUserId?.())
+                       || null;
             } catch {
                 return null;
             }
@@ -228,7 +228,6 @@
                 audioStreams = audioStreams.concat(sourceStreams.filter(s => s.Type === 'Audio'));
             }
 
-
             // Get primary video stream for analysis
             const primaryVideoStream = videoStreams[0];
 
@@ -300,7 +299,6 @@
                     const hdr10PlusMatchTitle = displayTitle.match(hdr10PlusRegex);
                     const hdr10PlusMatchRange = videoRangeType.match(hdr10PlusRegex);
 
-
                     if (hdr10PlusMatchTitle || hdr10PlusMatchRange) {
                         hdrTag = 'HDR10+';
                         qualities.add(hdrTag);
@@ -369,7 +367,6 @@
             }
 
             if (!audioTag) {
-
                 // Priority 2: Technical Metadata Fallback
                 for (let i = 0; i < audioStreams.length; i++) {
                     const stream = audioStreams[i];
@@ -401,7 +398,6 @@
             }
 
             if (!audioTag) {
-
                 // Priority 3: Channel Layout Fallback
                 let maxChannels = 0;
                 audioStreams.forEach((stream, index) => {
@@ -451,9 +447,9 @@
             try {
                 // Fetch the item with MediaStreams and MediaSources fields
                 const item = await ApiClient.ajax({
-                    type: "GET",
-                    url: ApiClient.getUrl(`/Users/${userId}/Items/${itemId}`, { Fields: "MediaStreams,MediaSources,Type,Genres" }),
-                    dataType: "json",
+                    type: 'GET',
+                    url: ApiClient.getUrl(`/Users/${userId}/Items/${itemId}`, { Fields: 'MediaStreams,MediaSources,Type,Genres' }),
+                    dataType: 'json',
                     timeout: config.REQUEST_TIMEOUT
                 });
 
@@ -461,7 +457,7 @@
 
                 let qualities = [];
 
-                if (item.Type === "Series" || item.Type === "Season") {
+                if (item.Type === 'Series' || item.Type === 'Season') {
                     // For a series or season, find the first episode to represent the quality.
                     const episode = await fetchFirstEpisode(userId, item.Id);
                     if (episode) {
@@ -494,18 +490,18 @@
         async function fetchFirstEpisode(userId, seriesId) {
             try {
                 const response = await ApiClient.ajax({
-                    type: "GET",
-                    url: ApiClient.getUrl("/Items", {
+                    type: 'GET',
+                    url: ApiClient.getUrl('/Items', {
                         ParentId: seriesId,
-                        IncludeItemTypes: "Episode",
+                        IncludeItemTypes: 'Episode',
                         Recursive: true,
-                        SortBy: "PremiereDate",
-                        SortOrder: "Ascending",
+                        SortBy: 'PremiereDate',
+                        SortOrder: 'Ascending',
                         Limit: 1,
-                        Fields: "MediaStreams,MediaSources",
+                        Fields: 'MediaStreams,MediaSources',
                         userId: userId
                     }),
-                    dataType: "json"
+                    dataType: 'json'
                 });
                 return response.Items?.[0] || null;
             } catch {
@@ -598,8 +594,6 @@
             processedElements.add(container);
         }
 
-
-
         /**
          * Extracts the Jellyfin item ID from a DOM element.
          * @param {HTMLElement} el - The element to inspect.
@@ -617,7 +611,7 @@
             }
             if (el.dataset?.itemid) return el.dataset.itemid;
 
-            let parent = el.closest('[data-itemid]');
+            const parent = el.closest('[data-itemid]');
             return parent ? parent.dataset.itemid : null;
         }
 
@@ -768,7 +762,7 @@
                     background: ${v.bg} !important;
                     color: ${v.text} !important;
                 }`;
-            }).join("\n");
+            }).join('\n');
 
             const pos = (window.JellyfinEnhanced?.currentSettings?.qualityTagsPosition || window.JellyfinEnhanced?.pluginConfig?.QualityTagsPosition || 'top-left');
             const isTop = pos.includes('top');
@@ -914,6 +908,5 @@
         // Trigger a fresh initialization which will set up everything with current settings
         JE.initializeQualityTags();
     };
-
 })(window.JellyfinEnhanced);
 

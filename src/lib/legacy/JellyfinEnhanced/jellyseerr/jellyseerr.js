@@ -24,8 +24,7 @@
         let isJellyseerrOnlyMode = false;
         let hiddenSections = [];
         let jellyseerrOriginalPosition = null;
-        let refreshInterval = null;
-
+        const refreshInterval = null;
 
         // Destructure modules for easy access
         const { checkUserStatus, search, requestMedia } = JE.jellyseerrAPI;
@@ -64,7 +63,6 @@
                 if (noResultsMessage) noResultsMessage.classList.add('section-hidden');
 
                 JE.toast(JE.t('jellyseerr_toast_filter_on'), 3000);
-
             } else {
                 hiddenSections.forEach(section => section.classList.remove('section-hidden'));
                 const jellyseerrSection = searchPage.querySelector('.jellyseerr-section');
@@ -319,7 +317,7 @@
                 if (action === 'request4k' && tmdbId) {
                     const popup = item.closest('.jellyseerr-4k-popup');
                     item.disabled = true;
-                    item.innerHTML = `<span>Requesting...</span><span class="jellyseerr-button-spinner"></span>`;
+                    item.innerHTML = '<span>Requesting...</span><span class="jellyseerr-button-spinner"></span>';
 
                     // Find the original item data from the card
                     const card = event.target.closest('.jellyseerr-card');
@@ -356,7 +354,7 @@
                         }
                         JE.toast(errorMessage, 4000);
                         item.disabled = false;
-                        item.innerHTML = `<span>Request in 4K</span>`;
+                        item.innerHTML = '<span>Request in 4K</span>';
                     }
                 }
                 return;
@@ -407,7 +405,5 @@
                 }
             }
         });
-
     };
-
 })(window.JellyfinEnhanced);

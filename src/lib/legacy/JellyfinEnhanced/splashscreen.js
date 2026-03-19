@@ -4,9 +4,9 @@
 
     const CONFIG = {
         loadingCheckInterval: 100,
-        fadeOutDuration: 400,         // Duration of fade out animation (ms)
-        progressUpdateInterval: 150,  // How often to update progress bar (ms)
-        hardTimeout: 20000,           // Max time before force-hiding splash (ms)
+        fadeOutDuration: 400, // Duration of fade out animation (ms)
+        progressUpdateInterval: 150, // How often to update progress bar (ms)
+        hardTimeout: 20000, // Max time before force-hiding splash (ms)
         removalInterval: 100,
         removalDuration: 5000
     };
@@ -107,8 +107,8 @@
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node instanceof HTMLElement) {
-                        if (node.id === 'page-loader' ||
-                            (node.classList.contains('bar-loading') && !node.classList.contains('je-loading'))) {
+                        if (node.id === 'page-loader'
+                            || (node.classList.contains('bar-loading') && !node.classList.contains('je-loading'))) {
                             node.remove();
                         }
                     }
@@ -202,7 +202,7 @@
         };
 
         if (progressBar && unfilledBar) {
-            progressBar.style.transition = `width 300ms ease-in-out`;
+            progressBar.style.transition = 'width 300ms ease-in-out';
             progressBar.style.width = '100%';
             unfilledBar.style.width = '0%';
             setTimeout(completeRemoval, 300);
@@ -433,7 +433,6 @@
         removeMediaBarSplash();
 
         createSplashScreen();
-
     }
 
     /**
@@ -450,6 +449,4 @@
     window.JellyfinEnhanced = window.JellyfinEnhanced || {};
     window.JellyfinEnhanced.initializeSplashScreen = initializeSplashScreen;
     window.JellyfinEnhanced.hideSplashScreen = publicHideSplashScreen;
-
-
 })();

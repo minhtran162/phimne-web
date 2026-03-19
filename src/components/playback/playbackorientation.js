@@ -36,9 +36,9 @@ function tryLockLandscape() {
 
 Events.on(playbackManager, 'playbackstart', function (e, player) {
     const isLocalVideo =
-        player.isLocalPlayer &&
-        !player.isExternalPlayer &&
-        playbackManager.isPlayingVideo(player);
+        player.isLocalPlayer
+        && !player.isExternalPlayer
+        && playbackManager.isPlayingVideo(player);
 
     if (isLocalVideo && layoutManager.mobile) {
         tryLockLandscape();

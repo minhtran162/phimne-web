@@ -55,8 +55,8 @@
             quality: new Map(),
             genre: new Map()
         });
-        let processedElements = new WeakSet();
-        let requestQueue = [];
+        const processedElements = new WeakSet();
+        const requestQueue = [];
         let isProcessingQueue = false;
         const queuedItemIds = new Set();
         let mutationDebounceTimer = null;
@@ -256,8 +256,7 @@
                         if (genres) {
                             insertGenreTags(element, genres);
                         }
-                    } catch (error) { }
-                    finally {
+                    } catch (error) { } finally {
                         queuedItemIds.delete(itemId);
                     }
                 });
@@ -324,10 +323,10 @@
                 if (m && m[1]) return m[1];
             }
             if (el.dataset?.itemid) return el.dataset.itemid;
-            let parent = el.closest('[data-itemid]');
+            const parent = el.closest('[data-itemid]');
             if (parent) return parent.dataset.itemid;
             // Fallback to data-id (but only if it's a valid 32-char hex ID)
-            let parent2 = el.closest('[data-id]');
+            const parent2 = el.closest('[data-id]');
             if (parent2 && parent2.dataset.id && /^[a-f0-9]{32}$/i.test(parent2.dataset.id)) {
                 return parent2.dataset.id;
             }
@@ -600,5 +599,4 @@
         // Trigger a fresh initialization which will set up everything with current settings
         JE.initializeGenreTags();
     };
-
 })(window.JellyfinEnhanced);

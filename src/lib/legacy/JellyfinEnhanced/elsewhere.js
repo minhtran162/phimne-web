@@ -32,7 +32,7 @@
 
         // Load regions and providers from GitHub repo
         function loadRegionsAndProviders() {
-            fetch(`https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/regions.txt`)
+            fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/regions.txt')
                 .then(response => response.ok ? response.text() : Promise.reject())
                 .then(text => {
                     const lines = text.trim().split('\n');
@@ -55,8 +55,8 @@
                     };
                 });
 
-                 // Load providers
-            fetch(`https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/providers.txt`)
+            // Load providers
+            fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/providers.txt')
                 .then(response => response.ok ? response.text() : Promise.reject())
                 .then(text => {
                     availableProviders = text.trim().split('\n')
@@ -317,8 +317,8 @@
                     <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #ccc;">${JE.t('elsewhere_settings_country')}</label>
                     <select id="region-select" style="width: 100%; padding: 12px; border: 1px solid #444; border-radius: 6px; background: #2a2a2a; color: #fff; font-size: 14px;">
                         ${Object.entries(availableRegions).map(([code, name]) =>
-                            `<option value="${code}" ${code === userRegion ? 'selected' : ''}>${name}</option>`
-                        ).join('')}
+        `<option value="${code}" ${code === userRegion ? 'selected' : ''}>${name}</option>`
+    ).join('')}
                     </select>
                 </div>
 
@@ -470,7 +470,7 @@
             const url = ApiClient.getUrl(`/JellyfinEnhanced/tmdb/${mediaType}/${tmdbId}/watch/providers`);
             fetch(url, {
                 headers: {
-                    "X-Emby-Token": ApiClient.accessToken()
+                    'X-Emby-Token': ApiClient.accessToken()
                 }
             })
                 .then(response => {
@@ -630,7 +630,7 @@
                 title.style.cursor = 'default';
             }
 
-             // Create controls container
+            // Create controls container
             const controls = document.createElement('div');
             controls.style.cssText = `
                 display: flex;
@@ -867,8 +867,8 @@
             const title = document.createElement('div');
             const regionNames = unavailableRegions.map(region => availableRegions[region] || region);
             const regionText = regionNames.length === 1 ? regionNames[0] :
-                              regionNames.length === 2 ? regionNames.join(' and ') :
-                              regionNames.slice(0, -1).join(', ') + ' and ' + regionNames[regionNames.length - 1];
+                regionNames.length === 2 ? regionNames.join(' and ') :
+                    regionNames.slice(0, -1).join(', ') + ' and ' + regionNames[regionNames.length - 1];
 
             title.textContent = JE.t('elsewhere_panel_not_available_in_regions', { regions: regionText });
             title.style.cssText = `
@@ -1129,5 +1129,4 @@
             setTimeout(addStreamingLookup, 1000);
         }
     };
-
 })(window.JellyfinEnhanced);

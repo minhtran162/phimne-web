@@ -18,7 +18,7 @@ export {};
     function EventEmitter () {}
 
     // Shortcuts to improve speed and size
-    var proto = EventEmitter.prototype;
+    const proto = EventEmitter.prototype;
 
     /**
      * Finds the index of the listener for the event in its storage array.
@@ -29,7 +29,7 @@ export {};
      * @api private
      */
     function indexOfListener (listeners, listener) {
-        var i = listeners.length;
+        let i = listeners.length;
         while (i--) {
             if (listeners[i].listener === listener) {
                 return i;
@@ -62,9 +62,9 @@ export {};
      * @return {Function[]|Object} All listener functions for the event.
      */
     proto.getListeners = function getListeners (evt) {
-        var events = this._getEvents();
-        var response;
-        var key;
+        const events = this._getEvents();
+        let response;
+        let key;
 
         // Return a concatenated array of all matching events if
         // the selector is a regular expression.
@@ -89,8 +89,8 @@ export {};
      * @return {Function[]} Just the listener functions.
      */
     proto.flattenListeners = function flattenListeners (listeners) {
-        var flatListeners = [];
-        var i;
+        const flatListeners = [];
+        let i;
 
         for (i = 0; i < listeners.length; i += 1) {
             flatListeners.push(listeners[i].listener);
@@ -106,8 +106,8 @@ export {};
      * @return {Object} All listener functions for an event in an object.
      */
     proto.getListenersAsObject = function getListenersAsObject (evt) {
-        var listeners = this.getListeners(evt);
-        var response;
+        const listeners = this.getListeners(evt);
+        let response;
 
         if (listeners instanceof Array) {
             response = {};
@@ -128,9 +128,9 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.addListener = function addListener (evt, listener) {
-        var listeners = this.getListenersAsObject(evt);
-        var listenerIsWrapped = typeof listener === 'object';
-        var key;
+        const listeners = this.getListenersAsObject(evt);
+        const listenerIsWrapped = typeof listener === 'object';
+        let key;
 
         for (key in listeners) {
             if (listeners.hasOwnProperty(key) && indexOfListener(listeners[key], listener) === -1) {
@@ -188,7 +188,7 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.defineEvents = function defineEvents (evts) {
-        for (var i = 0; i < evts.length; i += 1) {
+        for (let i = 0; i < evts.length; i += 1) {
             this.defineEvent(evts[i]);
         }
         return this;
@@ -203,9 +203,9 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.removeListener = function removeListener (evt, listener) {
-        var listeners = this.getListenersAsObject(evt);
-        var index;
-        var key;
+        const listeners = this.getListenersAsObject(evt);
+        let index;
+        let key;
 
         for (key in listeners) {
             if (listeners.hasOwnProperty(key)) {
@@ -268,10 +268,10 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.manipulateListeners = function manipulateListeners (remove, evt, listeners) {
-        var i;
-        var value;
-        var single = remove ? this.removeListener : this.addListener;
-        var multiple = remove ? this.removeListeners : this.addListeners;
+        let i;
+        let value;
+        const single = remove ? this.removeListener : this.addListener;
+        const multiple = remove ? this.removeListeners : this.addListeners;
 
         // If evt is an object then pass each of its properties to this method
         if (typeof evt === 'object' && !(evt instanceof RegExp)) {
@@ -309,9 +309,9 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.removeEvent = function removeEvent (evt) {
-        var type = typeof evt;
-        var events = this._getEvents();
-        var key;
+        const type = typeof evt;
+        const events = this._getEvents();
+        let key;
 
         // Remove different things depending on the state of evt
         if (type === 'string') {
@@ -352,11 +352,11 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.emitEvent = function emitEvent (evt, args) {
-        var listeners = this.getListenersAsObject(evt);
-        var listener;
-        var i;
-        var key;
-        var response;
+        const listeners = this.getListenersAsObject(evt);
+        let listener;
+        let i;
+        let key;
+        let response;
 
         for (key in listeners) {
             if (listeners.hasOwnProperty(key)) {
@@ -397,7 +397,7 @@ export {};
      * @return {Object} Current instance of EventEmitter for chaining.
      */
     proto.emit = function emit (evt) {
-        var args = Array.prototype.slice.call(arguments, 1);
+        const args = Array.prototype.slice.call(arguments, 1);
         return this.emitEvent(evt, args);
     };
 

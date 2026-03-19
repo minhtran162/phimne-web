@@ -5557,9 +5557,9 @@ In the Custom Tabs plugin, add a new tab with the following HTML content:
 					<div class="progress-stats">
 						<span>
 						${percentage === 100 ?
-                `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes - <strong>Series Complete!</strong>` :
-                `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes which leaves <strong>${remainingCount} episodes</strong> left to watch.`
-            }
+        `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes - <strong>Series Complete!</strong>` :
+        `Watched <strong>${watchedCount} of ${totalEpisodes}</strong> episodes which leaves <strong>${remainingCount} episodes</strong> left to watch.`
+    }
 						</span>
 					</div>
 					${lastWatchedInfo ? `<div class="progress-last-watched">${lastWatchedInfo}</div>` : ''}
