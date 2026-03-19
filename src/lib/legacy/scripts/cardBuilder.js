@@ -1,6 +1,7 @@
 import datetime from 'scripts/datetime';
 import globalize from 'lib/globalize';
 import browser from 'scripts/browser';
+import browser from 'scripts/browser';
 
 // Jellyfin Card Builder
 // This module provides a main entry point function to build Jellyfin cards
@@ -1083,6 +1084,7 @@ import browser from 'scripts/browser';
             }
         } else {
             // For Series/Movie, show name and year (plain text, no nested <a>)
+            // For Series/Movie, show name and year (plain text, no nested <a>)
             const titleText = document.createElement('div');
             titleText.className = 'cardText cardTextCentered cardText-first';
 
@@ -1113,6 +1115,8 @@ import browser from 'scripts/browser';
             secondaryText.innerHTML = `<bdi>${yearText}</bdi>`;
             cardBox.appendChild(secondaryText);
         }
+
+        cardBox.style.pointerEvents = 'none';
 
         card.appendChild(cardBox);
         return card;
@@ -1324,7 +1328,10 @@ import browser from 'scripts/browser';
     function createScrollableContainer(items, title, viewMoreUrl = null, overflowCard = false, cardFormat = null) {
         // Create the main vertical section container
         const verticalSection = document.createElement('div');
-        verticalSection.className = 'verticalSection';
+        // Conditionally set container classes based on platform
+        verticalSection.className = browser.tizen
+            ? 'verticalSection'
+            : 'verticalSection emby-scroller-container custom-scroller-container';
 
         // Create section header container
         const sectionHeader = document.createElement('div');
