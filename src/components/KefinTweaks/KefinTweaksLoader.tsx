@@ -5,6 +5,7 @@ import { currentSettings as userSettings } from 'scripts/settings/userSettings';
 
 declare global {
     interface Window {
+        // @ts-ignore
         KefinTweaksConfig?: any;
         KefinTweaks?: any;
         Emby?: any;
@@ -346,7 +347,7 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Skin selection and management'
     },
     {
-        name: 'infiniteScroll', script: 'infiniteScroll.js', css: null, dependencies: ['cardBuilder'], tier: 'medium',
+        name: 'infiniteScroll', script: 'infiniteScroll.tsx', css: null, dependencies: ['cardBuilder'], tier: 'medium',
         description: 'Infinite scroll functionality'
     },
 
@@ -366,12 +367,12 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Watchlist functionality'
     },
     {
-        name: 'subtitleSearch', script: 'subtitleSearch.js', css: 'subtitleSearch.css',
+        name: 'subtitleSearch', script: 'subtitleSearch.tsx', css: 'subtitleSearch.css',
         dependencies: ['toaster'], tier: 'low', lazyLoad: true,
         description: 'Subtitle search functionality'
     },
     {
-        name: 'playlist', script: 'playlist.js', css: null,
+        name: 'playlist', script: 'playlist.tsx', css: null,
         dependencies: ['cardBuilder', 'utils', 'modal'], tier: 'low', lazyLoad: true,
         description: 'Playlist enhancements'
     },
@@ -382,53 +383,53 @@ const SCRIPT_DEFINITIONS: ScriptDefinition[] = [
         description: 'Injects Watchlist tab'
     },
     {
-        name: 'headerTabs', script: 'headerTabs.js', css: null, dependencies: [], tier: 'low',
+        name: 'headerTabs', script: 'headerTabs.tsx', css: null, dependencies: [], tier: 'low',
         description: 'Header tab improvements'
     },
     {
-        name: 'customMenuLinks', script: 'customMenuLinks.js', css: null, dependencies: ['utils'], tier: 'low', lazyLoad: true,
+        name: 'customMenuLinks', script: 'customMenuLinks.tsx', css: null, dependencies: ['utils'], tier: 'low', lazyLoad: true,
         description: 'Custom menu links'
     },
     {
-        name: 'exclusiveElsewhere', script: 'exclusiveElsewhere.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'exclusiveElsewhere', script: 'exclusiveElsewhere.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Elsewhere functionality modifications'
     },
     {
-        name: 'backdropLeakFix', script: 'backdropLeakFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'backdropLeakFix', script: 'backdropLeakFix.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Fixes backdrop image leak'
     },
     {
-        name: 'updoot', script: 'updoot.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'updoot', script: 'updoot.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Upvote functionality'
     },
     {
-        name: 'dashboardButtonFix', script: 'dashboardButtonFix.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'dashboardButtonFix', script: 'dashboardButtonFix.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Dashboard button fix'
     },
     {
-        name: 'removeContinue', script: 'removeContinue.js', css: null, dependencies: [], tier: 'low', lazyLoad: true,
+        name: 'removeContinue', script: 'removeContinue.tsx', css: null, dependencies: [], tier: 'low', lazyLoad: true,
         description: 'Remove from continue watching'
     },
     {
-        name: 'breadcrumbs', script: 'breadcrumbs.js', css: 'breadcrumbNav.css', dependencies: ['utils'], tier: 'medium',
+        name: 'breadcrumbs', script: 'breadcrumbs.tsx', css: 'breadcrumbNav.css', dependencies: ['utils'], tier: 'medium',
         description: 'Breadcrumb navigation'
     },
     {
-        name: 'itemDetailsCollections', script: 'itemDetailsCollections.js', css: null,
+        name: 'itemDetailsCollections', script: 'itemDetailsCollections.tsx', css: null,
         dependencies: ['indexedDBCache', 'utils', 'cardBuilder'], tier: 'low', lazyLoad: true,
         description: 'Related collections on item details'
     },
     {
-        name: 'flattenSingleSeasonShows', script: 'seriesEpisodes.js', css: 'seriesEpisodes.css',
+        name: 'flattenSingleSeasonShows', script: 'flattenSingleSeasonShows.tsx', css: 'seriesEpisodes.css',
         dependencies: ['cardBuilder', 'utils'], tier: 'low', lazyLoad: true,
         description: 'Display episodes on series page'
     },
     {
-        name: 'seriesInfo', script: 'seriesInfo.js', css: null, dependencies: ['utils'], tier: 'medium',
+        name: 'seriesInfo', script: 'seriesInfo.tsx', css: null, dependencies: ['utils'], tier: 'medium',
         description: 'Series and season information'
     },
     {
-        name: 'collections', script: 'collections.js', css: null, dependencies: ['utils', 'modal'], tier: 'low', lazyLoad: true,
+        name: 'collections', script: 'collections.tsx', css: null, dependencies: ['utils', 'modal'], tier: 'low', lazyLoad: true,
         description: 'Collection sorting functionality'
     },
     {
@@ -472,35 +473,35 @@ const scriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'search': () => import('../../lib/legacy/scripts/search.js'),
     // @ts-ignore
-    'headerTabs': () => import('../../lib/legacy/scripts/headerTabs.js'),
+    'headerTabs': () => import('./tweaks/HeaderTabs').then(m => m.default),
     // @ts-ignore
-    'customMenuLinks': () => import('../../lib/legacy/scripts/customMenuLinks.js'),
+    'customMenuLinks': () => import('./tweaks/CustomMenuLinks').then(m => m.default),
     // @ts-ignore
-    'exclusiveElsewhere': () => import('../../lib/legacy/scripts/exclusiveElsewhere.js'),
+    'exclusiveElsewhere': () => import('./tweaks/ExclusiveElsewhere').then(m => m.default),
     // @ts-ignore
-    'backdropLeakFix': () => import('../../lib/legacy/scripts/backdropLeakFix.js'),
+    'backdropLeakFix': () => import('./tweaks/BackdropLeakFix').then(m => m.default),
     // @ts-ignore
-    'updoot': () => import('../../lib/legacy/scripts/updoot.js'),
+    'updoot': () => import('./tweaks/Updoot').then(m => m.default),
     // @ts-ignore
-    'dashboardButtonFix': () => import('../../lib/legacy/scripts/dashboardButtonFix.js'),
+    'dashboardButtonFix': () => import('./tweaks/DashboardButtonFix').then(m => m.default),
     // @ts-ignore
-    'infiniteScroll': () => import('../../lib/legacy/scripts/infiniteScroll.js'),
+    'infiniteScroll': () => import('./tweaks/InfiniteScroll').then(m => m.default),
     // @ts-ignore
-    'removeContinue': () => import('../../lib/legacy/scripts/removeContinue.js'),
+    'removeContinue': () => import('./tweaks/RemoveContinue').then(m => m.default),
     // @ts-ignore
-    'subtitleSearch': () => import('../../lib/legacy/scripts/subtitleSearch.js'),
+    'subtitleSearch': () => import('./tweaks/SubtitleSearch').then(m => m.default),
     // @ts-ignore
-    'breadcrumbs': () => import('../../lib/legacy/scripts/breadcrumbs.js'),
+    'breadcrumbs': () => import('./tweaks/Breadcrumbs').then(m => m.default),
     // @ts-ignore
-    'playlist': () => import('../../lib/legacy/scripts/playlist.js'),
+    'playlist': () => import('./tweaks/Playlist').then(m => m.default),
     // @ts-ignore
-    'itemDetailsCollections': () => import('../../lib/legacy/scripts/itemDetailsCollections.js'),
+    'itemDetailsCollections': () => import('./tweaks/ItemDetailsCollections').then(m => m.default),
     // @ts-ignore
-    'flattenSingleSeasonShows': () => import('../../lib/legacy/scripts/seriesEpisodes.js'),
+    'flattenSingleSeasonShows': () => import('./tweaks/FlattenSingleSeasonShows').then(m => m.default),
     // @ts-ignore
-    'seriesInfo': () => import('../../lib/legacy/scripts/seriesInfo.js'),
+    'seriesInfo': () => import('./tweaks/SeriesInfo').then(m => m.default),
     // @ts-ignore
-    'collections': () => import('../../lib/legacy/scripts/collections.js'),
+    'collections': () => import('./tweaks/Collections').then(m => m.default),
 };
 
 // Map for CSS imports
