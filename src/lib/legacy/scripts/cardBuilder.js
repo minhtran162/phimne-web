@@ -15,6 +15,15 @@ import browser from 'scripts/browser';
         serverAddress: null,
         userId: null
     };
+    
+    // Layout and browser detection
+    const layoutManager = {
+        mobile: browser.mobile,
+        tv: document.documentElement.classList.contains('layout-tv'),
+        desktop: document.documentElement.classList.contains('layout-desktop')
+    };
+    
+    const enableFocusTransform = !browser.slow && !browser.edge;
 
     function getCachedApiData() {
         if (!cache.serverId) {
@@ -271,6 +280,47 @@ import browser from 'scripts/browser';
     }
 
     /**
+     * Determines if an item can be marked as played
+     * @param {Object} item - Item object
+     * @returns {boolean} - True if item can be marked as played
+     */
+    function canMarkPlayed(item) {
+        // Check if the item type supports marking as played
+        const playableTypes = [
+            'Movie',
+            'Episode', 
+            'MusicVideo',
+            'Audio',
+            'Video'
+        ];
+        
+        return playableTypes.includes(item.Type) && item.MediaType === 'Video' || item.MediaType === 'Audio';
+    }
+
+    /**
+     * Determines if an item can be rated
+     * @param {Object} item - Item object
+     * @returns {boolean} - True if item can be rated
+     */
+    function canRate(item) {
+        // Check if the item type supports rating
+        const rateableTypes = [
+            'Movie',
+            'Series',
+            'Episode',
+            'MusicAlbum',
+            'MusicArtist',
+            'Audio',
+            'Program',
+            'Trailer',
+            'Book',
+            'Recording'
+        ];
+        
+        return rateableTypes.includes(item.Type);
+    }
+
+    /**
      * Optimized Image Fetcher for Jellyfin
      * @param {Object} item - The Jellyfin item object
      * @param {String} type - 'backdrop', 'thumb', 'square', or 'portrait'
@@ -280,30 +330,24 @@ import browser from 'scripts/browser';
     function getImageUrl(item, type, options = {}, serverAddress) {
         if (!item) return '';
 
-        // 1. Calculate dimensions based on Device Pixel Ratio (DPR)
+        // Calculate dimensions based on Device Pixel Ratio (DPR)
         const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
 
-        // Helper to build the final URL
-        const buildUrl = (itemId, imageType, tag) => {
+        // Build the final URL using ApiClient's scaled image method
+        const buildUrl = (itemId, imageType, tag, fillWidth, fillHeight) => {
             const urlParams = new URLSearchParams();
 
             // Base quality params
             urlParams.set('tag', tag);
-            urlParams.set('quality', options.quality || 90); // 90 is usually indistinguishable from 96 but smaller
+            urlParams.set('quality', options.quality || 96);
 
             // Calculate physical pixels requested from server
-            // If width is provided, scale it by DPR. Jellyfin will resize server-side.
-            if (options.width) {
-                urlParams.set('maxWidth', Math.round(options.width * dpr));
+            // Scale dimensions by DPR for sharp images on high-DPI screens
+            if (fillWidth) {
+                urlParams.set('fillWidth', Math.round(fillWidth * dpr));
             }
-            if (options.height) {
-                urlParams.set('maxHeight', Math.round(options.height * dpr));
-            }
-
-            // Handle specific "Fill" logic (cropping) if needed
-            if (options.fillWidth && options.fillHeight) {
-                urlParams.set('fillWidth', Math.round(options.fillWidth * dpr));
-                urlParams.set('fillHeight', Math.round(options.fillHeight * dpr));
+            if (fillHeight) {
+                urlParams.set('fillHeight', Math.round(fillHeight * dpr));
             }
 
             return `${serverAddress}/Items/${itemId}/Images/${imageType}?${urlParams.toString()}`;
@@ -313,94 +357,158 @@ import browser from 'scripts/browser';
         const {
             Id,
             ImageTags = {},
+            PrimaryImageTag,
+            PrimaryImageItemId,
+            SeriesPrimaryImageTag,
+            SeriesId,
+            AlbumPrimaryImageTag,
+            AlbumId,
+            ParentPrimaryImageTag,
+            ParentPrimaryImageItemId,
             ParentThumbImageTag,
             ParentThumbItemId,
             BackdropImageTags = [],
             ParentBackdropImageTags = [],
             ParentBackdropItemId,
-            SeriesPrimaryImageTag,
-            SeriesId
+            SeriesThumbImageTag,
+            SeriesId: itemSeriesId
         } = item;
 
-        // 2. Fallback Logic Chain
-        switch (type) {
-            case 'backdrop':
-            case 'thumb':
-                // Priority: Thumb -> Backdrop -> Parent Backdrop
-                if (ImageTags.Thumb)
-                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
-
-                if (BackdropImageTags[0])
-                    return buildUrl(Id, 'Backdrop', BackdropImageTags[0]);
-
-                if (ParentBackdropImageTags?.[0] && ParentBackdropItemId)
-                    return buildUrl(ParentBackdropItemId, 'Backdrop', ParentBackdropImageTags[0]);
-                break;
-
-            case 'square':
-                // Priority: Primary -> Thumb
-                if (ImageTags.Primary)
-                    return buildUrl(Id, 'Primary', ImageTags.Primary);
-
-                if (ImageTags.Thumb)
-                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
-                break;
-
-            case 'portrait':
-            default: // Default covers 'portrait' logic
-                // Priority: Primary -> Thumb -> Parent Thumb -> Series Primary
-                if (ImageTags.Primary)
-                    return buildUrl(Id, 'Primary', ImageTags.Primary);
-
-                if (ImageTags.Thumb)
-                    return buildUrl(Id, 'Thumb', ImageTags.Thumb);
-
-                if (ParentThumbImageTag && ParentThumbItemId)
-                    return buildUrl(ParentThumbItemId, 'Thumb', ParentThumbImageTag);
-
-                if (SeriesPrimaryImageTag && SeriesId)
-                    return buildUrl(SeriesId, 'Primary', SeriesPrimaryImageTag);
-                break;
+        // Modern image selection logic adapted from new cardBuilder
+        if (options.preferThumb && ImageTags.Thumb) {
+            return buildUrl(Id, 'Thumb', ImageTags.Thumb, options.fillWidth, options.fillHeight);
+        } else if ((options.preferBanner || type === 'banner') && ImageTags.Banner) {
+            return buildUrl(Id, 'Banner', ImageTags.Banner, options.fillWidth, options.fillHeight);
+        } else if (options.preferDisc && ImageTags.Disc) {
+            return buildUrl(Id, 'Disc', ImageTags.Disc, options.fillWidth, options.fillHeight);
+        } else if (options.preferLogo && ImageTags.Logo) {
+            return buildUrl(Id, 'Logo', ImageTags.Logo, options.fillWidth, options.fillHeight);
+        } else if (options.preferLogo && item.ParentLogoImageTag && item.ParentLogoItemId) {
+            return buildUrl(item.ParentLogoItemId, 'Logo', item.ParentLogoImageTag, options.fillWidth, options.fillHeight);
+        } else if (options.preferThumb && SeriesThumbImageTag && options.inheritThumb !== false) {
+            return buildUrl(itemSeriesId, 'Thumb', SeriesThumbImageTag, options.fillWidth, options.fillHeight);
+        } else if (options.preferThumb && ParentThumbItemId && options.inheritThumb !== false && item.MediaType !== 'Photo') {
+            return buildUrl(ParentThumbItemId, 'Thumb', ParentThumbImageTag, options.fillWidth, options.fillHeight);
+        } else if (options.preferThumb && BackdropImageTags?.length) {
+            return buildUrl(Id, 'Backdrop', BackdropImageTags[0], options.fillWidth, options.fillHeight);
+        } else if (options.preferThumb && ParentBackdropImageTags?.length && options.inheritThumb !== false && item.Type === 'Episode') {
+            return buildUrl(ParentBackdropItemId, 'Backdrop', ParentBackdropImageTags[0], options.fillWidth, options.fillHeight);
+        } else if (ImageTags.Primary && (item.Type !== 'Episode' || item.ChildCount !== 0)) {
+            return buildUrl(Id, 'Primary', ImageTags.Primary, options.fillWidth, options.fillHeight);
+        } else if (SeriesPrimaryImageTag) {
+            return buildUrl(SeriesId, 'Primary', SeriesPrimaryImageTag, options.fillWidth, options.fillHeight);
+        } else if (PrimaryImageTag) {
+            return buildUrl(PrimaryImageItemId, 'Primary', PrimaryImageTag, options.fillWidth, options.fillHeight);
+        } else if (ParentPrimaryImageTag) {
+            return buildUrl(ParentPrimaryImageItemId, 'Primary', ParentPrimaryImageTag, options.fillWidth, options.fillHeight);
+        } else if (AlbumId && AlbumPrimaryImageTag) {
+            return buildUrl(AlbumId, 'Primary', AlbumPrimaryImageTag, options.fillWidth, options.fillHeight);
+        } else if (item.Type === 'Season' && ImageTags?.Thumb) {
+            return buildUrl(Id, 'Thumb', ImageTags.Thumb, options.fillWidth, options.fillHeight);
+        } else if (BackdropImageTags?.length) {
+            return buildUrl(Id, 'Backdrop', BackdropImageTags[0], options.fillWidth, options.fillHeight);
+        } else if (ImageTags?.Thumb) {
+            return buildUrl(Id, 'Thumb', ImageTags.Thumb, options.fillWidth, options.fillHeight);
+        } else if (SeriesThumbImageTag && options.inheritThumb !== false) {
+            return buildUrl(itemSeriesId, 'Thumb', SeriesThumbImageTag, options.fillWidth, options.fillHeight);
+        } else if (ParentThumbItemId && options.inheritThumb !== false) {
+            return buildUrl(ParentThumbItemId, 'Thumb', ParentThumbImageTag, options.fillWidth, options.fillHeight);
+        } else if (ParentBackdropImageTags?.length && options.inheritThumb !== false) {
+            return buildUrl(ParentBackdropItemId, 'Backdrop', ParentBackdropImageTags[0], options.fillWidth, options.fillHeight);
         }
+
         return '';
     }
 
-    // Shared helper: Get card format configuration
-    function getCardFormatConfig(cardFormat, itemType, overflowCard, isMobile = false) {
-        const format = cardFormat?.toLowerCase();
-
-        if (format === 'backdrop' || format === 'thumb' || itemType === 'Episode' || itemType === 'TvChannel') {
-            return {
-                cardClass: overflowCard ? 'overflowBackdropCard' : 'backdropCard',
-                padderClass: overflowCard ? 'cardPadder-overflowBackdrop' : 'cardPadder-backdrop',
-                imageParams: { fillHeight: 267, fillWidth: 474, quality: 90 }
-            };
-        }
-
-        if (format === 'square' || ['MusicAlbum', 'Audio', 'Artist', 'MusicArtist'].includes(itemType)) {
-            return {
-                cardClass: overflowCard ? 'overflowSquareCard' : 'squareCard',
-                padderClass: overflowCard ? 'cardPadder-overflowSquare' : 'cardPadder-square',
-                imageParams: { fillHeight: 297, fillWidth: 297, quality: 90 }
-            };
-        }
-
-        // Portrait (default) - lower res/quality for mobile/low-end
+    // Shared helper: Get card format configuration with modern aspect ratio logic
+    function getCardFormatConfig(cardFormat, itemType, overflowCard, isMobile = false, primaryImageAspectRatio = null) {
+        // Modern aspect ratio logic from cardBuilderUtils
+        const format = determineCardFormat(cardFormat, itemType, primaryImageAspectRatio, overflowCard);
+        
+        // Determine appropriate card classes based on format
+        const baseFormat = format.replace('overflow', '').toLowerCase();
+        const overflowSuffix = overflowCard ? 'overflow' : '';
+        
+        // Calculate image parameters based on modern approach
+        const imageParams = calculateImageParams(format, isMobile);
+        
         return {
-            cardClass: overflowCard ? 'overflowPortraitCard' : 'portraitCard',
-            padderClass: overflowCard ? 'cardPadder-overflowPortrait' : 'cardPadder-portrait',
-            imageParams: isMobile ? { fillHeight: 524, fillWidth: 524, quality: 80 } : { fillHeight: 786, fillWidth: 524, quality: 90 }
+            cardClass: `${overflowSuffix}${baseFormat}Card`,
+            padderClass: `cardPadder-${overflowSuffix}${baseFormat}`,
+            imageParams: imageParams
         };
     }
+    
+    // Determine card format based on modern logic
+    function determineCardFormat(cardFormat, itemType, primaryImageAspectRatio, overflowCard) {
+        // If format is explicitly provided, use it
+        if (cardFormat) {
+            if (overflowCard && !cardFormat.startsWith('overflow')) {
+                return 'overflow' + cardFormat.charAt(0).toUpperCase() + cardFormat.slice(1);
+            }
+            return cardFormat;
+        }
+        
+        // Modern logic to determine format based on aspect ratio
+        if (primaryImageAspectRatio !== null && primaryImageAspectRatio !== undefined) {
+            if (primaryImageAspectRatio >= 3) {
+                return overflowCard ? 'overflowBanner' : 'banner';
+            } else if (primaryImageAspectRatio >= 1.33) {
+                return overflowCard ? 'overflowBackdrop' : 'backdrop';
+            } else if (primaryImageAspectRatio > 0.8) {
+                return overflowCard ? 'overflowSquare' : 'square';
+            } else {
+                return overflowCard ? 'overflowPortrait' : 'portrait';
+            }
+        }
+        
+        // Fallback to original logic
+        if (itemType === 'Episode' || itemType === 'TvChannel') {
+            return overflowCard ? 'overflowBackdrop' : 'backdrop';
+        }
+        
+        if (['MusicAlbum', 'Audio', 'Artist', 'MusicArtist'].includes(itemType)) {
+            return overflowCard ? 'overflowSquare' : 'square';
+        }
+        
+        return overflowCard ? 'overflowPortrait' : 'portrait';
+    }
+    
+    // Calculate image parameters based on format and device
+    function calculateImageParams(format, isMobile = false) {
+        const baseParams = {
+            quality: 96
+        };
+        
+        if (format.includes('backdrop') || format.includes('thumb')) {
+            // Backdrop cards typically have wider aspect ratios
+            baseParams.fillWidth = isMobile ? 300 : 474;
+            baseParams.fillHeight = isMobile ? 169 : 267;
+        } else if (format.includes('square')) {
+            // Square cards
+            baseParams.fillWidth = isMobile ? 200 : 297;
+            baseParams.fillHeight = isMobile ? 200 : 297;
+        } else if (format.includes('banner')) {
+            // Banner cards are wide and thin
+            baseParams.fillWidth = isMobile ? 400 : 1000;
+            baseParams.fillHeight = isMobile ? 74 : 185;
+        } else {
+            // Portrait cards (default)
+            baseParams.fillWidth = isMobile ? 130 : 185;
+            baseParams.fillHeight = isMobile ? 200 : 278;
+        }
+        
+        return baseParams;
+    }
 
-    // Shared helper: Create text element
+    // Shared helper: Create text element with modern logic
     function createCardText(item, serverId, serverAddress, className = 'cardText cardTextCentered cardText-first') {
         const textContainer = document.createElement('div');
         textContainer.className = className;
 
         const bdi = document.createElement('bdi');
         const link = document.createElement('a');
-        link.href = `${serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
+        link.href = `${serverAddress}/web/index.html#!/details?id=${item.Id}&serverId=${serverId}`;
         link.className = 'itemAction textActionButton';
         link.setAttribute('data-id', item.Id);
         link.setAttribute('data-serverid', serverId);
@@ -434,15 +542,28 @@ import browser from 'scripts/browser';
         return yearText;
     }
 
-    // Create Mobile Card
+    // Create Mobile Card with modern enhancements
     function createMobileCard(item, overflowCard, cardFormat, serverId, serverAddress) {
         const card = document.createElement('div');
         const isFolderItem = isFolder(item);
 
-        const config = getCardFormatConfig(cardFormat, item.Type, true, true); // isMobile=true for optimization
+        // Use enhanced cardFormatConfig with aspect ratio detection
+        const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, true, item.PrimaryImageAspectRatio); // isMobile=true for optimization
 
-        // Set card classes
+        // Modern card class determination logic
         const cardClasses = ['card', config.cardClass, 'card-withuserdata'];
+        
+        // Add classes for desktop, TV, and focus behaviors
+        if (!layoutManager.mobile) {
+            cardClasses.push('card-hoverable');
+        }
+        if (layoutManager.tv) {
+            cardClasses.push('show-focus');
+            if (enableFocusTransform) {
+                cardClasses.push('show-animation');
+            }
+        }
+        
         if (isFolderItem) {
             cardClasses.push('groupedCard');
         }
@@ -454,11 +575,18 @@ import browser from 'scripts/browser';
         card.setAttribute('data-serverid', serverId);
         card.setAttribute('data-id', item.Id);
         card.setAttribute('data-type', item.Type);
-        card.setAttribute('data-mediatype', item.MediaType || 'Unknown');
+        card.setAttribute('data-mediatype', item.MediaType || 'Video'); // Use Video as default instead of Unknown
         if (item.Path) card.setAttribute('data-path', item.Path);
         card.setAttribute('data-context', 'home');
         if (item.EndDate) card.setAttribute('data-enddate', item.EndDate);
-        if (item.Name?.startsWith('The ')) card.setAttribute('data-prefix', 'THE');
+        
+        // Set prefix for sorting
+        const nameWithPrefix = (item.SortName || item.Name || '');
+        let prefix = nameWithPrefix.substring(0, Math.min(3, nameWithPrefix.length));
+        if (prefix) {
+            prefix = prefix.toUpperCase();
+        }
+        card.setAttribute('data-prefix', prefix);
 
         // Create cardBox
         const cardBox = document.createElement('div');
@@ -471,22 +599,38 @@ import browser from 'scripts/browser';
         // Create cardPadder
         const cardPadder = document.createElement('div');
         cardPadder.className = `cardPadder ${config.padderClass} lazy-hidden-children`;
-        cardPadder.appendChild(createIcon(item.Type));
+        
+        // Add default icon/text with proper logic
+        if (getImageUrl(item, cardFormat, config.imageParams, serverAddress)) {
+            cardPadder.appendChild(createIcon(item.Type));
+        }
 
         // Create blurhash canvas
         const canvas = createBlurhashCanvas();
 
-        // Create cardImageContainer
+        // Create cardImageContainer with modern class determination
         const cardImageContainer = document.createElement('a');
         cardImageContainer.href = `#/details?id=${item.Id}&serverId=${serverId}`;
         cardImageContainer.setAttribute('data-action', 'link');
-        cardImageContainer.className = 'cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast';
+        
+        // Modern class determination
+        let cardImageClasses = ['cardImageContainer', 'coveredImage', 'cardContent', 'itemAction', 'lazy', 'blurhashed', 'lazy-image-fadein-fast'];
+        cardImageContainer.className = cardImageClasses.join(' ');
+        
         cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
 
         // Set background image
         const imageUrl = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
         if (imageUrl) {
             cardImageContainer.style.backgroundImage = `url("${imageUrl}")`;
+            
+            // Add blurhash data attribute if available
+            if (item.ImageBlurHashes && item.ImageBlurHashes.Primary) {
+                cardImageContainer.setAttribute('data-blurhash', item.ImageBlurHashes.Primary);
+            }
+        } else {
+            // If no image, add default icon/text directly to container
+            cardImageContainer.appendChild(createIcon(item.Type));
         }
 
         // Add indicators for folders (ChildCount) or played status
@@ -500,6 +644,24 @@ import browser from 'scripts/browser';
             cardIndicators.appendChild(countIndicator);
 
             cardImageContainer.appendChild(cardIndicators);
+        }
+
+        // Add progress bar for in-progress items
+        if (item.UserData?.PlaybackPositionTicks && item.RunTimeTicks) {
+            const progressPercentage = (item.UserData.PlaybackPositionTicks / item.RunTimeTicks) * 100;
+            const innerCardFooter = document.createElement('div');
+            innerCardFooter.className = 'innerCardFooter fullInnerCardFooter innerCardFooterClear';
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'itemProgressBar';
+
+            const progressBarForeground = document.createElement('div');
+            progressBarForeground.className = 'itemProgressBarForeground';
+            progressBarForeground.style.width = `${progressPercentage}%`;
+
+            progressBar.appendChild(progressBarForeground);
+            innerCardFooter.appendChild(progressBar);
+            cardImageContainer.appendChild(innerCardFooter);
         }
 
         // Create play button
@@ -535,7 +697,7 @@ import browser from 'scripts/browser';
             episodeLink.setAttribute('data-id', item.Id);
             episodeLink.setAttribute('data-serverid', serverId);
             episodeLink.setAttribute('data-type', 'Episode');
-            episodeLink.setAttribute('data-mediatype', 'undefined');
+            episodeLink.setAttribute('data-mediatype', 'Video'); // Updated default
             episodeLink.setAttribute('data-channelid', 'undefined');
             episodeLink.setAttribute('data-isfolder', 'false');
             episodeLink.className = 'itemAction textActionButton';
@@ -566,12 +728,30 @@ import browser from 'scripts/browser';
         return card;
     }
 
-    // Create Desktop Card
+    // Create Desktop Card with modern enhancements
     function createDesktopCard(item, overflowCard, cardFormat, serverId, serverAddress) {
-        const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false);
+        // Use enhanced cardFormatConfig with aspect ratio detection
+        const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false, item.PrimaryImageAspectRatio);
 
         const card = document.createElement('div');
-        card.className = `card ${config.cardClass} card-hoverable card-withuserdata itemAction`;
+        
+        // Modern card class determination logic
+        const cardClasses = ['card', config.cardClass, 'card-withuserdata'];
+        
+        // Add classes for desktop, TV, and focus behaviors
+        if (!layoutManager.mobile) {
+            cardClasses.push('card-hoverable');
+        }
+        if (layoutManager.tv) {
+            cardClasses.push('show-focus');
+            if (enableFocusTransform) {
+                cardClasses.push('show-animation');
+            }
+        }
+        
+        cardClasses.push('itemAction');
+        card.className = cardClasses.join(' ');
+
         card.setAttribute('data-index', '0');
         card.setAttribute('data-isfolder', isFolder(item).toString());
         card.setAttribute('data-serverid', serverId);
@@ -580,7 +760,14 @@ import browser from 'scripts/browser';
         card.setAttribute('data-mediatype', item.MediaType || 'Video');
         if (item.Path) card.setAttribute('data-path', item.Path);
         card.setAttribute('data-context', 'home');
-        if (item.Name?.startsWith('The ')) card.setAttribute('data-prefix', 'THE');
+        
+        // Set prefix for sorting
+        const nameWithPrefix = (item.SortName || item.Name || '');
+        let prefix = nameWithPrefix.substring(0, Math.min(3, nameWithPrefix.length));
+        if (prefix) {
+            prefix = prefix.toUpperCase();
+        }
+        card.setAttribute('data-prefix', prefix);
 
         const cardBox = document.createElement('div');
         cardBox.className = 'cardBox cardBox-bottompadded';
@@ -590,19 +777,67 @@ import browser from 'scripts/browser';
 
         const cardPadder = document.createElement('div');
         cardPadder.className = `cardPadder ${config.padderClass} lazy-hidden-children`;
-        cardPadder.appendChild(createIcon(item.Type));
+        
+        // Add default icon/text with proper logic
+        if (getImageUrl(item, cardFormat, config.imageParams, serverAddress)) {
+            cardPadder.appendChild(createIcon(item.Type));
+        }
 
         const cardImageContainer = document.createElement('a');
-        cardImageContainer.href = `${serverAddress}/web/#/details?id=${item.Id}&serverId=${serverId}`;
-        cardImageContainer.className = 'cardImageContainer coveredImage cardContent itemAction lazy blurhashed lazy-image-fadein-fast';
+        cardImageContainer.href = `${serverAddress}/web/index.html#!/details?id=${item.Id}&serverId=${serverId}`;
+        
+        // Modern class determination
+        let cardImageClasses = ['cardImageContainer', 'coveredImage', 'cardContent', 'itemAction', 'lazy', 'blurhashed', 'lazy-image-fadein-fast'];
+        cardImageContainer.className = cardImageClasses.join(' ');
+        
         cardImageContainer.setAttribute('data-action', 'link');
         cardImageContainer.setAttribute('aria-label', item.Name || 'Unknown');
 
         const imageUrl = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
         if (imageUrl) {
             cardImageContainer.style.backgroundImage = `url("${imageUrl}")`;
+            
+            // Add blurhash data attribute if available
+            if (item.ImageBlurHashes && item.ImageBlurHashes.Primary) {
+                cardImageContainer.setAttribute('data-blurhash', item.ImageBlurHashes.Primary);
+            }
         } else {
+            // If no image, add default icon/text directly to container
             cardImageContainer.appendChild(createIcon(item.Type));
+        }
+
+        // Add indicators for played status or child count
+        const hasIndicators = item.UserData?.Played || item.ChildCount || item.SeriesCount;
+        if (hasIndicators) {
+            const cardIndicators = document.createElement('div');
+            cardIndicators.className = 'cardIndicators';
+
+            if (item.UserData?.Played) {
+                cardIndicators.innerHTML = '<div class="playedIndicator indicator"><span class="material-icons indicatorIcon check" aria-hidden="true"></span></div>';
+            } else if (item.ChildCount || item.SeriesCount) {
+                // For Series, show count indicator
+                const count = item.ChildCount || item.SeriesCount;
+                cardIndicators.innerHTML = `<div class="countIndicator indicator">${count}</div>`;
+            }
+            cardImageContainer.appendChild(cardIndicators);
+        }
+
+        // Add progress bar for in-progress items
+        if (item.UserData?.PlaybackPositionTicks && item.RunTimeTicks) {
+            const progressPercentage = (item.UserData.PlaybackPositionTicks / item.RunTimeTicks) * 100;
+            const innerCardFooter = document.createElement('div');
+            innerCardFooter.className = 'innerCardFooter fullInnerCardFooter innerCardFooterClear';
+
+            const progressBar = document.createElement('div');
+            progressBar.className = 'itemProgressBar';
+
+            const progressBarForeground = document.createElement('div');
+            progressBarForeground.className = 'itemProgressBarForeground';
+            progressBarForeground.style.width = `${progressPercentage}%`;
+
+            progressBar.appendChild(progressBarForeground);
+            innerCardFooter.appendChild(progressBar);
+            cardImageContainer.appendChild(innerCardFooter);
         }
 
         // Overlay with buttons
@@ -627,44 +862,37 @@ import browser from 'scripts/browser';
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'cardOverlayButton-br flex';
 
-        // Watchlist button
-        const watchlistButton = document.createElement('button');
-        watchlistButton.type = 'button';
-        watchlistButton.className = 'watchlist-button cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button button-flat';
-        watchlistButton.setAttribute('data-action', 'none');
-        watchlistButton.setAttribute('data-id', item.Id);
-        watchlistButton.setAttribute('data-active', 'false');
-        watchlistButton.title = 'Add to Watchlist';
-        watchlistButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover watchlist" aria-hidden="true"></span>';
-        buttonContainer.appendChild(watchlistButton);
-
         // Watched button
-        const watchedButton = document.createElement('button');
-        watchedButton.setAttribute('is', 'emby-playstatebutton');
-        watchedButton.type = 'button';
-        watchedButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
-        watchedButton.setAttribute('data-action', 'none');
-        watchedButton.setAttribute('data-id', item.Id);
-        watchedButton.setAttribute('data-serverid', serverId);
-        watchedButton.setAttribute('data-itemtype', item.Type);
-        watchedButton.setAttribute('data-played', item.UserData?.Played || 'false');
-        watchedButton.title = 'Mark played';
-        watchedButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover check playstatebutton-icon-unplayed" aria-hidden="true"></span>';
-        buttonContainer.appendChild(watchedButton);
+        if (canMarkPlayed(item)) {
+            const watchedButton = document.createElement('button');
+            watchedButton.setAttribute('is', 'emby-playstatebutton');
+            watchedButton.type = 'button';
+            watchedButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
+            watchedButton.setAttribute('data-action', 'none');
+            watchedButton.setAttribute('data-id', item.Id);
+            watchedButton.setAttribute('data-serverid', serverId);
+            watchedButton.setAttribute('data-itemtype', item.Type);
+            watchedButton.setAttribute('data-played', item.UserData?.Played || 'false');
+            watchedButton.title = 'Mark played';
+            watchedButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover check playstatebutton-icon-unplayed" aria-hidden="true"></span>';
+            buttonContainer.appendChild(watchedButton);
+        }
 
         // Favorite button
-        const favoriteButton = document.createElement('button');
-        favoriteButton.setAttribute('is', 'emby-ratingbutton');
-        favoriteButton.type = 'button';
-        favoriteButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
-        favoriteButton.setAttribute('data-action', 'none');
-        favoriteButton.setAttribute('data-id', item.Id);
-        favoriteButton.setAttribute('data-serverid', serverId);
-        favoriteButton.setAttribute('data-itemtype', item.Type);
-        favoriteButton.setAttribute('data-isfavorite', item.UserData?.IsFavorite || 'false');
-        favoriteButton.title = 'Add to favorites';
-        favoriteButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover favorite" aria-hidden="true"></span>';
-        buttonContainer.appendChild(favoriteButton);
+        if (canRate(item)) {
+            const favoriteButton = document.createElement('button');
+            favoriteButton.setAttribute('is', 'emby-ratingbutton');
+            favoriteButton.type = 'button';
+            favoriteButton.className = 'cardOverlayButton cardOverlayButton-hover itemAction paper-icon-button-light emby-button';
+            favoriteButton.setAttribute('data-action', 'none');
+            favoriteButton.setAttribute('data-id', item.Id);
+            favoriteButton.setAttribute('data-serverid', serverId);
+            favoriteButton.setAttribute('data-itemtype', item.Type);
+            favoriteButton.setAttribute('data-isfavorite', item.UserData?.IsFavorite || 'false');
+            favoriteButton.title = 'Add to favorites';
+            favoriteButton.innerHTML = '<span class="material-icons cardOverlayButtonIcon cardOverlayButtonIcon-hover favorite" aria-hidden="true"></span>';
+            buttonContainer.appendChild(favoriteButton);
+        }
 
         // More button
         const moreButton = document.createElement('button');
@@ -694,19 +922,41 @@ import browser from 'scripts/browser';
         return card;
     }
 
-    // Create TV Card
+    // Create TV Card with modern enhancements
     function createTVCard(item, overflowCard, cardFormat, customFooterText, serverId, serverAddress) {
-        const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false);
+        // Use enhanced cardFormatConfig with aspect ratio detection
+        const config = getCardFormatConfig(cardFormat, item.Type, overflowCard, false, item.PrimaryImageAspectRatio);
 
         const card = document.createElement('button');
-        card.className = `card ${config.cardClass} show-focus card-withuserdata itemAction`;
+        card.type = 'button';
+        card.setAttribute('is', 'emby-button');       
+
+        // Modern card class determination logic for TV layout
+        const cardClasses = ['card', config.cardClass, 'card-withuserdata', 'itemAction'];
+        
+        // Add TV-specific classes
+        cardClasses.push('show-focus');
+        if (enableFocusTransform) {
+            cardClasses.push('show-animation');
+        }
+        
+        card.className = cardClasses.join(' ');
+        
         card.setAttribute('data-index', '0');
-        card.setAttribute('data-isfolder', ['Series', 'MusicAlbum', 'Artist'].includes(item.Type).toString());
+        card.setAttribute('data-isfolder', (item.IsFolder || ['Series', 'MusicAlbum', 'Artist'].includes(item.Type)).toString());
         card.setAttribute('data-serverid', serverId);
-        card.setAttribute('data-id', item.Id);
+        card.setAttribute('data-id', item.Id || item.ItemId);
         card.setAttribute('data-type', item.Type);
         card.setAttribute('data-mediatype', item.MediaType || 'Video');
-        if (item.Name?.startsWith('The ')) card.setAttribute('data-prefix', 'THE');
+
+        // Set prefix for sorting
+        const nameWithPrefix = (item.SortName || item.Name || '');
+        let prefix = nameWithPrefix.substring(0, Math.min(3, nameWithPrefix.length));
+        if (prefix) {
+            prefix = prefix.toUpperCase();
+        }
+        card.setAttribute('data-prefix', prefix);
+
         card.setAttribute('data-action', 'link');
         card.setAttribute('data-context', 'home');
         card.setAttribute('aria-label', item.Name || 'Unknown');
@@ -739,22 +989,31 @@ import browser from 'scripts/browser';
 
         const cardPadder = document.createElement('div');
         cardPadder.className = `cardPadder ${config.padderClass} lazy-hidden-children`;
-        cardPadder.appendChild(createIcon(item.Type));
+        
+        // Add default icon/text with proper logic
+        if (getImageUrl(item, cardFormat, config.imageParams, serverAddress)) {
+            cardPadder.appendChild(createIcon(item.Type));
+        }
 
         const cardImageContainer = document.createElement('div');
-        // Remove data-src attribute as it's not in target examples
-
-        // Conditionally add coveredImage class
-        let imageContainerClass = 'cardImageContainer cardContent lazy blurhashed lazy-image-fadein-fast';
+        
+        // Modern class determination for TV layout
+        let cardImageClasses = ['cardImageContainer', 'cardContent', 'lazy', 'blurhashed', 'lazy-image-fadein-fast'];
         if (item.Type !== 'Episode' || config.cardClass !== 'overflowBackdropCard') {
-            imageContainerClass = 'cardImageContainer coveredImage cardContent lazy blurhashed lazy-image-fadein-fast';
+            cardImageClasses.splice(1, 0, 'coveredImage');
         }
-        cardImageContainer.className = imageContainerClass;
+        cardImageContainer.className = cardImageClasses.join(' ');
 
         const imageUrl = getImageUrl(item, cardFormat, config.imageParams, serverAddress);
         if (imageUrl) {
             cardImageContainer.style.backgroundImage = `url("${imageUrl}")`;
+            
+            // Add blurhash data attribute if available
+            if (item.ImageBlurHashes && item.ImageBlurHashes.Primary) {
+                cardImageContainer.setAttribute('data-blurhash', item.ImageBlurHashes.Primary);
+            }
         } else {
+            // If no image, add default icon/text directly to container
             cardImageContainer.appendChild(createIcon(item.Type));
         }
 
@@ -799,7 +1058,6 @@ import browser from 'scripts/browser';
         cardBox.appendChild(cardScalable);
 
         if (item.Type === 'Episode') {
-            // For Episode, show Series name first
             const seriesText = createCardText({
                 ...item,
                 Id: item.SeriesId || item.Id,
@@ -824,7 +1082,7 @@ import browser from 'scripts/browser';
                 cardBox.appendChild(footerText);
             }
         } else {
-            // For Series/Movie, show name and year
+            // For Series/Movie, show name and year (plain text, no nested <a>)
             const titleText = document.createElement('div');
             titleText.className = 'cardText cardTextCentered cardText-first';
 
@@ -860,21 +1118,21 @@ import browser from 'scripts/browser';
         return card;
     }
 
-    // Main card creation function (router)
+    // Main card creation function (router) with modern layout handling
     function createJellyfinCardElement(item, overflowCard = false, cardFormat = null, customFooterText = null) {
         const { serverId, serverAddress } = getCachedApiData();
 
-        // Detect layout once
-        const isTVLayout = document.documentElement.classList.contains('layout-tv');
-        const isMobileLayout = document.documentElement.classList.contains('layout-mobile');
-        const isHomepage = document.querySelector('.page.homePage');
-
-        if (isMobileLayout && isHomepage) {
-            return createMobileCard(item, true, cardFormat, serverId, serverAddress);
-        }
+        // Detect layout once with modern approach
+        const isTVLayout = layoutManager.tv;
+        const isMobileLayout = layoutManager.mobile;
+        const isHomepage = document.querySelector && document.querySelector('.page.homePage');
 
         if (isTVLayout) {
             return createTVCard(item, overflowCard, cardFormat, customFooterText, serverId, serverAddress);
+        }
+
+        if (isMobileLayout && isHomepage) {
+            return createMobileCard(item, overflowCard, cardFormat, serverId, serverAddress); // Pass original overflowCard value
         }
 
         return createDesktopCard(item, overflowCard, cardFormat, serverId, serverAddress);
@@ -971,254 +1229,85 @@ import browser from 'scripts/browser';
         let isPaused = false;
 
         const container = document.createElement('div');
-        container.className = 'spotlight-section padded-left';
+        container.className = 'verticalSection';
 
-        const bannerContainer = document.createElement('div');
-        bannerContainer.className = 'spotlight-banner-container';
+        // Create section header
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = 'sectionHeaderContainer sectionTitleContainer-cards padded-left';
 
         if (title) {
-            let sectionTitleEl;
-
             if (viewMoreUrl) {
                 const titleLink = document.createElement('a');
-                titleLink.className = 'spotlight-section-title spotlight-title-link';
-                titleLink.textContent = title;
-                titleLink.title = 'See All';
-                titleLink.style.textDecoration = 'none';
-
-                const cssStyle = document.createElement('style');
-                cssStyle.textContent = `.spotlight-title-link:hover { text-decoration: underline !important; }`;
-                titleLink.appendChild(cssStyle);
-
+                titleLink.className = 'sectionTitle sectionTitleButton';
+                titleLink.href = typeof viewMoreUrl === 'string' ? viewMoreUrl : '#';
+                
                 if (typeof viewMoreUrl === 'function') {
-                    titleLink.addEventListener('click', (e) => {
+                    titleLink.addEventListener('click', function(e) {
                         e.preventDefault();
-                        e.stopPropagation();
                         viewMoreUrl();
                     });
-                } else {
-                    titleLink.href = viewMoreUrl;
-                    titleLink.addEventListener('click', (e) => e.stopPropagation());
                 }
-
-                sectionTitleEl = titleLink;
+                
+                titleLink.innerHTML = `${title}<span class="material-icons chevron_right" style="font-size:inherit;">chevron_right</span>`;
+                sectionHeader.appendChild(titleLink);
             } else {
-                sectionTitleEl = document.createElement('div');
-                sectionTitleEl.className = 'spotlight-section-title';
-                sectionTitleEl.textContent = title;
+                // Regular non-clickable title
+                const titleElement = document.createElement('h2');
+                titleElement.className = 'sectionTitle';
+                titleElement.textContent = title;
+                sectionHeader.appendChild(titleElement);
             }
-
-            bannerContainer.appendChild(sectionTitleEl);
         }
+
+        const bannerContainer = document.createElement('div');
+        bannerContainer.className = 'emby-scroller';
+
+        // Create slider container
+        const sliderContainer = document.createElement('div');
+        sliderContainer.className = 'scrollSlider';
 
         const itemsContainer = document.createElement('div');
-        itemsContainer.className = 'spotlight-items-container';
+        itemsContainer.className = layoutManager.tv ? 'itemsContainer focuscontainer-x' : 'itemsContainer scrollSlider focuscontainer-x';
+        itemsContainer.setAttribute('is', 'emby-itemscontainer');
 
         items.forEach((item, index) => {
-            const itemType = item.Type || 'Movie';
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'spotlight-item';
-            itemDiv.setAttribute('data-index', index);
-            itemDiv.style.opacity = index === 0 ? '1' : '0';
-
-            let imageUrl = '';
-            if (item.Type === 'Episode' && item.ParentBackdropImageTags?.[0]) {
-                imageUrl = `${serverAddress}/Items/${item.ParentBackdropItemId}/Images/Backdrop?fillHeight=450&fillWidth=1920&quality=96&tag=${item.ParentBackdropImageTags[0]}`;
-            } else if (item.BackdropImageTags?.[0]) {
-                imageUrl = `${serverAddress}/Items/${item.Id}/Images/Backdrop?fillHeight=450&fillWidth=1920&quality=96&tag=${item.BackdropImageTags[0]}`;
-            } else if (item.ImageTags?.Primary) {
-                imageUrl = `${serverAddress}/Items/${item.Id}/Images/Primary?fillHeight=450&fillWidth=1920&quality=96&tag=${item.ImageTags.Primary}`;
-            }
-
-            if (imageUrl) {
-                itemDiv.style.backgroundImage = `url("${imageUrl}")`;
-            }
-
-            const overlay = document.createElement('div');
-            overlay.className = 'spotlight-overlay' + (title ? ' has-title' : '');
-
-            let titleEl = null;
-            const hasLogo = item.ImageTags?.Logo;
-
-            if (hasLogo) {
-                const logoUrl = `${serverAddress}/Items/${item.Id}/Images/Logo?fillHeight=200&quality=96&tag=${item.ImageTags.Logo}`;
-                titleEl = document.createElement('img');
-                titleEl.className = 'spotlight-item-logo';
-                titleEl.src = logoUrl;
-                titleEl.alt = item.Name || 'Unknown';
-            } else {
-                titleEl = document.createElement('h3');
-                titleEl.className = 'spotlight-item-title';
-                titleEl.textContent = item.Name || 'Unknown';
-            }
-
-            overlay.appendChild(titleEl);
-            itemDiv.appendChild(overlay);
-
-            if (showClearArt && item.ImageTags?.Art) {
-                const clearArtUrl = `${serverAddress}/Items/${item.Id}/Images/Art?fillHeight=300&quality=96&tag=${item.ImageTags.Art}`;
-                const clearArtEl = document.createElement('img');
-                clearArtEl.className = 'spotlight-clearart';
-                clearArtEl.src = clearArtUrl;
-                clearArtEl.alt = item.Name || 'Unknown';
-                itemDiv.appendChild(clearArtEl);
-            }
-
-            itemsContainer.appendChild(itemDiv);
+            const card = createJellyfinCardElement(item, false, 'backdrop'); // Use backdrop format for spotlight
+            card.classList.add('hero-card'); // Add special class for spotlight cards
+            card.setAttribute('data-index', index);
+            itemsContainer.appendChild(card);
         });
 
-        bannerContainer.appendChild(itemsContainer);
+        sliderContainer.appendChild(itemsContainer);
+        bannerContainer.appendChild(sliderContainer);
 
-        if (showNavButtons && items.length > 1) {
-            const navContainer = document.createElement('div');
-            navContainer.className = 'spotlight-nav-container';
-
-            const prevButton = document.createElement('button');
-            prevButton.className = 'spotlight-nav-button spotlight-nav-prev emby-button';
-            prevButton.innerHTML = '<span class="material-icons">chevron_left</span>';
-            prevButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                goToItem((currentIndex - 1 + items.length) % items.length, true);
-            });
-
-            const nextButton = document.createElement('button');
-            nextButton.className = 'spotlight-nav-button spotlight-nav-next emby-button';
-            nextButton.innerHTML = '<span class="material-icons">chevron_right</span>';
-            nextButton.addEventListener('click', (e) => {
-                e.stopPropagation();
-                goToItem((currentIndex + 1) % items.length, true);
-            });
-
-            navContainer.appendChild(prevButton);
-            navContainer.appendChild(nextButton);
-            bannerContainer.appendChild(navContainer);
+        // Add scroll buttons for non-TV layouts
+        if (!layoutManager.tv) {
+            const scrollButtons = document.createElement('div');
+            scrollButtons.className = 'emby-scroller-buttons emby-scrollbuttons-hide';
+            
+            const leftBtn = document.createElement('button');
+            leftBtn.className = 'emby-scrollerbutton emby-scrollerbutton-left';
+            leftBtn.innerHTML = '<span class="material-icons navigate_before" aria-hidden="true"></span>';
+            leftBtn.setAttribute('is', 'paper-icon-button-light');
+            
+            const rightBtn = document.createElement('button');
+            rightBtn.className = 'emby-scrollerbutton emby-scrollerbutton-right';
+            rightBtn.innerHTML = '<span class="material-icons navigate_next" aria-hidden="true"></span>';
+            rightBtn.setAttribute('is', 'paper-icon-button-light');
+            
+            scrollButtons.appendChild(leftBtn);
+            scrollButtons.appendChild(rightBtn);
+            bannerContainer.appendChild(scrollButtons);
         }
 
-        if (showDots && items.length > 1) {
-            const dotsContainer = document.createElement('div');
-            dotsContainer.className = 'spotlight-dots';
-
-            items.forEach((_, index) => {
-                const dot = document.createElement('button');
-                dot.className = 'spotlight-dot' + (index === 0 ? ' active' : '');
-                dot.setAttribute('data-index', index);
-                dot.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    goToItem(index, true);
-                });
-                dotsContainer.appendChild(dot);
-            });
-
-            bannerContainer.appendChild(dotsContainer);
-        }
-
-        function goToItem(index, resetTimer = true) {
-            if (index === currentIndex) return;
-
-            const currentItem = bannerContainer.querySelector(`.spotlight-item[data-index="${currentIndex}"]`);
-            const nextItem = bannerContainer.querySelector(`.spotlight-item[data-index="${index}"]`);
-
-            if (currentItem && nextItem) {
-                currentItem.style.opacity = '0';
-                nextItem.style.opacity = '1';
-            }
-
-            currentIndex = index;
-
-            if (showDots) {
-                const dots = bannerContainer.querySelectorAll('.spotlight-dot');
-                dots.forEach((dot, i) => {
-                    dot.classList.toggle('active', i === index);
-                });
-            }
-
-            if (resetTimer && autoPlay && !isPaused) {
-                clearInterval(autoPlayTimer);
-                autoPlayTimer = null;
-                startAutoPlay();
-            }
-        }
-
-        function startAutoPlay() {
-            if (autoPlayTimer) {
-                clearInterval(autoPlayTimer);
-                autoPlayTimer = null;
-            }
-
-            if (!autoPlay || items.length <= 1 || isPaused) return;
-
-            autoPlayTimer = setInterval(() => {
-                goToItem((currentIndex + 1) % items.length, false);
-            }, interval);
-        }
-
-        let isHovering = false;
-        bannerContainer.addEventListener('mouseenter', () => {
-            isHovering = true;
-            if (autoPlayTimer) {
-                clearInterval(autoPlayTimer);
-                autoPlayTimer = null;
-            }
-        });
-
-        bannerContainer.addEventListener('mouseleave', () => {
-            isHovering = false;
-            if (autoPlay && !isPaused && !isHovering) {
-                startAutoPlay();
-            }
-        });
-
-        if (autoPlay) {
-            startAutoPlay();
-        }
-
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        bannerContainer.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        bannerContainer.addEventListener('touchmove', (e) => {
-            if (!e.touches[0]) return;
-
-            const touchX = e.touches[0].clientX;
-            const touchY = e.touches[0].clientY;
-            const deltaX = touchX - touchStartX;
-            const deltaY = touchY - touchStartY;
-
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                if (e.cancelable) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }
-        }, { passive: false });
-
-        bannerContainer.addEventListener('touchend', (e) => {
-            if (!e.changedTouches[0]) return;
-
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = touchEndY - touchStartY;
-
-            if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
-                // Stop propagation to prevent parent handlers (like tab switching)
-                e.stopPropagation();
-
-                if (deltaX > 0) {
-                    // Swipe right (previous)
-                    goToItem((currentIndex - 1 + items.length) % items.length, true);
-                } else {
-                    // Swipe left (next)
-                    goToItem((currentIndex + 1) % items.length, true);
-                }
-            }
-        }, { passive: true });
-
+        container.appendChild(sectionHeader);
         container.appendChild(bannerContainer);
+
+        // Register action handlers for TV remote support
+        if (window.itemShortcuts) {
+            window.itemShortcuts.off(itemsContainer);
+            window.itemShortcuts.on(itemsContainer);
+        }
 
         return container;
     }
@@ -1235,81 +1324,55 @@ import browser from 'scripts/browser';
     function createScrollableContainer(items, title, viewMoreUrl = null, overflowCard = false, cardFormat = null) {
         // Create the main vertical section container
         const verticalSection = document.createElement('div');
-        // Conditionally set container classes based on platform
-        verticalSection.className = browser.tizen
-            ? 'verticalSection'
-            : 'verticalSection emby-scroller-container custom-scroller-container';
+        verticalSection.className = 'verticalSection';
 
-        // Create section title
-        const sectionTitleContainer = document.createElement('div');
-        sectionTitleContainer.className = 'sectionTitleContainer sectionTitleContainer-cards padded-left';
+        // Create section header container
+        const sectionHeader = document.createElement('div');
+        sectionHeader.className = 'sectionHeaderContainer sectionTitleContainer-cards padded-left';
 
-        if (viewMoreUrl) {
-            // Create clickable title with chevron icon
-            const titleLink = document.createElement('a');
-            titleLink.className = 'sectionTitle-link sectionTitleTextButton';
-            titleLink.style.cssText = 'text-decoration: none; cursor: pointer; display: flex; align-items: center;';
-
-            // Handle both URL and function
-            if (typeof viewMoreUrl === 'function') {
-                titleLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    viewMoreUrl();
-                });
+        if (title) {
+            if (viewMoreUrl) {
+                // Create clickable title with chevron icon
+                const titleLink = document.createElement('a');
+                titleLink.className = 'sectionTitle sectionTitleButton';
+                titleLink.href = typeof viewMoreUrl === 'string' ? viewMoreUrl : '#';
+                
+                if (typeof viewMoreUrl === 'function') {
+                    titleLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        viewMoreUrl();
+                    });
+                }
+                
+                titleLink.innerHTML = `${title}<span class="material-icons chevron_right" style="font-size:inherit;">chevron_right</span>`;
+                sectionHeader.appendChild(titleLink);
             } else {
-                titleLink.href = viewMoreUrl;
+                // Regular non-clickable title
+                const titleElement = document.createElement('h2');
+                titleElement.className = 'sectionTitle';
+                titleElement.textContent = title;
+                sectionHeader.appendChild(titleElement);
             }
-
-            const titleText = document.createElement('h2');
-            titleText.className = 'sectionTitle sectionTitle-cards';
-            titleText.textContent = title;
-
-            const chevronIcon = document.createElement('span');
-            chevronIcon.className = 'material-icons chevron_right';
-            chevronIcon.setAttribute('aria-hidden', 'true');
-
-            titleLink.appendChild(titleText);
-            titleLink.appendChild(chevronIcon);
-            sectionTitleContainer.appendChild(titleLink);
-        } else {
-            // Regular non-clickable title
-            const titleText = document.createElement('h2');
-            titleText.className = 'sectionTitle sectionTitle-cards';
-            titleText.textContent = title;
-            sectionTitleContainer.appendChild(titleText);
         }
-
-        // Create "Show All" button
-        const showAllButton = document.createElement('button');
-        showAllButton.type = 'button';
-        showAllButton.className = 'show-all-button';
-        showAllButton.style.cssText = 'margin-left: 10px; font-size: 12px; padding: 4px 8px; min-width: auto; background: transparent; border: 1px solid rgba(255, 255, 255, 0.3) !important; border-radius: 4px; cursor: pointer; color: var(--main-text, #fff) !important; margin-bottom: .35em; align-self: center;';
-        showAllButton.textContent = 'Expand';
-        showAllButton.title = 'Show all items';
 
         const scroller = document.createElement('div');
         scroller.setAttribute('is', 'emby-scroller');
+        scroller.setAttribute('data-horizontal', 'true');
+        scroller.setAttribute('data-centerfocus', layoutManager.tv ? 'card' : 'true');
+        scroller.setAttribute('data-scrollbuttons', 'false');
+        scroller.setAttribute('data-mousewheel', 'false');
+        scroller.setAttribute('data-overscroll', 'true');
+        scroller.className = 'emby-scroller';
 
-        if (browser.tizen) {
-            // Tizen TV optimized settings (keep as-is)
-            scroller.className = 'padded-top-focusscale padded-bottom-focusscale emby-scroller';
-            scroller.setAttribute('data-centerfocus', 'true');
-            scroller.setAttribute('data-scroll-mode-x', 'custom');
-            scroller.style.overflow = 'hidden';
-        } else {
-            scroller.setAttribute('data-horizontal', 'true');  // Critical for horizontal swipe
-            scroller.setAttribute('data-centerfocus', 'card'); // Proper focus handling
-            scroller.setAttribute('data-scroll-mode-x', 'custom');
-            scroller.style.overflow = '';
-            scroller.className = '';
-        }
-
+        // Create scroller inner container
+        const scrollSlider = document.createElement('div');
+        scrollSlider.className = 'scrollSlider';
+        
         // Create items container
         const itemsContainer = document.createElement('div');
         itemsContainer.setAttribute('is', 'emby-itemscontainer');
-        itemsContainer.className = 'itemsContainer scrollSlider focuscontainer-x animatedScrollX';
-        itemsContainer.style.whiteSpace = 'nowrap';
-
+        itemsContainer.className = layoutManager.tv ? 'itemsContainer focuscontainer-x' : 'itemsContainer scrollSlider focuscontainer-x';
+        
         // Add items to container
         items.forEach((item, index) => {
             const card = createJellyfinCardElement(item, overflowCard, cardFormat);
@@ -1317,112 +1380,37 @@ import browser from 'scripts/browser';
             itemsContainer.appendChild(card);
         });
 
-        scroller.appendChild(itemsContainer);
+        scrollSlider.appendChild(itemsContainer);
+        scroller.appendChild(scrollSlider);
 
-        // Add "Show All" button to title if there are more than 20 items
-        if (items.length > 20) {
-            sectionTitleContainer.appendChild(showAllButton);
+        // Add scroll buttons for non-TV layouts
+        if (!layoutManager.tv) {
+            const scrollButtons = document.createElement('div');
+            scrollButtons.className = 'emby-scroller-buttons emby-scrollbuttons-hide';
+            
+            const leftBtn = document.createElement('button');
+            leftBtn.className = 'emby-scrollerbutton emby-scrollerbutton-left';
+            leftBtn.innerHTML = '<span class="material-icons navigate_before" aria-hidden="true"></span>';
+            leftBtn.setAttribute('is', 'paper-icon-button-light');
+            
+            const rightBtn = document.createElement('button');
+            rightBtn.className = 'emby-scrollerbutton emby-scrollerbutton-right';
+            rightBtn.innerHTML = '<span class="material-icons navigate_next" aria-hidden="true"></span>';
+            rightBtn.setAttribute('is', 'paper-icon-button-light');
+            
+            scrollButtons.appendChild(leftBtn);
+            scrollButtons.appendChild(rightBtn);
+            scroller.appendChild(scrollButtons);
         }
 
-        // Toggle between scroll and grid view
-        let isShowingAll = false;
-        let originalTransform = 'translateX(0px)';
-        let originalStyle = itemsContainer.style.cssText;
-        let originalScrollerStyle = scroller.style.cssText;
-
-        // Store the original transition for restoration
-        const storeOriginalStyles = () => {
-            originalTransform = itemsContainer.style.transform || 'translateX(0px)';
-            originalStyle = itemsContainer.style.cssText;
-            originalScrollerStyle = scroller.style.cssText;
-        };
-
-        // Initial store
-        setTimeout(() => storeOriginalStyles(), 100);
-
-        showAllButton.addEventListener('click', () => {
-            if (isShowingAll) {
-                // Switch back to scroll view
-                itemsContainer.style.cssText = originalStyle;
-                scroller.style.cssText = originalScrollerStyle;
-                showAllButton.textContent = 'Expand';
-                showAllButton.title = 'Show all items in a grid layout';
-                isShowingAll = false;
-
-                // Restore Jellyfin's scrolling functionality
-                itemsContainer.style.transform = originalTransform;
-                itemsContainer.style.transition = 'transform 270ms ease-out';
-
-                // Re-enable Jellyfin's scroller
-                scroller.style.overflow = 'hidden';
-
-                // Reset individual card styles
-                const cards = itemsContainer.querySelectorAll('.card');
-                cards.forEach(card => {
-                    card.style.width = '';
-                    card.style.flexShrink = '';
-                    card.style.marginRight = '';
-                });
-            } else {
-                // Switch to grid view
-                storeOriginalStyles();
-
-                // Calculate appropriate card size based on format
-                const isBackdrop = cardFormat === 'backdrop' ||
-                    (items.length > 0 && items[0].MediaType === 'Video' &&
-                        itemsContainer.querySelector('.overflowBackdropCard'));
-
-                const cardWidth = isBackdrop ?
-                    'calc((100% - 24px) / 3)' :  // 3 backdrop cards per row
-                    'calc((100% - 30px) / 6)';   // 6 portrait cards per row
-
-                const cardMargin = isBackdrop ? '8px' : '6px';
-
-                // Apply grid layout
-                itemsContainer.style.cssText = `
-                display: flex;
-                flex-wrap: wrap;
-                gap: ${cardMargin};
-                white-space: normal;
-                transform: none !important;
-                transition: none !important;
-                will-change: auto;
-                padding: 0;
-                margin: 0;
-            `;
-
-                scroller.style.cssText = `
-                overflow: visible !important;
-                height: auto !important;
-            `;
-
-                // Adjust each card for grid view
-                const cards = itemsContainer.querySelectorAll('.card');
-                cards.forEach(card => {
-                    card.style.width = cardWidth;
-                    card.style.flexShrink = '0';
-                    card.style.marginRight = '0';
-                });
-
-                showAllButton.textContent = 'Collapse';
-                showAllButton.title = 'Show items in scrollable layout';
-                isShowingAll = true;
-            }
-        });
-
-        // Add scroll animation handling for Jellyfin's system
-        let scrollPosition = 0;
-        const containerWidth = itemsContainer.offsetWidth;
-        const cardCount = items.length;
-
-        // This function would be called by Jellyfin's navigation system
-        const scrollToPosition = (position) => {
-            scrollPosition = position;
-            itemsContainer.style.transform = `translateX(${-position}px)`;
-        };
+        // Register action handlers for TV remote support
+        if (window.itemShortcuts) {
+            window.itemShortcuts.off(itemsContainer);
+            window.itemShortcuts.on(itemsContainer);
+        }
 
         // Add the section to the page
-        verticalSection.appendChild(sectionTitleContainer);
+        verticalSection.appendChild(sectionHeader);
         verticalSection.appendChild(scroller);
 
         return verticalSection;
