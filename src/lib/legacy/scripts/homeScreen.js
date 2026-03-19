@@ -130,59 +130,71 @@ import globalize from '../../globalize';
     // Body class management for home page and themes
     function manageBodyClasses() {
         const body = document.body;
+        if (!body) return;
+
         const currentView = window.KefinTweaksUtils?.getCurrentView();
         const isHomePage = currentView === 'home' || currentView === 'home.html';
 
         // Get seasonal animation setting
-        const homeScreenConfig = window.KefinTweaksConfig?.homeScreen || {};
+        const config = window.KefinTweaksConfig || {};
+        const homeScreenConfig = config.homeScreen || {};
         const seasonalConfig = homeScreenConfig.seasonal || {};
         const enableSeasonalAnimations = seasonalConfig.enableSeasonalAnimations !== false;
         const enableSeasonalBackground = seasonalConfig.enableSeasonalBackground !== false;
 
+        const classList = body.classList;
+
         // Manage home-screen class
-        if (isHomePage && body) {
-            body.classList.add('home-screen');
+        if (isHomePage) {
+            classList.add('home-screen');
         } else {
-            body.classList.remove('home-screen');
+            classList.remove('home-screen');
         }
 
-        // Manage theme classes (only on home page)
+        // Theme classes list for easier management
+        const themeClasses = ['halloween-theme', 'christmas-theme', 'valentines-theme', 'newyear-theme', 'with-background'];
+
+        // Manage theme classes
         if (isHomePage) {
-            // Remove all existing theme classes
-            const themeClasses = ['halloween-theme', 'christmas-theme', 'valentines-theme', 'newyear-theme', 'with-background'];
-            themeClasses.forEach(themeClass => body.classList.remove(themeClass));
+            // Remove existing theme classes first (except those we're about to set)
+            // Better to just set them correctly in one go
+            let themeToAdd = null;
+            let backgroundToAdd = false;
 
-            // Add appropriate theme class based on current date
             if (isHalloweenPeriod()) {
-                body.classList.add('halloween-theme');
+                themeToAdd = 'halloween-theme';
             } else if (isChristmasPeriod()) {
-                body.classList.add('christmas-theme');
-
-                if (enableSeasonalBackground) {
-                    body.classList.add('with-background');
-                }
-
+                themeToAdd = 'christmas-theme';
+                backgroundToAdd = enableSeasonalBackground;
+                
                 if (enableSeasonalAnimations) {
-                    // Check if snowverlay script is already added
                     const snowverlayScript = document.querySelector('script[src*="snowverlay.js"]');
-
                     if (!snowverlayScript) {
-                        // Use the snowverlay.js script to add snowflakes to the background
-                        const snowverlayScriptSrc = (window.KefinTweaksConfig.kefinTweaksRoot || '') + 'scripts/snowverlay.js';
-                        const snowverlayScript = document.createElement('script');
-                        snowverlayScript.src = snowverlayScriptSrc;
-                        document.head.appendChild(snowverlayScript);
+                        const snowverlayScriptSrc = (config.kefinTweaksRoot || '') + 'scripts/snowverlay.js';
+                        const script = document.createElement('script');
+                        script.src = snowverlayScriptSrc;
+                        document.head.appendChild(script);
                     }
                 }
             } else if (isValentinesPeriod()) {
-                body.classList.add('valentines-theme');
+                themeToAdd = 'valentines-theme';
             } else if (isNewYearsPeriod()) {
-                body.classList.add('newyear-theme');
+                themeToAdd = 'newyear-theme';
+            }
+
+            for (let i = 0, len = themeClasses.length; i < len; i++) {
+                const cls = themeClasses[i];
+                if (cls === themeToAdd || (cls === 'with-background' && backgroundToAdd)) {
+                    classList.add(cls);
+                } else {
+                    classList.remove(cls);
+                }
             }
         } else {
             // Remove all theme classes when not on home page
-            const themeClasses = ['halloween-theme', 'christmas-theme', 'valentines-theme', 'newyear-theme', 'with-background'];
-            themeClasses.forEach(themeClass => body.classList.remove(themeClass));
+            for (let i = 0, len = themeClasses.length; i < len; i++) {
+                classList.remove(themeClasses[i]);
+            }
         }
     }
 
@@ -1553,7 +1565,7 @@ import globalize from '../../globalize';
                 return false;
             }
 
-            console.log(includeItemTypes);
+            // ;
 
             const cardContainer = window.cardBuilder.renderCards(
                 items,
@@ -5026,6 +5038,10 @@ import globalize from '../../globalize';
             window.removeEventListener('wheel', discoveryWheelHandler);
             discoveryWheelHandler = null;
         }
+        if (discoveryKeyDownHandler) {
+            window.removeEventListener('keydown', discoveryKeyDownHandler);
+            discoveryKeyDownHandler = null;
+        }
         if (discoveryTouchStartHandler) {
             window.removeEventListener('touchstart', discoveryTouchStartHandler);
             discoveryTouchStartHandler = null;
@@ -5113,6 +5129,46 @@ import globalize from '../../globalize';
 
         discoveryWheelHandler = handleWheel;
         window.addEventListener('wheel', handleWheel, { passive: true });
+
+        // TV Remote support: trigger when user presses down/right/page down keys while focused on last item
+        const handleKeyDown = (event) => {
+            // Ensure we're on the home page before proceeding
+            const currentView = window.KefinTweaksUtils?.getCurrentView();
+            const isHomePage = currentView === 'home' || currentView === 'home.html';
+            if (!isHomePage) return;
+
+            // Only on first tab
+            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active')?.getAttribute('data-index');
+            if (activeTab !== '0') return;
+
+            if (isRenderingDiscoveryGroup) return;
+
+            // Only react to ArrowDown, ArrowRight, or PageDown keys
+            if (!['ArrowDown', 'ArrowRight', 'PageDown'].includes(event.key)) return;
+
+            // Check if focus is on the last focusable item in the container
+            const focusableItems = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusableItems.length === 0) return;
+
+            const lastItem = focusableItems[focusableItems.length - 1];
+            if (document.activeElement !== lastItem) return;
+
+            // Prevent page scroll when PageDown is pressed
+            if (event.key === 'PageDown') {
+                event.preventDefault();
+            }
+
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = setTimeout(async () => {
+                await renderNextDiscoveryGroup(container);
+            }, 200);
+        };
+
+        // Store handler reference and add keydown listener
+        discoveryKeyDownHandler = handleKeyDown;
+        window.addEventListener('keydown', handleKeyDown, { passive: true });
 
         // Touch support: trigger when user swipes up (scroll down) while already at bottom
         const handleTouchStart = (event) => {
