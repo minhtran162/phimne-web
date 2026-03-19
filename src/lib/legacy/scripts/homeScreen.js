@@ -1086,6 +1086,7 @@ import globalize from '../../globalize';
     let discoveryWheelHandler = null; // Reference to wheel handler for cleanup
     let discoveryTouchStartHandler = null; // Reference to touchstart handler for cleanup
     let discoveryTouchMoveHandler = null; // Reference to touchmove handler for cleanup
+    let scrollTimeout = null; // Reference to scroll timeout for cleanup
 
     /************ Helpers ************/
 
@@ -5044,8 +5045,13 @@ import globalize from '../../globalize';
         removeScrollBasedLoading();
 
         let lastScrollTop = 0;
-        let scrollTimeout = null;
         let lastTouchY = null;
+        
+        // Clear any existing scroll timeout when setting up again
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = null;
+        }
 
         const handleScroll = () => {
             // Ensure we're on the home page before proceeding
@@ -5772,16 +5778,22 @@ import globalize from '../../globalize';
         }
 
         if (!homeSectionsContainer) {
+            // Clean up any existing scroll-based loading handlers when no container found
+            removeScrollBasedLoading();
             return;
         }
 
         // Check if already processing to prevent parallel execution
         if (isProcessing && homeSectionsContainer.dataset.customSectionsRendered === 'true') {
+            // Setup infinite loading on already rendered sections
+            setupInfiniteLoading(homeSectionsContainer);
             return;
         }
 
         // Check if sections are already rendered
         if (homeSectionsContainer.dataset.customSectionsRendered === 'true') {
+            // Setup infinite loading on already rendered sections
+            setupInfiniteLoading(homeSectionsContainer);
             return;
         }
 
@@ -5848,6 +5860,9 @@ import globalize from '../../globalize';
 
             // Wait for all parallel operations to complete
             await Promise.all(initPromises);
+            
+            // Setup infinite loading after content is rendered
+            setupInfiniteLoading(homeSectionsContainer);
         } catch (error) {
             ERR('Error rendering custom sections:', error);
         } finally {
@@ -5856,10 +5871,22 @@ import globalize from '../../globalize';
         }
     }
 
+    // Keep track of the current page instance to clean up when page changes
+    let currentPageInstance = null;
+    
     if (window.KefinTweaksUtils) {
         // Register handler for all pages (breadcrumbs can appear on any detail page)
         window.KefinTweaksUtils.onViewPage((view, element) => {
             try {
+                // Clean up previous instance if different page
+                if (currentPageInstance && currentPageInstance !== view) {
+                    // Perform comprehensive cleanup when leaving the page
+                    cleanupModule();
+                }
+                
+                // Update current page instance
+                currentPageInstance = view;
+                
                 // Run our custom code
                 checkAndRenderCustomSections();
             } catch (err) {
@@ -5873,6 +5900,36 @@ import globalize from '../../globalize';
     }
 
     checkAndRenderCustomSections();
+
+    // Function to clean up all event listeners and timers for the module
+    function cleanupModule() {
+        // Clear any pending timeouts
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = null;
+        }
+        
+        // Remove all event listeners
+        removeScrollBasedLoading();
+        
+        // Reset state variables to free memory
+        discoveryBuffer.length = 0;
+        hiddenDiscoverySections.length = 0;
+        renderedSections.clear();
+        renderedActors.clear();
+        renderedDirectors.clear();
+        renderedWriters.clear();
+        renderedStudios.clear();
+        renderedWatchedMovies.clear();
+        renderedGenres.clear();
+        renderedNetworks.clear();
+        renderedCollections.clear();
+        renderedCustomDiscoverySections.clear();
+        renderedFavoriteMovies.clear();
+        renderedStarringWatchedMovies.clear();
+        renderedDirectedWatchedMovies.clear();
+        renderedWrittenWatchedMovies.clear();
+    }
 
     // Debug functions for troubleshooting (available in console)
     window.debugHomeScreen = function() {
