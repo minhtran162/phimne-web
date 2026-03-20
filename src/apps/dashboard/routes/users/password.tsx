@@ -19,13 +19,13 @@ const UserPassword = () => {
         }
 
         loading.show();
-        window.ApiClient.getUser(userId).then(function (user) {
+        window.ApiClient.getUser(userId).then(function (user: any) {
             if (!user.Name) {
                 throw new Error('Unexpected null user.Name');
             }
             setUserName(user.Name);
             loading.hide();
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[userpassword] failed to fetch user', err);
         });
     }, [userId]);

@@ -5,6 +5,8 @@
 (function() {
     'use strict';
 
+    ;
+
     const MODAL_ID = 'kefinTweaksConfigModal';
     let currentLoadedConfig = null;
 
@@ -112,6 +114,7 @@
 
                 // Check if already loaded
                 if (window.KefinTweaksDefaultConfig) {
+                    ;
                     resolve(window.KefinTweaksDefaultConfig);
                     return;
                 }
@@ -123,6 +126,7 @@
 
                 script.onload = () => {
                     if (window.KefinTweaksDefaultConfig) {
+                        ;
                         resolve(window.KefinTweaksDefaultConfig);
                     } else {
                         reject(new Error('Default config file loaded but window.KefinTweaksDefaultConfig is not defined'));
@@ -162,6 +166,7 @@
                         const config = JSON.parse(scriptMatch[1]);
                         // Store enabled state globally for use in modal (defaults to true if not set)
                         window.KefinTweaksConfigEnabled = config.enabled !== false;
+                        ;
                         return config;
                     } catch (parseError) {
                         console.error('[KefinTweaks Configuration] Error parsing config from script:', parseError);
@@ -170,6 +175,7 @@
             }
 
             // If no config found in JS Injector, load defaults
+            ;
             const rawDefaultConfig = await loadDefaultConfig();
             const defaultConfig = JSON.parse(JSON.stringify(rawDefaultConfig));
 
@@ -2146,6 +2152,8 @@
     }
 
     async function openConfigurationModal() {
+        ;
+
         // Inject CSS if not already injected
         injectConfigModalCSS();
 
@@ -2192,6 +2200,9 @@
             </button>
             <button class="emby-button raised" id="importConfigBtn" style="padding: 0.75em 2em; font-size: 1em;">
                 <span>Import</span>
+            </button>
+            <button class="emby-button raised block button-delete" id="resetAllUsersBtn" style="padding: 0.75em 2em; font-size: 1em; font-weight: 500;">
+                <span>Reset All Users Local Settings</span>
             </button>
         `;
 
@@ -2269,6 +2280,7 @@
                     await saveConfigToJavaScriptInjector(config);
 
                     window.KefinTweaksConfigEnabled = isEnabled;
+                    ;
 
                     if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
                         window.KefinTweaksToaster.toast(`KefinTweaks ${isEnabled ? 'enabled' : 'disabled'}. Page refresh required.`);
@@ -2377,10 +2389,15 @@
             if (deleteBtn) {
                 e.preventDefault();
                 e.stopPropagation();
+                ;
                 const prefix = deleteBtn.getAttribute('data-prefix');
                 const sectionIndexRaw = deleteBtn.getAttribute('data-section-index');
                 const isSeasonal = deleteBtn.getAttribute('data-is-seasonal') === 'true';
+                ;
+                ;
+                ;
                 if (prefix && sectionIndexRaw !== null) {
+                    ;
                     // For seasonal sections, sectionIndex is a compound string like "0_1", don't parse it
                     const sectionIndex = isSeasonal || sectionIndexRaw.includes('_') ? sectionIndexRaw : parseInt(sectionIndexRaw);
                     deleteSection(prefix, sectionIndex, isSeasonal);
@@ -2817,6 +2834,7 @@
         }
 
         function deleteSection(prefix, sectionIndex, isSeasonalNested) {
+            ;
             // Try both string and number comparison for data-section-index
             const sectionItem = modalInstance.dialogContent.querySelector(
                 `.${prefix}_section_item[data-section-index="${sectionIndex}"], .${prefix}_section_item[data-section-index='${sectionIndex}']`
@@ -4267,6 +4285,7 @@
 
         window.editSeasonalSeason = function(index) {
             // For now, editing is done inline - this could open a modal in the future
+            ;
         };
 
         window.deleteSeasonalSeason = function(index) {
@@ -4416,6 +4435,11 @@
         const resetBtn = modalInstance.dialogFooter?.querySelector('#resetConfigBtn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => handleResetConfig(modalInstance));
+        }
+
+        const resetAllUsersBtn = modalInstance.dialogFooter?.querySelector('#resetAllUsersBtn');
+        if (resetAllUsersBtn) {
+            resetAllUsersBtn.addEventListener('click', () => handleResetAllUsersConfig(modalInstance));
         }
 
         // Export button handler
@@ -4694,6 +4718,7 @@
             }
 
             const plugins = await response.json();
+            ;
 
             // Handle both array and object with Items property
             const pluginsList = Array.isArray(plugins) ? plugins : (plugins.Items || []);
@@ -4707,6 +4732,7 @@
                 throw new Error('JavaScript Injector plugin not found. Please ensure it is installed.');
             }
 
+            ;
             return injectorPlugin.Id;
         } catch (error) {
             console.error('[KefinTweaks Configuration] Error finding JavaScript Injector plugin:', error);
@@ -4735,6 +4761,7 @@
             }
 
             const config = await response.json();
+            ;
             return config;
         } catch (error) {
             console.error('[KefinTweaks Configuration] Error getting JS Injector config:', error);
@@ -4770,10 +4797,12 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
 
             if (existingScriptIndex !== -1) {
                 // Update existing script
+                ;
                 injectorConfig.CustomJavaScripts[existingScriptIndex].Script = scriptContent;
                 // Keep existing Enabled and RequiresAuthentication settings
             } else {
                 // Add new script
+                ;
                 injectorConfig.CustomJavaScripts.push({
                     Name: 'KefinTweaks-Config',
                     Script: scriptContent,
@@ -4799,6 +4828,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
+            ;
             return true;
         } catch (error) {
             console.error('[KefinTweaks Configuration] Error saving configuration:', error);
@@ -5031,6 +5061,8 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
             alert('You must be an administrator to save configuration.');
             return;
         }
+
+        ;
 
         // Collect all form values
         // Preserve existing kefinTweaksRoot from current config (no longer editable in UI)
@@ -5365,6 +5397,8 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
             config.defaultSkin = null;
         }
 
+        ;
+
         // Save to JavaScript Injector plugin
         try {
             await saveConfigToJavaScriptInjector(config);
@@ -5425,6 +5459,41 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
             openConfigurationModal();
         } catch (error) {
             console.error('[KefinTweaks Configuration] Error resetting config:', error);
+            if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
+                window.KefinTweaksToaster.toast(`Error resetting configuration: ${error.message}`, '5');
+            } else {
+                alert(`Error resetting configuration: ${error.message}`);
+            }
+        }
+    }
+
+    async function handleResetAllUsersConfig(modalInstance) {
+        const userIsAdmin = await isAdmin();
+        if (!userIsAdmin) {
+            alert('You must be an administrator to reset configuration for all users.');
+            return;
+        }
+
+        const confirmed = confirm('WARNING: This will force ALL users to reset their KefinTweaks settings to the default configuration on their next visit. This action cannot be undone. Are you sure you want to continue?');
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const config = await getKefinTweaksConfig();
+            // Update the configVersion to current timestamp
+            // This will trigger the reset logic in injector.js for all clients
+            config.configVersion = Date.now();
+
+            await saveConfigToJavaScriptInjector(config);
+
+            if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
+                window.KefinTweaksToaster.toast('Reset signal sent. All users will be reset on next load.');
+            } else {
+                alert('Reset signal sent. All users will be reset on next load.');
+            }
+        } catch (error) {
+            console.error('[KefinTweaks Configuration] Error resetting all users config:', error);
             if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
                 window.KefinTweaksToaster.toast(`Error resetting configuration: ${error.message}`, '5');
             } else {
@@ -5526,6 +5595,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         // Find the plugins section
         const pluginsSection = document.querySelector('ul[aria-labelledby="plugins-subheader"]');
         if (!pluginsSection) {
+            ;
             setTimeout(addConfigButtonToDashboard, 500);
             return;
         }
@@ -5538,6 +5608,8 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
 
         // Add button to the plugins section
         pluginsSection.appendChild(button);
+
+        ;
     }
 
     // Add configuration button to Administration section
@@ -5550,6 +5622,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         // Find the Administration section
         const adminSection = document.querySelector('.adminSection.verticalSection');
         if (!adminSection) {
+            ;
             setTimeout(addConfigButtonToAdminSection, 500);
             return;
         }
@@ -5557,11 +5630,14 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         // Create and add the button
         const button = createConfigButton();
         adminSection.appendChild(button);
+
+        ;
     }
 
     // Register onViewPage handler for mypreferencesmenu page and dashboard
     function registerViewPageHandler() {
         if (!window.KefinTweaksUtils || !window.KefinTweaksUtils.onViewPage) {
+            ;
             setTimeout(registerViewPageHandler, 1000);
             return;
         }
@@ -5571,11 +5647,13 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
             // Check if user is admin before adding buttons
             const userIsAdmin = await isAdmin();
             if (!userIsAdmin) {
+                ;
                 return;
             }
 
             // Check if we're on the mypreferencesmenu page
             if (hash && (hash.includes('mypreferencesmenu') || hash.includes('userpreferences') || hash.includes('preferences'))) {
+                ;
                 // Wait a bit for the page to fully load
                 setTimeout(() => {
                     addConfigButtonToAdminSection();
@@ -5584,12 +5662,15 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
 
             // Check if we're on the dashboard page
             if (view === 'dashboard' || view === 'configurationpage' || hash.includes('dashboard') || hash.includes('configurationpage')) {
+                ;
                 // Wait a bit for the page to fully load
                 setTimeout(() => {
                     addConfigButtonToDashboard();
                 }, 500);
             }
         });
+
+        ;
     }
 
     // Add configuration link to custom menu
@@ -5597,11 +5678,13 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         // Check if user is admin
         const userIsAdmin = await isAdmin();
         if (!userIsAdmin) {
+            ;
             return;
         }
 
         // Check if utils is available
         if (!window.KefinTweaksUtils || !window.KefinTweaksUtils.addCustomMenuLink) {
+            ;
             setTimeout(addConfigLinkToCustomMenu, 1000);
             return;
         }
@@ -5619,6 +5702,8 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         );
 
         if (success) {
+            ;
+
             // Set up click handler to intercept navigation and open modal instead
             setupConfigLinkClickHandler();
         }
@@ -5629,6 +5714,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
         // Find the config button
         const configButton = document.querySelector('.navMenuOption[data-name="configure"]');
         if (!configButton) {
+            ;
             setTimeout(setupConfigLinkClickHandler, 1000);
             return;
         }
@@ -5643,6 +5729,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
     // Handle direct navigation to config URL
     function handleDirectConfigNavigation() {
         if (window.location.hash === '#kefintweaks-config') {
+            ;
             // Remove the hash to prevent navigation
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
             // Open modal
@@ -5654,6 +5741,7 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
     function setupHashChangeListener() {
         window.addEventListener('hashchange', () => {
             if (window.location.hash === '#kefintweaks-config') {
+                ;
                 // Remove the hash to prevent navigation
                 window.history.replaceState(null, '', window.location.pathname + window.location.search);
                 // Open modal
@@ -5706,4 +5794,6 @@ window.KefinTweaksConfig = ${JSON.stringify(config, null, 2)};`;
     } else {
         initialize();
     }
+
+    ;
 })();

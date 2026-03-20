@@ -487,7 +487,7 @@ const scriptImports: Record<string, () => Promise<any>> = {
     // @ts-ignore
     'infiniteScroll': () => import('../../lib/legacy/scripts/infiniteScroll.js'),
     // @ts-ignore
-    'removeContinue': () => import('./tweaks/RemoveContinue').then(m => m.default),
+    'removeContinue': () => import('../../lib/legacy/scripts/removeContinue.js').then(m => m.default),
     // @ts-ignore
     'subtitleSearch': () => import('../../lib/legacy/scripts/subtitleSearch.js'),
     // @ts-ignore
@@ -750,6 +750,23 @@ const initializeJellyfinEnhanced = async () => {
             userConfig: { settings: {}, shortcuts: { Shortcuts: [] }, bookmarks: { Bookmarks: {} }, elsewhere: {} },
             translations: {},
             pluginVersion: 'unknown',
+            // Properties that scripts might expect to exist
+            IconName: {}, // Will be populated by the icons script later
+            themer: {},
+            osdRating: {},
+            bookmarks: {},
+            // Additional properties needed by UI and other scripts
+            ui: {
+                PAINT: {} // Common object that might be accessed
+            },
+            // Other expected objects
+            config: {},
+            events: {},
+            features: {},
+            playback: {},
+            subtitles: {},
+            jellyseerr: {},
+            elsewhere: {},
             state: {
                 activeShortcuts: {},
                 currentContextItemId: null,

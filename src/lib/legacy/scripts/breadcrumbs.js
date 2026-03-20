@@ -3,8 +3,10 @@
 // Supports: Movie, Series, Season, Episode, MusicArtist, MusicAlbum, Audio
 // Requires: utils.js module to be loaded before this script
 
-(function () {
+(function() {
     'use strict';
+
+    ;
 
     // Configuration
     const CONFIG = {
@@ -29,9 +31,11 @@
     // Smart API call functions that check parent ID
     async function getSeasonsIfNeeded(parentId) {
         if (lastSeasonsParentId === parentId && cachedSeasonsData) {
+            ;
             return cachedSeasonsData;
         }
 
+        ;
         const seasons = await getSeasons(parentId);
         lastSeasonsParentId = parentId;
         cachedSeasonsData = seasons;
@@ -40,9 +44,11 @@
 
     async function getAlbumsIfNeeded(parentId) {
         if (lastAlbumsParentId === parentId && cachedAlbumsData) {
+            ;
             return cachedAlbumsData;
         }
 
+        ;
         const albums = await getAlbums(parentId);
         lastAlbumsParentId = parentId;
         cachedAlbumsData = albums;
@@ -51,9 +57,11 @@
 
     async function getSongsIfNeeded(parentId) {
         if (lastSongsParentId === parentId && cachedSongsData) {
+            ;
             return cachedSongsData;
         }
 
+        ;
         const songs = await getSongs(parentId);
         lastSongsParentId = parentId;
         cachedSongsData = songs;
@@ -162,13 +170,14 @@
         const differences = [];
 
         // Check if we have the right number of elements
-        const existingElements = Array.from(breadcrumbContainer.children).filter(child =>
-            child.classList.contains('kefinTweaks-breadcrumb-element')
-        );
+        const breadcrumbElements = breadcrumbContainer.querySelectorAll('.kefinTweaks-breadcrumb-element');
+        const existingCount = breadcrumbElements.length;
+        const targetCount = target.elements.length;
+        const maxCount = Math.max(existingCount, targetCount);
 
         // Compare each element
-        for (let i = 0; i < Math.max(existingElements.length, target.elements.length); i++) {
-            const existingElement = existingElements[i];
+        for (let i = 0; i < maxCount; i++) {
+            const existingElement = breadcrumbElements[i];
             const targetElement = target.elements[i];
 
             if (!existingElement && targetElement) {
@@ -205,13 +214,14 @@
     // Apply breadcrumb differences intelligently
     async function applyBreadcrumbDifferences(differences, targetStructure) {
         if (differences.length === 0) {
+            ;
             return;
         }
 
+        ;
+
         // Get existing elements
-        const existingElements = Array.from(breadcrumbContainer.children).filter(child =>
-            child.classList.contains('kefinTweaks-breadcrumb-element')
-        );
+        const existingElements = breadcrumbContainer.querySelectorAll('.kefinTweaks-breadcrumb-element');
 
         // Process differences in reverse order to maintain indices
         for (let i = differences.length - 1; i >= 0; i--) {
@@ -235,6 +245,8 @@
                         breadcrumbContainer.appendChild(newElement);
                     }
                 }
+
+                ;
             } else if (diff.action === 'remove') {
                 // Remove element and its separator
                 const elementToRemove = existingElements[diff.index];
@@ -244,12 +256,14 @@
                         breadcrumbContainer.removeChild(separatorToRemove);
                     }
                     breadcrumbContainer.removeChild(elementToRemove);
+                    ;
                 }
             } else if (diff.action === 'update') {
                 // Update existing element
                 const elementToUpdate = existingElements[diff.index];
                 if (elementToUpdate) {
                     await updateBreadcrumbElement(elementToUpdate, diff.element, targetStructure.item);
+                    ;
                 }
             }
         }
@@ -257,7 +271,7 @@
 
     // Create breadcrumb element from structure definition
     async function createBreadcrumbElementFromStructure(elementDef, item) {
-        const element = document.createElement('a');
+        const element = document.createElement('span');
         element.className = 'kefinTweaks-breadcrumb-element';
         element.textContent = elementDef.text;
 
@@ -265,7 +279,10 @@
             element.style.cursor = 'pointer';
 
             if (elementDef.url) {
-                element.href = elementDef.url;
+                // Direct link
+                element.addEventListener('click', () => {
+                    window.location.href = elementDef.url;
+                });
             } else if (elementDef.popover) {
                 // Popover functionality
                 await setupPopoverForElement(element, elementDef, item);
@@ -311,7 +328,9 @@
             const seasons = await getSeasonsIfNeeded(item.Id);
             element.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const popover = createPopover(seasons, null);
+                const popover = createPopover(seasons, null, (selectedSeason) => {
+                    window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedSeason.Id}&serverId=${ApiClient.serverId()}`;
+                });
                 showPopover(element, popover);
             });
         } else if (elementDef.text === 'All Albums') {
@@ -319,7 +338,9 @@
             const albums = await getAlbumsIfNeeded(item.Id);
             element.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const popover = createPopover(albums, null);
+                const popover = createPopover(albums, null, (selectedAlbum) => {
+                    window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedAlbum.Id}&serverId=${ApiClient.serverId()}`;
+                });
                 showPopover(element, popover);
             });
         } else if (elementDef.text === 'All Songs') {
@@ -327,7 +348,9 @@
             const songs = await getSongsIfNeeded(item.Id);
             element.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const popover = createPopover(songs, null);
+                const popover = createPopover(songs, null, (selectedSong) => {
+                    window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedSong.Id}&serverId=${ApiClient.serverId()}`;
+                });
                 showPopover(element, popover);
             });
         } else if (item.Type === 'Season') {
@@ -338,7 +361,9 @@
             } else {
                 element.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const popover = createPopover(seasons, item);
+                    const popover = createPopover(seasons, item, (selectedSeason) => {
+                        window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedSeason.Id}&serverId=${ApiClient.serverId()}`;
+                    });
                     showPopover(element, popover);
                 });
             }
@@ -346,12 +371,16 @@
             // Episode page - check if single season
             const seasons = await getSeasonsIfNeeded(item.SeriesId);
             if (seasons.length === 1) {
-
+                element.addEventListener('click', () => {
+                    window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${seasons[0].Id}&serverId=${ApiClient.serverId()}`;
+                });
             } else {
                 const currentSeason = seasons.find(season => season.Id === item.ParentId);
                 element.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const popover = createPopover(seasons, currentSeason);
+                    const popover = createPopover(seasons, currentSeason, (selectedSeason) => {
+                        window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedSeason.Id}&serverId=${ApiClient.serverId()}`;
+                    });
                     showPopover(element, popover);
                 });
             }
@@ -376,7 +405,9 @@
             } else {
                 element.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const popover = createPopover(albums, item);
+                    const popover = createPopover(albums, item, (selectedAlbum) => {
+                        window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedAlbum.Id}&serverId=${ApiClient.serverId()}`;
+                    });
                     showPopover(element, popover);
                 });
             }
@@ -397,12 +428,16 @@
                 element.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const currentAlbum = albumDetails || null;
-                    const popover = createPopover(albums || [], currentAlbum);
+                    const popover = createPopover(albums || [], currentAlbum, (selectedAlbum) => {
+                        window.location.href = `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=${selectedAlbum.Id}&serverId=${ApiClient.serverId()}`;
+                    });
                     showPopover(element, popover);
                 });
             }
         }
     }
+
+    // Utility functions
 
     function error(message, ...args) {
         console.error(`[KefinTweaks Breadcrumbs] ${message}`, ...args);
@@ -462,6 +497,7 @@
         wrapper.appendChild(popoverContainer);
         headerLeft.appendChild(wrapper);
 
+        ;
         return breadcrumbContainer;
     }
 
@@ -475,8 +511,9 @@
 
         if (wrapper && wideScreen && isSupportedPage) {
             wrapper.style.display = 'block';
+            ;
         } else {
-
+            ;
         }
     }
 
@@ -496,17 +533,6 @@
         closePopover();
     }
 
-    function getDetailsBaseUrl() {
-        const protocol = window.location.protocol;
-        const host = window.location.host;
-
-        return `${protocol}//${host}/${protocol === 'https:' ? 'web/' : ''}#/details?id=`;
-    }
-
-    function buildDetailsLink(itemId) {
-        return `${getDetailsBaseUrl()}${itemId}&serverId=${ApiClient.serverId()}`;
-    }
-
     function closePopover() {
         if (activePopover) {
             activePopover.remove();
@@ -514,52 +540,53 @@
         }
     }
 
-    function createPopover(items, currentItem) {
+    function createPopover(items, currentItem, onItemClick) {
         const popover = document.createElement('div');
         popover.className = 'kefinTweaks-popover';
-        popover.style.display = 'flex'; // Ensure it's visible
-        popover.style.flexDirection = 'column';
+        popover.style.display = 'block'; // Ensure it's visible
+
+        ;
 
         let selectedItemElement = null;
 
         items.forEach(item => {
-            const link = document.createElement('a');
-            link.className = 'kefinTweaks-popover-item';
-            link.href = buildDetailsLink(item.Id);
+            const itemElement = document.createElement('div');
+            itemElement.className = 'kefinTweaks-popover-item';
 
             if (currentItem && item.Id === currentItem.Id) {
-                link.classList.add('selected');
-                selectedItemElement = link;
+                itemElement.classList.add('selected');
+                selectedItemElement = itemElement; // Store reference to selected item
             }
 
-            // Display text formatting
+            // Format display text based on item type
             let displayText = item.Name;
             if (item.Type === 'Season' || item.Type === 'Episode') {
                 displayText = item.Name || `Season ${item.IndexNumber}`;
             } else if (item.Type === 'Audio') {
-                displayText = item.IndexNumber ?
-                    `${padNumber(item.IndexNumber)}. ${item.Name}` :
-                    item.Name;
+                // For songs, show track number if available
+                displayText = item.IndexNumber ? `${padNumber(item.IndexNumber)}. ${item.Name}` : item.Name;
             }
 
-            link.textContent = displayText;
-
-            // Prevent popover click from bubbling to breadcrumbs/header
-            link.addEventListener('click', (e) => {
-                e.stopPropagation();
+            itemElement.textContent = displayText;
+            itemElement.addEventListener('click', () => {
+                ;
+                onItemClick(item);
                 closePopover();
             });
 
-            popover.appendChild(link);
+            popover.appendChild(itemElement);
         });
 
+        // Add auto-scroll functionality
         if (selectedItemElement) {
+            // Use setTimeout to ensure the popover is rendered before scrolling
             setTimeout(() => {
                 selectedItemElement.scrollIntoView({
                     behavior: 'instant',
                     block: 'nearest',
                     inline: 'nearest'
                 });
+                ;
             }, 10);
         }
 
@@ -570,6 +597,8 @@
         closePopover();
 
         activePopover = popover;
+
+        ;
 
         // Add popover to the dedicated popover container
         const popoverContainer = document.getElementById('kefinTweaks-popover-container');
@@ -584,7 +613,9 @@
             popover.style.left = `${leftOffset}px`;
 
             popoverContainer.appendChild(popover);
+            ;
         } else {
+            ;
             triggerElement.style.position = 'relative';
             triggerElement.appendChild(popover);
         }
@@ -612,7 +643,7 @@
 
             const url = ApiClient.getUrl(`Users/${currentUserId}/Items/${itemId}`);
             const response = await ApiClient.getJSON(url);
-
+            ;
             return response;
         } catch (err) {
             console.error('Failed to get item details:', err);
@@ -627,7 +658,7 @@
                 imageTypeLimit: 1
             });
             const response = await ApiClient.getJSON(url);
-
+            ;
             return response.Items || [];
         } catch (err) {
             error('Failed to get seasons:', err);
@@ -649,7 +680,7 @@
                 SortBy: 'PremiereDate,ProductionYear,Sortname'
             });
             const response = await ApiClient.getJSON(url);
-
+            ;
             return response.Items || [];
         } catch (err) {
             error('Failed to get albums:', err);
@@ -682,7 +713,7 @@
                     unique.push(it);
                 }
             }
-
+            ;
             return unique;
         } catch (err) {
             error('Failed to get albums by artist IDs:', err);
@@ -702,7 +733,7 @@
                 SortBy: 'IndexNumber,SortName'
             });
             const response = await ApiClient.getJSON(url);
-
+            ;
             return response.Items || [];
         } catch (err) {
             error('Failed to get songs:', err);
@@ -734,6 +765,13 @@
                 return;
             }
 
+            // Check if the user is logged in
+            if (!ApiClient._loggedIn) {
+                clearBreadcrumbs();
+                hideBreadcrumbs();
+                return;
+            }
+
             // Extract item ID
             if (!item || !item.Id) {
                 clearBreadcrumbs();
@@ -750,9 +788,11 @@
 
             // Determine target breadcrumb structure
             const targetStructure = await getTargetBreadcrumbStructure(item);
+            ;
 
             // Check if we need to create breadcrumbs from scratch
             if (!breadcrumbContainer || !currentBreadcrumbs) {
+                ;
                 await createBreadcrumbsFromScratch(targetStructure);
             } else {
                 // Compare existing with target and apply differences
@@ -764,7 +804,9 @@
             currentBreadcrumbs = targetStructure;
             currentItemId = item.Id;
 
+            ;
             showBreadcrumbs();
+            ;
         } catch (err) {
             error('Error handling page change:', err);
             clearBreadcrumbs();
@@ -796,8 +838,14 @@
         // Replace the innerHTML entirely to avoid any duplicate appending issues
         breadcrumbContainer.innerHTML = '';
 
-        // Append all elements at once
-        elements.forEach(el => breadcrumbContainer.appendChild(el));
+        // Append all elements at once using fragment for performance
+        const fragment = document.createDocumentFragment();
+        for (let i = 0, len = elements.length; i < len; i++) {
+            fragment.appendChild(elements[i]);
+        }
+        breadcrumbContainer.appendChild(fragment);
+
+        ;
     }
 
     // Window resize handler
@@ -813,8 +861,12 @@
 
     // Initialize breadcrumbs
     function initialize() {
+        ;
+
         // Use utils for page change detection
         if (window.KefinTweaksUtils) {
+            ;
+
             // Register handler for all pages (breadcrumbs can appear on any detail page)
             window.KefinTweaksUtils.onViewPage(async (view, element, hash, itemPromise) => {
                 try {
@@ -837,6 +889,8 @@
 
         // Initial check
         handlePageChange();
+
+        ;
     }
 
     // Start initialization when DOM is ready

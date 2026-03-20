@@ -36,7 +36,7 @@ const UserProfile: FunctionComponent = () => {
         }
 
         loading.show();
-        window.ApiClient.getUser(userId).then(function (user) {
+        window.ApiClient.getUser(userId).then(function (user: any) {
             if (!user.Name || !user.Id) {
                 throw new Error('Unexpected null user name or id');
             }
@@ -66,11 +66,11 @@ const UserProfile: FunctionComponent = () => {
                     (page.querySelector('#btnDeleteImage') as HTMLButtonElement).classList.add('hide');
                     (page.querySelector('#btnAddImage') as HTMLButtonElement).classList.remove('hide');
                 }
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[userprofile] failed to get current user', err);
             });
             loading.hide();
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[userprofile] failed to load data', err);
         });
     }, [userId]);
@@ -126,7 +126,7 @@ const UserProfile: FunctionComponent = () => {
                 window.ApiClient.uploadUserImage(userId, ImageType.Primary, file).then(function () {
                     loading.hide();
                     reloadUser();
-                }).catch(err => {
+                }).catch((err: any) => {
                     console.error('[userprofile] failed to upload image', err);
                 });
             };
@@ -148,7 +148,7 @@ const UserProfile: FunctionComponent = () => {
                 window.ApiClient.deleteUserImage(userId, ImageType.Primary).then(function () {
                     loading.hide();
                     reloadUser();
-                }).catch(err => {
+                }).catch((err: any) => {
                     console.error('[userprofile] failed to delete image', err);
                 });
             }).catch(() => {

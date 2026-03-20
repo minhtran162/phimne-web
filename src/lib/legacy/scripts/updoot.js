@@ -1,6 +1,9 @@
 (function() {
     try {
+        ;
+
         if (!document.querySelector('link[href*="material-icons"]')) {
+            ;
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons';
@@ -15,6 +18,8 @@
         const backendUrl = `${window.location.origin}/updoot`;
         const adminUserIds = ['ee8996be37aa4da0912a08b410940d3e'];
 
+        ;
+
         let recommendButton = null;
         let recommendationsButton = null;
         let adminButton = null;
@@ -22,8 +27,10 @@
         let adminOverlay = null;
 
         async function fetchItemDetails(itemId) {
+            ;
             try {
                 const url = `${serverUrl}/Items/${itemId}?api_key=${apiKey}`; // Fixed typo from original: 'melalui' to 'apiKey'
+                ;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: { 'X-Emby-Token': apiKey }
@@ -33,6 +40,7 @@
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 const data = await response.json();
+                ;
                 return data;
             } catch (error) {
                 console.error('Error fetching item details:', error.message);
@@ -41,13 +49,17 @@
         }
 
         function createRecommendButton(playButton) {
+            ;
             if (!playButton || !playButton.parentNode) {
+                ;
                 return;
             }
             if (document.querySelector('.itemDetailPage:not(.hide) .btnRecommend')) {
+                ;
                 return;
             }
 
+            ;
             recommendButton = document.createElement('button');
             recommendButton.setAttribute('is', 'paper-icon-button-light');
             recommendButton.className = 'btnRecommend detailButton emby-button paper-icon-button-light';
@@ -68,11 +80,13 @@
 
             try {
                 playButton.parentNode.insertBefore(recommendButton, playButton.nextSibling || null);
+                ;
             } catch (error) {
                 console.error('Error inserting Recommend button:', error.message);
                 const targetContainer = document.querySelector('.detailPagePrimaryContainer, .detailButton-container');
                 if (targetContainer) {
                     targetContainer.appendChild(recommendButton);
+                    ;
                 }
             }
 
@@ -82,12 +96,15 @@
             const targetContainer = playButton.closest('.mainDetailButtons, .detailButton-container, .detailPagePrimaryContainer');
             if (targetContainer) {
                 targetContainer.appendChild(displayArea);
+                ;
             } else {
+                ;
             }
 
             createCommentsSection(targetContainer);
 
             recommendButton.addEventListener('click', () => {
+                ;
                 toggleRecommendation();
                 recommendButton.dataset.active = recommendButton.dataset.active === 'true' ? 'false' : 'true';
             });
@@ -96,13 +113,17 @@
         }
 
         function createCommentsSection(targetContainer) {
+            ;
             if (!targetContainer) {
+                ;
                 return;
             }
             if (document.querySelector('.commentsSection')) {
+                ;
                 return;
             }
 
+            ;
             const commentsSection = document.createElement('div');
             commentsSection.className = 'commentsSection';
             commentsSection.style.cssText = `
@@ -119,7 +140,10 @@
             addCommentButton.textContent = '+ Add Comment';
             addCommentButton.className = 'btnAddComment button-submit emby-button button-flat show-focus';
             addCommentButton.addEventListener('click', () => {
+                ;
                 if (!userId) {
+                    ;
+                    alert('Please log in to add a comment');
                     return;
                 }
                 commentForm.style.display = commentForm.style.display === 'none' ? 'block' : 'none';
@@ -133,6 +157,7 @@
             `;
             const sendButton = commentForm.querySelector('button');
             sendButton.addEventListener('click', () => {
+                ;
                 const textarea = commentForm.querySelector('textarea');
                 const comment = textarea.value.trim();
                 if (comment) {
@@ -142,6 +167,7 @@
                         updateCommentsDisplay();
                     });
                 } else {
+                    ;
                     alert('Comment cannot be empty');
                 }
             });
@@ -161,7 +187,9 @@
             const primaryContent = document.querySelector('.detailPagePrimaryContent.padded-right');
             if (primaryContent && primaryContent.parentNode) {
                 primaryContent.parentNode.insertBefore(commentsSection, primaryContent.nextSibling);
+                ;
             } else {
+                ;
                 targetContainer.appendChild(commentsSection);
             }
 
@@ -169,17 +197,22 @@
         }
 
         async function submitComment(comment) {
+            ;
             const itemId = getItemId();
             if (!itemId) {
+                ;
                 alert('Cannot add comment: Item not found');
                 return;
             }
             if (!userId) {
+                ;
+                alert('Please log in to add a comment');
                 return;
             }
 
             try {
                 const url = `${backendUrl}/comments`;
+                ;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -189,6 +222,7 @@
                     console.error('Comment submission failed:', `HTTP ${response.status}`);
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
+                ;
             } catch (error) {
                 console.error('Error submitting comment:', error.message);
                 alert('Failed to submit comment: ' + error.message);
@@ -196,12 +230,16 @@
         }
 
         async function editComment(commentId, newComment) {
+            ;
             if (!userId) {
+                ;
+                alert('Please log in to edit comment');
                 return;
             }
 
             try {
                 const url = `${backendUrl}/comments/${commentId}`;
+                ;
                 const response = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -211,6 +249,7 @@
                     console.error('Comment edit failed:', `HTTP ${response.status}`);
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
+                ;
                 updateCommentsDisplay();
             } catch (error) {
                 console.error('Error editing comment:', error.message);
@@ -219,12 +258,16 @@
         }
 
         async function deleteComment(commentId) {
+            ;
             if (!userId) {
+                ;
+                alert('Please log in to delete comment');
                 return;
             }
 
             try {
                 const url = `${backendUrl}/comments/${commentId}`;
+                ;
                 const response = await fetch(url, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -234,6 +277,7 @@
                     console.error('Comment deletion failed:', `HTTP ${response.status}`);
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
+                ;
                 updateCommentsDisplay();
             } catch (error) {
                 console.error('Error deleting comment:', error.message);
@@ -242,20 +286,24 @@
         }
 
         async function updateCommentsDisplay() {
+            ;
             const itemId = getItemId();
             const commentsDisplay = document.querySelector('.commentsDisplay');
             if (!itemId || !commentsDisplay) {
+                ;
                 return;
             }
 
             try {
                 const url = `${backendUrl}/comments/${itemId}`;
+                ;
                 const response = await fetch(url);
                 if (!response.ok) {
                     console.error('Fetch comments failed:', `HTTP ${response.status}`);
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 const comments = await response.json();
+                ;
                 commentsDisplay.innerHTML = '';
                 if (comments.length > 0) {
                     comments.forEach(comment => {
@@ -281,6 +329,7 @@
                                 cursor: pointer;
                             `;
                             editButton.addEventListener('click', () => {
+                                ;
                                 const newComment = prompt('Edit your comment:', comment.comment);
                                 if (newComment && newComment.trim()) {
                                     editComment(comment.id, newComment.trim());
@@ -297,6 +346,7 @@
                                 cursor: pointer;
                             `;
                             deleteButton.addEventListener('click', () => {
+                                ;
                                 if (confirm('Are you sure you want to delete this comment?')) {
                                     deleteComment(comment.id);
                                 }
@@ -308,6 +358,7 @@
                         commentsDisplay.appendChild(commentDiv);
                     });
                 } else {
+                    ;
                     commentsDisplay.innerHTML = '<p>No comments yet.</p>';
                 }
             } catch (error) {
@@ -317,17 +368,22 @@
         }
 
         async function toggleRecommendation() {
+            ;
             const itemId = getItemId();
             if (!itemId) {
+                ;
                 alert('Cannot recommend: Item not found');
                 return;
             }
             if (!userId) {
+                ;
+                alert('Please log in to recommend');
                 return;
             }
 
             try {
                 const url = `${backendUrl}/recommend`;
+                ;
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -338,6 +394,7 @@
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 const result = await response.json();
+                ;
                 updateRecommendationDisplay();
             } catch (error) {
                 console.error('Error toggling recommendation:', error.message);
@@ -346,20 +403,24 @@
         }
 
         async function updateRecommendationDisplay() {
+            ;
             const itemId = getItemId();
             const displayArea = document.querySelector('.recommendationArea');
             if (!itemId || !displayArea) {
+                ;
                 return;
             }
 
             try {
                 const url = `${backendUrl}/recommendations/${itemId}`;
+                ;
                 const response = await fetch(url);
                 if (!response.ok) {
                     console.error('Fetch recommendations failed:', `HTTP ${response.status}`);
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 const recommendations = await response.json();
+                ;
 
                 displayArea.innerHTML = '';
 
@@ -420,15 +481,18 @@
         }
 
         function getItemId() {
+            ;
             let itemId = null;
 
             const detailLogo = document.querySelector('.detailLogo.lazy.lazy-image-fadein-fast');
             if (detailLogo) {
                 const style = window.getComputedStyle(detailLogo);
                 const bgImage = style.backgroundImage;
+                ;
                 if (bgImage && bgImage.includes('/Items/')) {
                     const match = bgImage.match(/\/Items\/([0-9a-f]{32})\//);
                     itemId = match ? match[1] : null;
+                    ;
                 }
             }
 
@@ -437,14 +501,18 @@
                 if (backdropImage) {
                     const style = window.getComputedStyle(backdropImage);
                     const bgImage = style.backgroundImage;
+                    ;
                     if (bgImage && bgImage.includes('/Items/')) {
                         const match = bgImage.match(/\/Items\/([0-9a-f]{32})\//);
                         itemId = match ? match[1] : null;
+                        ;
                     }
                     if (!itemId && backdropImage.dataset.url) {
                         const dataUrl = backdropImage.dataset.url;
+                        ;
                         const match = dataUrl.match(/\/Items\/([0-9a-f]{32})\//);
                         itemId = match ? match[1] : null;
+                        ;
                     }
                 }
             }
@@ -452,6 +520,7 @@
             if (!itemId) {
                 const urlParams = new URLSearchParams(window.location.search);
                 itemId = urlParams.get('id');
+                ;
             }
 
             if (!itemId) {
@@ -459,18 +528,22 @@
                 if (hash.includes('details?id=')) {
                     const match = hash.match(/id=([^&]+)/);
                     itemId = match ? match[1] : null;
+                    ;
                 }
             }
 
             if (!itemId) {
                 const pathParts = window.location.pathname.split('/');
                 itemId = pathParts[pathParts.length - 1];
+                ;
             }
 
             if (!itemId || !/^[0-9a-f]{32}$/.test(itemId)) {
+                ;
                 return null;
             }
 
+            ;
             return itemId;
         }
 
@@ -479,9 +552,12 @@
                 return;
             }
 
+            ;
             if (!castButton || !castButton.parentNode) {
+                ;
             }
 
+            ;
             recommendationsButton = document.createElement('button');
             recommendationsButton.setAttribute('is', 'paper-icon-button-light');
             recommendationsButton.className = 'headerButton btnRecommendations emby-button paper-icon-button-light';
@@ -501,15 +577,18 @@
 
             try {
                 castButton.parentNode.insertBefore(recommendationsButton, castButton);
+                ;
             } catch (error) {
                 console.error('Error inserting Recommendations button:', error.message);
                 const topBar = document.querySelector('.headerRight, .headerTabs, .mainDrawer-scrollContainer, .header');
                 if (topBar) {
                     topBar.prepend(recommendationsButton);
+                    ;
                 }
             }
 
             recommendationsButton.addEventListener('click', () => {
+                ;
                 showRecommendationsOverlay();
             });
         }
@@ -519,10 +598,13 @@
                 return;
             }
 
+            ;
             if (!adminUserIds.includes(userId)) {
+                ;
                 return;
             }
 
+            ;
             adminButton = document.createElement('button');
             adminButton.setAttribute('is', 'paper-icon-button-light');
             adminButton.className = 'headerButton btnAdmin emby-button paper-icon-button-light';
@@ -536,6 +618,7 @@
                     adminButton.style.width = `${castWidth * 1.2}px`;
                     adminButton.style.height = `${castHeight * 1.2}px`;
                     castButton.parentNode.insertBefore(adminButton, castButton);
+                    ;
                 } else {
                     throw new Error('Cast button or its parent not found');
                 }
@@ -545,6 +628,7 @@
                 adminButton.style.height = '48px';
                 const topBar = document.querySelector('.headerRight, .headerTabs, .mainDrawer-scrollContainer, .header');
                 if (topBar) {
+                    ;
                     topBar.prepend(adminButton);
                 } else {
                     console.error('No topBar found for Admin button');
@@ -553,6 +637,7 @@
             }
 
             adminButton.addEventListener('click', () => {
+                ;
                 try {
                     showAdminOverlay();
                 } catch (error) {
@@ -563,7 +648,9 @@
         }
 
         async function showRecommendationsOverlay() {
+            ;
             if (!overlay) {
+                ;
                 overlay = document.createElement('div');
                 overlay.style.cssText = `
                     display: none;
@@ -605,12 +692,14 @@
                     cursor: pointer;
                 `;
                 closeButton.addEventListener('click', () => {
+                    ;
                     overlay.style.display = 'none';
                 });
                 overlay.appendChild(closeButton);
 
                 overlay.addEventListener('click', (e) => {
                     if (e.target === overlay) {
+                        ;
                         overlay.style.display = 'none';
                     }
                 });
@@ -620,10 +709,12 @@
             overlay.innerHTML = '';
             if (closeButton) {
                 overlay.appendChild(closeButton);
+                ;
             }
 
             try {
                 const url = `${backendUrl}/recommendations`;
+                ;
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -636,13 +727,16 @@
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 const recommendations = await response.json();
+                ;
 
                 if (!Array.isArray(recommendations) || recommendations.length === 0) {
+                    ;
                     const noRecsMessage = document.createElement('p');
                     noRecsMessage.textContent = 'No recommendations available yet.';
                     noRecsMessage.style.cssText = 'width: 100%; text-align: center;';
                     overlay.appendChild(noRecsMessage);
                     overlay.style.display = 'flex';
+                    ;
                     return;
                 }
 
@@ -656,8 +750,10 @@
 
                 for (const itemId in groupedByItem) {
                     const usernames = groupedByItem[itemId];
+                    ;
                     const itemDetails = await fetchItemDetails(itemId);
                     if (!itemDetails) {
+                        ;
                         continue;
                     }
 
@@ -674,6 +770,7 @@
                         box-sizing: border-box;
                     `;
                     card.addEventListener('click', () => {
+                        ;
                         window.location.href = `/web/index.html#!/details?id=${itemId}`;
                         overlay.style.display = 'none';
                     });
@@ -693,9 +790,11 @@
                     `;
 
                     overlay.appendChild(card);
+                    ;
                 }
 
                 overlay.style.display = 'flex';
+                ;
             } catch (error) {
                 console.error('Error fetching recommendations:', error.message);
                 const errorMessage = document.createElement('p');
@@ -703,16 +802,20 @@
                 errorMessage.style.cssText = 'width: 100%; text-align: center;';
                 overlay.appendChild(errorMessage);
                 overlay.style.display = 'flex';
+                ;
             }
         }
 
         async function showAdminOverlay() {
+            ;
             if (!adminUserIds.includes(userId)) {
+                ;
                 alert('Access denied: Admin privileges required');
                 return;
             }
 
             if (!adminOverlay) {
+                ;
                 adminOverlay = document.createElement('div');
                 adminOverlay.style.cssText = `
                     display: none;
@@ -731,6 +834,7 @@
                 `;
                 try {
                     document.body.appendChild(adminOverlay);
+                    ;
                 } catch (error) {
                     console.error('Error appending admin overlay:', error.message);
                     alert('Failed to create admin overlay: ' + error.message);
@@ -755,12 +859,15 @@
                     cursor: pointer;
                 `;
                 closeButton.addEventListener('click', () => {
+                    ;
                     adminOverlay.style.display = 'none';
                 });
                 adminOverlay.appendChild(closeButton);
+                ;
 
                 adminOverlay.addEventListener('click', (e) => {
                     if (e.target === adminOverlay) {
+                        ;
                         adminOverlay.style.display = 'none';
                     }
                 });
@@ -785,17 +892,21 @@
                 cursor: pointer;
             `;
             closeButton.addEventListener('click', () => {
+                ;
                 adminOverlay.style.display = 'none';
             });
             adminOverlay.appendChild(closeButton);
+            ;
 
             try {
+                ;
                 const settingsResponse = await fetch(`${backendUrl}/admin/settings`);
                 if (!settingsResponse.ok) {
                     console.error('Fetch settings failed:', `HTTP ${settingsResponse.status}`);
                     throw new Error(`HTTP ${settingsResponse.status}: ${await settingsResponse.text()}`);
                 }
                 const settings = await settingsResponse.json();
+                ;
 
                 const settingsForm = document.createElement('div');
                 settingsForm.style.cssText = 'margin-bottom: 20px;';
@@ -814,6 +925,7 @@
                 `;
                 const saveButton = settingsForm.querySelector('button');
                 saveButton.addEventListener('click', async () => {
+                    ;
                     const globalLimit = parseInt(document.getElementById('globalLimit').value) || 0;
                     const userIdLimit = document.getElementById('userIdLimit').value.trim();
                     const perUserLimit = parseInt(document.getElementById('perUserLimit').value) || 0;
@@ -827,6 +939,7 @@
                             console.error('Save settings failed:', `HTTP ${response.status}`);
                             throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                         }
+                        ;
                         alert('Settings saved successfully');
                     } catch (error) {
                         console.error('Error saving settings:', error.message);
@@ -834,13 +947,16 @@
                     }
                 });
                 adminOverlay.appendChild(settingsForm);
+                ;
 
+                ;
                 const commentsResponse = await fetch(`${backendUrl}/admin/comments`);
                 if (!commentsResponse.ok) {
                     console.error('Fetch comments failed:', `HTTP ${commentsResponse.status}`);
                     throw new Error(`HTTP ${commentsResponse.status}: ${await commentsResponse.text()}`);
                 }
                 const comments = await commentsResponse.json();
+                ;
 
                 const commentSection = document.createElement('div');
                 commentSection.innerHTML = `
@@ -854,21 +970,26 @@
                 const deleteSelectedButton = commentSection.querySelector('#deleteSelected');
 
                 selectAllCheckbox.addEventListener('change', () => {
+                    ;
                     const checkboxes = commentSection.querySelectorAll('.commentCheckbox');
                     checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
                 });
 
                 deleteSelectedButton.addEventListener('click', async () => {
+                    ;
                     const selectedIds = Array.from(commentSection.querySelectorAll('.commentCheckbox:checked')).map(cb => cb.dataset.commentId);
                     if (selectedIds.length === 0) {
+                        ;
                         alert('No comments selected');
                         return;
                     }
                     if (!confirm(`Are you sure you want to delete ${selectedIds.length} comment(s)?`)) {
+                        ;
                         return;
                     }
                     try {
                         for (const commentId of selectedIds) {
+                            ;
                             const response = await fetch(`${backendUrl}/admin/comments/${commentId}`, {
                                 method: 'DELETE'
                             });
@@ -876,6 +997,7 @@
                                 console.error('Delete comment failed:', `HTTP ${response.status}`);
                                 throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                             }
+                            ;
                         }
                         showAdminOverlay(); // Refresh
                     } catch (error) {
@@ -894,7 +1016,9 @@
                     `;
                     const deleteButton = commentDiv.querySelector('button');
                     deleteButton.addEventListener('click', async () => {
+                        ;
                         if (!confirm('Are you sure you want to delete this comment?')) {
+                            ;
                             return;
                         }
                         try {
@@ -905,6 +1029,7 @@
                                 console.error('Delete comment failed:', `HTTP ${response.status}`);
                                 throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                             }
+                            ;
                             commentDiv.remove();
                         } catch (error) {
                             console.error('Error deleting comment:', error.message);
@@ -915,6 +1040,7 @@
                 });
 
                 adminOverlay.appendChild(commentSection);
+                ;
 
                 const bulkDeleteForm = document.createElement('div');
                 bulkDeleteForm.style.cssText = 'margin-top: 20px;';
@@ -925,12 +1051,15 @@
                 `;
                 const bulkDeleteButton = bulkDeleteForm.querySelector('button');
                 bulkDeleteButton.addEventListener('click', async () => {
+                    ;
                     const bulkUserId = document.getElementById('bulkUserId').value.trim();
                     if (!bulkUserId) {
+                        ;
                         alert('Please enter a User ID');
                         return;
                     }
                     if (!confirm(`Are you sure you want to delete all comments by user ${bulkUserId}?`)) {
+                        ;
                         return;
                     }
                     try {
@@ -941,6 +1070,7 @@
                             console.error('Bulk delete failed:', `HTTP ${response.status}`);
                             throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                         }
+                        ;
                         alert('Comments deleted successfully');
                         showAdminOverlay();
                     } catch (error) {
@@ -950,8 +1080,10 @@
                 });
 
                 adminOverlay.appendChild(bulkDeleteForm);
+                ;
 
                 adminOverlay.style.display = 'block';
+                ;
             } catch (error) {
                 console.error('Error loading admin overlay:', error.message);
                 const errorMessage = document.createElement('p');
@@ -959,10 +1091,12 @@
                 errorMessage.style.cssText = 'width: 100%; text-align: center;';
                 adminOverlay.appendChild(errorMessage);
                 adminOverlay.style.display = 'block';
+                ;
             }
         }
 
         function cleanupExistingElements() {
+            ;
             const elements = [
                 document.querySelector('.btnRecommend'),
                 document.querySelector('.btnRecommendations'),
@@ -975,6 +1109,7 @@
             elements.forEach(el => {
                 if (el) {
                     el.remove();
+                    ;
                 }
             });
             recommendButton = null;
@@ -985,19 +1120,25 @@
         }
 
         function init() {
+            ;
             function tryAddButtons() {
+                ;
                 const playButton = document.querySelector('.mainDetailButtons .btnPlaystate, .detailButton-container button[data-id="play"]');
                 const castButton = document.querySelector('.headerRight .headerCastButton, .headerTabs button[data-id="cast"], .mainDrawer-scrollContainer .castButton');
 
                 if (playButton) {
+                    ;
                     createRecommendButton(playButton);
                 } else {
+                    ;
                 }
 
                 if (castButton) {
+                    ;
                     createRecommendationsButton(castButton);
                     createAdminButton(castButton);
                 } else {
+                    ;
                     createAdminButton(null);
                 }
             }
@@ -1006,6 +1147,7 @@
             tryAddButtons();
 
             /*  const observer = new MutationObserver(() => {
+                //;
                 //tryAddButtons();
             });
             observer.observe(document.body, {
@@ -1017,23 +1159,30 @@
             let attempts = 0;
             const maxAttempts = 10;
             const retryInterval = setInterval(() => {
+                ;
                 tryAddButtons();
                 attempts++;
                 if (document.querySelector('.btnRecommend') && document.querySelector('.btnRecommendations') || attempts >= maxAttempts) {
+                    ;
                     clearInterval(retryInterval);
                 }
             }, 2000);
         }
 
         function setupNavigationListener() {
+            ;
             const homeButton = document.querySelector('.headerHomeButton, .skinHeader .emby-button[title="Home"]');
             if (homeButton) {
                 homeButton.addEventListener('click', () => {
+                    ;
                     setTimeout(() => {
+                        ;
                         init();
                     }, 500); // Delay to allow page navigation
                 });
+                ;
             } else {
+                ;
             }
 
             // Observe URL changes for SPA navigation
@@ -1041,7 +1190,9 @@
             const urlObserver = new MutationObserver(() => {
                 const currentUrl = window.location.href;
                 if (currentUrl !== lastUrl) {
+                    ;
                     lastUrl = currentUrl;
+                    ;
                     setTimeout(() => init(), 500); // Delay to allow DOM to settle
                 }
             });
@@ -1050,23 +1201,29 @@
             /*             // Override history API to catch SPA navigation
             const originalPushState = history.pushState;
             history.pushState = function(state, title, url) {
+                ;
                 originalPushState.apply(this, arguments);
+                ;
                 setTimeout(() => init(), 500);
             };
 
             const originalReplaceState = history.replaceState;
             history.replaceState = function(state, title, url) {
+                ;
                 originalReplaceState.apply(this, arguments);
+                ;
                 setTimeout(() => init(), 500);
             }; */
         }
 
         if (document.readyState === 'loading') {
+            ;
             document.addEventListener('DOMContentLoaded', () => {
                 init();
                 setupNavigationListener();
             });
         } else {
+            ;
             init();
             setupNavigationListener();
         }

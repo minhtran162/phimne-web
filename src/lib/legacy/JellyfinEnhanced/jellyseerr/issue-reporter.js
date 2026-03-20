@@ -29,48 +29,53 @@
     ];
 
     /**
-     * Checks if issue reporting is available (item has TMDB ID and Jellyseerr configured)
-     * Caches the result to avoid repeated checks.
-     * Returns: 'available', 'no-tmdb', or 'no-jellyseerr'
+     * Checks if issue reporting is available.
+     * Resolves TMDB via parent series or fallback for Season/Episode items.
+     * Returns: 'available', 'no-tmdb', 'no-jellyseerr', or 'no-both'
      * @returns {Promise<string>}
      */
     issueReporter.checkReportingAvailability = async function (item) {
-        // Return cached result if available
-        if (cachedUserCanReport !== null) {
-            return cachedUserCanReport;
-        }
-
         try {
-            // Check if item has TMDB ID
-            const hasTmdbId = item && (item.ProviderIds?.Tmdb || item.ProviderIds?.['Tmdb']);
-
-            // Check Jellyseerr status
+            // Check Jellyseerr status first
             const statusUrl = ApiClient.getUrl('/JellyfinEnhanced/jellyseerr/status');
-            const statusRes = await ApiClient.ajax({
-                type: 'GET',
-                url: statusUrl,
-                dataType: 'json'
-            });
-
+            const statusRes = await ApiClient.ajax({ type: 'GET', url: statusUrl, dataType: 'json' });
             const jellyseerrActive = statusRes && statusRes.active === true;
 
+            // Resolve TMDB ID: direct, parent (for Season/Episode), or fallback search
+            let tmdbId = item && (item.ProviderIds?.Tmdb || item.ProviderIds?.['Tmdb']);
+            const type = item?.Type;
+
+            // If Season or Episode without TMDB, attempt parent series
+            if (!tmdbId && (type === 'Season' || type === 'Episode')) {
+                try {
+                    const parentId = item.SeriesId || item.ParentId || (item.Series && item.Series.Id) || null;
+                    const userId = ApiClient.getCurrentUserId();
+                    if (parentId && userId) {
+                        const parentItem = JE.helpers?.getItemCached ?
+                            await JE.helpers.getItemCached(parentId, { userId }) :
+                            await ApiClient.getItem(userId, parentId);
+                        tmdbId = parentItem?.ProviderIds?.Tmdb || parentItem?.ProviderIds?.['Tmdb'] || null;
+                        if (tmdbId) {
+
+                        }
+                    }
+                } catch (e) {
+
+                }
+            }
             // Determine availability
-            if (!hasTmdbId && !jellyseerrActive) {
-                cachedUserCanReport = 'no-both';
+            const hasTmdb = !!tmdbId;
+            if (!hasTmdb && !jellyseerrActive) {
                 return 'no-both';
-            } else if (!hasTmdbId) {
-                cachedUserCanReport = 'no-tmdb';
+            } else if (!hasTmdb) {
                 return 'no-tmdb';
             } else if (!jellyseerrActive) {
-                cachedUserCanReport = 'no-jellyseerr';
                 return 'no-jellyseerr';
             }
 
             // Both available
-            cachedUserCanReport = 'available';
             return 'available';
         } catch (error) {
-            console.debug(`${logPrefix} Error checking reporting availability:`, error);
             // On error, assume available and let the actual request fail if needed
             cachedUserCanReport = 'available';
             return 'available';
@@ -140,7 +145,7 @@
         `;
 
         // Create modal using the existing modal system
-        const { modalElement, show, close } = JE.jellyseerrModal.create({
+        const { modalElement, show } = JE.jellyseerrModal.create({
             title: JE.t('jellyseerr_report_issue_title'),
             subtitle: itemName,
             bodyHtml: formHtml,
@@ -177,13 +182,20 @@
 
                     if (result) {
                         JE.toast(JE.t('jellyseerr_report_issue_success'), 3000);
+
                         closeModal();
                     } else {
                         throw new Error('No response from API');
                     }
                 } catch (error) {
                     console.error(`${logPrefix} Error reporting issue:`, error);
-                    JE.toast(JE.t('jellyseerr_report_issue_error'), 4000);
+                    // Check if error is due to Jellyseerr being unavailable
+                    const errorMsg = error?.message || error?.toString() || '';
+                    if (errorMsg.toLowerCase().includes('jellyseerr') || errorMsg.toLowerCase().includes('unavailable') || error?.status === 503 || error?.status === 0) {
+                        JE.toast('Jellyseerr is not available', 4000);
+                    } else {
+                        JE.toast(JE.t('jellyseerr_report_issue_error'), 4000);
+                    }
                     button.disabled = false;
                     button.textContent = JE.t('jellyseerr_report_issue_submit');
                 }
@@ -202,15 +214,15 @@
             };
 
             const issueTypeLabels = {
-                1: 'Video',
-                2: 'Audio',
-                3: 'Subtitles',
-                4: 'Other'
+                1: JE.t('jellyseerr_report_issue_type_video') || 'Video',
+                2: JE.t('jellyseerr_report_issue_type_audio') || 'Audio',
+                3: JE.t('jellyseerr_report_issue_type_subtitles') || 'Subtitles',
+                4: JE.t('jellyseerr_report_issue_type_other') || 'Other'
             };
 
             const statusLabels = {
-                1: 'Open',
-                2: 'Resolved'
+                1: JE.t('jellyseerr_issue_open') || 'Open',
+                2: JE.t('jellyseerr_issue_resolved') || 'Resolved'
             };
 
             const fmtDate = (iso) => {
@@ -261,7 +273,6 @@
                             .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                             .map(issue => {
                                 const status = issue.status;
-                                const typeLabel = issueTypeLabels[issue.issueType] || 'Other';
                                 const createdBy = escapeHtml(
                                     issue.createdBy?.jellyfinUsername
                                     || issue.createdBy?.displayName
@@ -407,13 +418,11 @@
                                     const eps = epsRes?.Items || [];
                                     s.episodes = eps.map(ep => ({ episodeNumber: parseInt(ep.IndexNumber || ep.ParentIndexNumber || ep.Index || 0) || 0, title: ep.Name || ep.Title || '' }));
                                 } catch (e) {
-                                    console.debug(`${logPrefix} Failed to fetch episodes for season ${s.seasonNumber}:`, e);
                                     s.episodes = [];
                                 }
                             }
                         }
                     } catch (e) {
-                        console.debug(`${logPrefix} Error fetching seasons/episodes from Jellyfin:`, e);
                         normalized = [];
                     }
 
@@ -427,9 +436,9 @@
 
                     // If still no seasons discovered, show a single 'All seasons' option and disable episode selector
                     if (!normalized || normalized.length === 0) {
-                        setOptions(seasonSelect, [{ value: 0, label: 'All seasons' }]);
+                        setOptions(seasonSelect, [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All seasons' }]);
                         seasonSelect.disabled = true;
-                        setOptions(episodeSelect, [{ value: 0, label: 'All episodes' }]);
+                        setOptions(episodeSelect, [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All episodes' }]);
                         episodeSelect.disabled = true;
                         return;
                     }
@@ -438,10 +447,10 @@
                     const seasonOptions = [];
                     // If more than one season, add 'All seasons'
                     if (normalized.length > 1) {
-                        seasonOptions.push({ value: 0, label: 'All seasons' });
+                        seasonOptions.push({ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All seasons' });
                     }
                     for (const s of normalized) {
-                        seasonOptions.push({ value: s.seasonNumber, label: `Season ${s.seasonNumber}` });
+                        seasonOptions.push({ value: s.seasonNumber, label: `${JE.t('jellyseerr_report_issue_season') || 'Season'} ${s.seasonNumber}` });
                     }
 
                     setOptions(seasonSelect, seasonOptions);
@@ -451,14 +460,14 @@
                     const populateEpisodesForSeason = (seasonNum) => {
                         const s = normalized.find(x => x.seasonNumber === parseInt(seasonNum));
                         if (!s) {
-                            setOptions(episodeSelect, [{ value: 0, label: 'All episodes' }]);
+                            setOptions(episodeSelect, [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All episodes' }]);
                             episodeSelect.disabled = true;
                             return;
                         }
                         const eps = s.episodes && s.episodes.length > 0 ? s.episodes : [];
-                        const epOptions = [{ value: 0, label: 'All episodes' }];
+                        const epOptions = [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All episodes' }];
                         if (eps.length > 0) {
-                            for (const ep of eps) epOptions.push({ value: ep.episodeNumber, label: `Episode ${ep.episodeNumber}${ep.title ? ' — ' + ep.title : ''}` });
+                            for (const ep of eps) epOptions.push({ value: ep.episodeNumber, label: `${JE.t('jellyseerr_report_issue_episode') || 'Episode'} ${ep.episodeNumber}${ep.title ? ' — ' + ep.title : ''}` });
                         }
                         setOptions(episodeSelect, epOptions);
                         episodeSelect.disabled = false;
@@ -502,7 +511,7 @@
                         if (normalized.length > 1) {
                             seasonSelect.value = '0';
                             // Ensure the episode select shows the 'All episodes' option when defaulting
-                            setOptions(episodeSelect, [{ value: 0, label: 'All episodes' }]);
+                            setOptions(episodeSelect, [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All episodes' }]);
                             episodeSelect.disabled = true;
                         } else {
                             // Single season - select it
@@ -516,14 +525,14 @@
                         const val = seasonSelect.value;
                         if (!val || val === '0') {
                             // All seasons => show a single "All episodes" option to avoid blank UI and disable selection
-                            setOptions(episodeSelect, [{ value: 0, label: 'All episodes' }]);
+                            setOptions(episodeSelect, [{ value: 0, label: JE.t('jellyseerr_select_all_seasons') || 'All episodes' }]);
                             episodeSelect.disabled = true;
                         } else {
                             populateEpisodesForSeason(parseInt(val));
                         }
                     });
                 } catch (err) {
-                    console.debug(`${logPrefix} Error building tv controls:`, err);
+
                 }
             })();
         }
@@ -582,14 +591,14 @@
         let title = JE.t('jellyseerr_report_unavailable_button');
 
         if (reason === 'no-tmdb') {
-            ariaLabel = 'TMDB not configured';
-            title = 'TMDB is not configured';
+            ariaLabel = 'TMDB ID not found';
+            title = 'TMDB ID not found for this item';
         } else if (reason === 'no-jellyseerr') {
             ariaLabel = 'Jellyseerr unavailable';
             title = 'Jellyseerr is not available';
         } else if (reason === 'no-both') {
             ariaLabel = 'Reporting services unavailable';
-            title = 'TMDB and Jellyseerr are not configured';
+            title = 'TMDB ID not found and Jellyseerr is not available';
         } else if (reason === 'no-permissions') {
             ariaLabel = 'Not enough permissions';
             title = 'Not enough permissions to report';
@@ -600,7 +609,7 @@
         button.disabled = true;
         button.innerHTML = `
             <div class="detailButton-content">
-                <span class="material-icons detailButton-icon warning_off" aria-hidden="true"></span>
+                <span class="material-icons detailButton-icon" aria-hidden="true">warning_off</span>
             </div>
         `;
 
@@ -609,11 +618,11 @@
             e.preventDefault();
             e.stopPropagation();
             if (reason === 'no-tmdb') {
-                JE.toast('TMDB is not configured', 4000);
+                JE.toast('TMDB ID not found for this item', 4000);
             } else if (reason === 'no-jellyseerr') {
                 JE.toast('Jellyseerr is not available', 4000);
             } else if (reason === 'no-both') {
-                JE.toast('TMDB and Jellyseerr are not configured', 4000);
+                JE.toast('TMDB ID not found and Jellyseerr is not available', 4000);
             } else if (reason === 'no-permissions') {
                 JE.toast('You do not have permissions to report issues', 4000);
             } else {
@@ -630,11 +639,9 @@
      */
     issueReporter.getTmdbIdFallback = async function (itemName, mediaType, item) {
         try {
-            console.debug(`${logPrefix} Attempting fallback TMDB lookup for ${itemName}`);
-
             // Check other provider IDs that might help
             if (item.ProviderIds?.Imdb) {
-                console.debug(`${logPrefix} Found IMDB ID: ${item.ProviderIds.Imdb}, could use for lookup`);
+
             }
 
             // Try to use External URLs which might contain TMDB link
@@ -671,7 +678,7 @@
                         }
                     } catch (e) {
                         // Continue to next entry if any unexpected structure is encountered
-                        console.debug(`${logPrefix} Skipping ExternalUrls entry due to error:`, e);
+
                         continue;
                     }
                 }
@@ -683,7 +690,6 @@
                     // Prefer IMDB lookup when available
                     const imdbId = item.ProviderIds?.Imdb;
                     if (imdbId) {
-                        console.debug(`${logPrefix} Trying Jellyseerr search by IMDB ID: ${imdbId}`);
                         const res = await JE.jellyseerrAPI.search(imdbId);
                         if (res && Array.isArray(res.results) && res.results.length > 0) {
                             // Prefer a result with matching mediaType
@@ -701,7 +707,7 @@
                     // Try name + year search
                     const year = item.ProductionYear || (item.PremiereDate ? item.PremiereDate.substring(0, 4) : null) || '';
                     const titleQuery = `${item.Name}${year ? ' ' + year : ''}`;
-                    console.debug(`${logPrefix} Trying Jellyseerr search by title: "${titleQuery}"`);
+
                     const res2 = await JE.jellyseerrAPI.search(titleQuery);
                     if (res2 && Array.isArray(res2.results) && res2.results.length > 0) {
                         // Try to find best match: exact title and same year
@@ -723,12 +729,11 @@
                     }
                 }
             } catch (error) {
-                console.debug(`${logPrefix} Jellyseerr search fallback failed:`, error);
+
             }
 
             return null;
         } catch (error) {
-            console.debug(`${logPrefix} Fallback lookup failed:`, error);
             return null;
         }
     };
@@ -743,13 +748,11 @@
         }
         // Don't add if plugin or report-button feature is disabled
         if (!JE.pluginConfig?.JellyseerrEnabled || !JE.pluginConfig?.JellyseerrShowReportButton) {
-            console.debug(`${logPrefix} Jellyseerr or report button disabled, skipping`);
             return false;
         }
 
         // Check if we already added the button (either active or unavailable)
         if (itemDetailPage.querySelector('.jellyseerr-report-issue-icon, .jellyseerr-report-unavailable-icon')) {
-            console.debug(`${logPrefix} Report button already exists`);
             return true;
         }
 
@@ -757,20 +760,19 @@
             // Get item ID from URL hash (same way as reviews.js)
             const itemId = new URLSearchParams(window.location.hash.split('?')[1]).get('id');
             if (!itemId) {
-                console.debug(`${logPrefix} No item ID in URL`);
                 return false;
             }
 
             // Fetch item data from Jellyfin API (same way as reviews.js)
             const userId = ApiClient.getCurrentUserId();
             if (!userId) {
-                console.debug(`${logPrefix} No user ID found`);
                 return false;
             }
 
-            const item = await ApiClient.getItem(userId, itemId);
+            const item = JE.helpers?.getItemCached ?
+                await JE.helpers.getItemCached(itemId, { userId }) :
+                await ApiClient.getItem(userId, itemId);
             if (!item) {
-                console.debug(`${logPrefix} Could not fetch item data`);
                 return false;
             }
 
@@ -779,8 +781,6 @@
 
             // If services not available, show unavailable button
             if (availability !== 'available') {
-                console.debug(`${logPrefix} Reporting not available: ${availability}`);
-
                 // Try to add an unavailable button
                 let buttonContainerUnavail = null;
                 const selectorsUnavail = [
@@ -817,6 +817,7 @@
                         } else {
                             buttonContainerUnavail.appendChild(unavailButton);
                         }
+
                         return true;
                     }
                 }
@@ -830,20 +831,16 @@
 
             // Do not display report button for non-media collection pages (collections/boxsets/etc.)
             if (!isTvLike && !isMovie) {
-                console.debug(`${logPrefix} Skipping ${item.Name}: unsupported item type (${item.Type}) — likely a collection/boxset`);
                 return false;
             }
 
             const mediaType = isTvLike ? 'tv' : 'movie';
-
-            console.debug(`${logPrefix} Checking item: ${item.Name} (type=${item.Type}, mediaType=${mediaType}, TMDB: ${tmdbId})`);
 
             // Remove report button for special seasons (season 0) and special episodes (season 0)
             try {
                 if (item.Type === 'Season') {
                     const seasonNumber = parseInt(item.IndexNumber || item.SeasonNumber || item.Index || 0) || 0;
                     if (seasonNumber === 0) {
-                        console.debug(`${logPrefix} Skipping ${item.Name}: special season (season 0)`);
                         return false;
                     }
                 }
@@ -852,13 +849,12 @@
                     // Episode items often contain the season number in ParentIndexNumber or SeasonNumber
                     const parentSeason = parseInt(item.ParentIndexNumber || item.SeasonIndex || item.ParentIndex || item.SeasonNumber || 0) || 0;
                     if (parentSeason === 0) {
-                        console.debug(`${logPrefix} Skipping ${item.Name}: special episode (season 0)`);
                         return false;
                     }
                 }
             } catch (e) {
                 // If any unexpected shape, don't block the flow; just continue
-                console.debug(`${logPrefix} Could not determine season index for special detection:`, e);
+
             }
 
             // If no TMDB ID, and this is a Season/Episode, try to fetch parent/series TMDB ID first
@@ -867,10 +863,11 @@
                     // Common fields that may point to the series/parent item
                     const parentId = item.SeriesId || item.ParentId || item.ParentId || (item.Parent && item.Parent.Id) || (item.Series && item.Series.Id) || null;
                     if (parentId) {
-                        console.debug(`${logPrefix} Found parentId ${parentId} for ${item.Name}, fetching parent item`);
                         const userId2 = ApiClient.getCurrentUserId();
                         if (userId2) {
-                            const parentItem = await ApiClient.getItem(userId2, parentId);
+                            const parentItem = JE.helpers?.getItemCached ?
+                                await JE.helpers.getItemCached(parentId, { userId: userId2 }) :
+                                await ApiClient.getItem(userId2, parentId);
                             if (parentItem) {
                                 const parentTmdb = parentItem.ProviderIds?.Tmdb;
                                 if (parentTmdb) {
@@ -880,18 +877,15 @@
                         }
                     }
                 } catch (err) {
-                    console.debug(`${logPrefix} Error fetching parent item for TMDB lookup:`, err);
+
                 }
             }
 
             // If still no TMDB ID, try the general fallback lookup (may inspect names/urls)
             if (!tmdbId) {
-                console.debug(`${logPrefix} No direct TMDB ID found for ${item.Name}, trying fallback...`);
                 tmdbId = await issueReporter.getTmdbIdFallback(item.Name, mediaType, item);
 
                 if (!tmdbId) {
-                    console.debug(`${logPrefix} No TMDB ID could be resolved for ${item.Name} (fallback also failed)`);
-
                     // Try to add a disabled 'unavailable' button in-place to inform the user
                     let buttonContainerFallback = null;
                     const selectorsFallback = [
@@ -928,16 +922,18 @@
                             } else {
                                 buttonContainerFallback.appendChild(unavailableButton);
                             }
+
                             return true;
                         }
                     }
 
                     return false;
+                } else {
+
                 }
             }
 
             if (mediaType !== 'tv' && mediaType !== 'movie') {
-                console.debug(`${logPrefix} Skipping ${item.Name}: invalid type (${mediaType})`);
                 return false;
             }
 
@@ -959,7 +955,7 @@
                 const found = itemDetailPage.querySelector(selector);
                 if (found) {
                     buttonContainer = found;
-                    console.debug(`${logPrefix} Found button container with selector: ${selector}`);
+
                     break;
                 }
             }
@@ -969,12 +965,10 @@
                 const allButtons = itemDetailPage.querySelectorAll('button');
                 if (allButtons.length > 0) {
                     buttonContainer = allButtons[allButtons.length - 1].parentElement;
-                    console.debug(`${logPrefix} Using parent of last button as container`);
                 }
             }
 
             if (!buttonContainer) {
-                console.debug(`${logPrefix} Could not find button container for ${item.Name}`);
                 return false;
             }
 
@@ -1007,6 +1001,7 @@
                 } else {
                     buttonContainer.appendChild(button);
                 }
+
                 return true;
             }
         } catch (error) {
@@ -1021,16 +1016,16 @@
      */
     issueReporter.initialize = async function () {
         if (!JE.pluginConfig?.JellyseerrEnabled || !JE.pluginConfig?.JellyseerrShowReportButton) {
-            console.debug(`${logPrefix} Jellyseerr or report-button feature disabled, skipping initialization`);
             return;
         }
+
+        JE.jellyseerrUI?.addMainStyles?.();
 
         // Verify Jellyseerr is reachable and active via the server-side status endpoint
         try {
             const statusUrl = ApiClient.getUrl('/JellyfinEnhanced/jellyseerr/status');
             const statusRes = await ApiClient.ajax({ type: 'GET', url: statusUrl, dataType: 'json' });
             if (!statusRes || !statusRes.active) {
-                console.debug(`${logPrefix} Jellyseerr status check returned inactive, skipping reporter init`);
                 return;
             }
         } catch (e) {

@@ -42,10 +42,10 @@
                 return;
             }
 
-            // Convert bookmark data back to PascalCase for server
+            // Convert data back to PascalCase for server C# deserialization
             let dataToSave = settings;
-            if (fileName === 'bookmark.json' && typeof JE.helpers.toPascalCase === 'function') {
-                dataToSave = JE.helpers.toPascalCase(settings);
+            if ((fileName === 'bookmark.json' || fileName === 'settings.json') && typeof window.JellyfinEnhanced?.toPascalCase === 'function') {
+                dataToSave = window.JellyfinEnhanced.toPascalCase(settings);
             }
 
             await ApiClient.ajax({
@@ -70,15 +70,23 @@
             autoPauseEnabled: true, autoResumeEnabled: false, autoPipEnabled: false,
             autoSkipIntro: false, autoSkipOutro: false,
             selectedStylePresetIndex: 0, selectedFontSizePresetIndex: 2, selectedFontFamilyPresetIndex: 0,
+            customSubtitleTextColor: '#FFFFFFFF', customSubtitleBgColor: '#00000000',
+            usingCustomColors: false,
             disableCustomSubtitleStyles: false, randomButtonEnabled: true,
             randomIncludeMovies: true, randomIncludeShows: true, randomUnwatchedOnly: false,
             showWatchProgress: false, showFileSizes: false, showAudioLanguages: true, removeContinueWatchingEnabled: false,
+            watchProgressMode: 'percentage',
+            watchProgressTimeFormat: 'hours',
             pauseScreenEnabled: true,
-            qualityTagsEnabled: false, genreTagsEnabled: false, languageTagsEnabled: false, ratingTagsEnabled: false,
+            qualityTagsEnabled: false, genreTagsEnabled: false, languageTagsEnabled: false, ratingTagsEnabled: false, peopleTagsEnabled: false,
             qualityTagsPosition: 'top-left', genreTagsPosition: 'top-right', languageTagsPosition: 'bottom-left', ratingTagsPosition: 'bottom-right',
             showRatingInPlayer: true,
             reviewsExpandedByDefault: false,
-            disableAllShortcuts: false, longPress2xEnabled: false, lastOpenedTab: 'shortcuts'
+            displayLanguage: '',
+            calendarDisplayMode: 'list',
+            calendarDefaultViewMode: 'agenda',
+            disableAllShortcuts: false, longPress2xEnabled: false, lastOpenedTab: 'shortcuts',
+            isAdmin: undefined
         };
 
         const mergedSettings = {};
@@ -99,7 +107,16 @@
             }
         }
 
+        mergedSettings.displayLanguage = userSettings.hasOwnProperty('displayLanguage') ?
+            userSettings.displayLanguage :
+            (pluginDefaults.DefaultLanguage || '');
         mergedSettings.lastOpenedTab = userSettings.lastOpenedTab || 'shortcuts';
+
+        // Ensure isAdmin is always present (even if undefined) so it can be set later
+        if (!mergedSettings.hasOwnProperty('isAdmin')) {
+            mergedSettings.isAdmin = userSettings.isAdmin !== undefined ? userSettings.isAdmin : undefined;
+        }
+
         return mergedSettings;
     };
 

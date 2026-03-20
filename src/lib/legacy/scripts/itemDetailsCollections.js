@@ -27,8 +27,11 @@
 
         // Check if cache is valid
         if (!invalidate && await cache.isCacheValid(CACHE_NAME)) {
+            ;
             return;
         }
+
+        ;
 
         try {
             const allCollections = await ApiClient.getItems(ApiClient.getCurrentUserId(), {
@@ -53,6 +56,7 @@
 
             if (currentCacheData && currentCacheData.length > 0) {
                 // Refreshing the cache Collections cache in the background
+                ;
                 Promise.all(collectionPromises);
                 return;
             }
@@ -65,6 +69,7 @@
 
             const endTime = performance.now();
             const duration = endTime - startTime;
+            ;
 
             const cacheData = [];
 
@@ -95,6 +100,7 @@
             }
 
             await cache.set(CACHE_NAME, cacheData);
+            ;
         } catch (error) {
             ERR('Error populating collections cache:', error);
         }
@@ -193,6 +199,8 @@
             } else {
                 detailPageContent.appendChild(collectionsSection);
             }
+
+            ;
         } catch (error) {
             ERR('Error rendering collections section:', error);
         }
@@ -205,6 +213,8 @@
             setTimeout(initializeCollectionsHook, 1000);
             return;
         }
+
+        ;
 
         window.KefinTweaksUtils.onViewPage(
             async (view, element, hash, itemPromise) => {
@@ -222,6 +232,7 @@
                 const supportedTypes = ['Movie', 'Series', 'Season', 'Episode', 'MusicArtist', 'MusicAlbum', 'Audio', 'Book', 'AudioBook', 'MusicVideo' ];
 
                 if (!supportedTypes.includes(item.Type)) {
+                    ;
                     return;
                 }
 
@@ -238,6 +249,8 @@
                 pages: ['details']
             }
         );
+
+        ;
     }
 
     const maxInitAttempts = 10;
@@ -266,5 +279,7 @@
     } else {
         initialize();
     }
+
+    ;
 })();
 

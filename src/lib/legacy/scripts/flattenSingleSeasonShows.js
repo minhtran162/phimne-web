@@ -20,6 +20,7 @@
             const serverUrl = apiClient.serverAddress();
             const token = apiClient.accessToken();
 
+            ;
             const nextUpUrl = `${serverUrl}/Shows/NextUp?SeriesId=${seriesId}&UserId=${userId}&Fields=MediaSourceCount`;
             const nextUpRes = await fetch(nextUpUrl, {
                 headers: { 'Authorization': `MediaBrowser Token="${token}"` }
@@ -39,10 +40,12 @@
                         season: item.ParentIndexNumber,
                         episode: item.IndexNumber
                     };
+                    ;
                     return episodeNumber;
                 }
             }
 
+            ;
             return null;
         } catch (error) {
             ERR(`Failed to fetch Next Up episode for series ${seriesId}:`, error);
@@ -62,6 +65,7 @@
             const serverUrl = apiClient.serverAddress();
             const token = apiClient.accessToken();
 
+            ;
             const episodesUrl = `${serverUrl}/Shows/${seriesId}/Episodes?UserId=${userId}&Fields=UserData`;
             const episodesRes = await fetch(episodesUrl, {
                 headers: { 'Authorization': `MediaBrowser Token="${token}"` }
@@ -74,6 +78,7 @@
             const episodesData = await episodesRes.json();
             const episodes = episodesData.Items || [];
 
+            ;
             return episodes;
         } catch (error) {
             ERR(`Failed to fetch episodes for series ${seriesId}:`, error);
@@ -86,15 +91,19 @@
      * @param {string} seriesId - The series ID
      */
     async function flattenShow(seriesId) {
+        ;
+
         // Check if already flattened for this series (avoid duplicates)
         const activePage = document.querySelector('.libraryPage:not(.hide)');
         if (activePage && activePage.dataset.flattenedSeriesId === seriesId) {
+            ;
             return;
         }
 
         // Check if flattened section already exists
         const existingSection = activePage?.querySelector('.flattened-season-section');
         if (existingSection) {
+            ;
             return;
         }
 
@@ -134,6 +143,7 @@
                 const apiClient = window.ApiClient;
                 const serverId = apiClient.serverId();
                 viewMoreUrl = `${apiClient._serverAddress || apiClient.serverAddress()}/web/#/details?id=${seasonId}&serverId=${serverId}`;
+                ;
             } else {
                 WARN('Could not determine season ID from episodes');
             }
@@ -145,6 +155,8 @@
             // Extract episode info from Next Up if it exists
             let targetEpisodeNumber = null;
             if (nextUpSection && nextUpItemsContainer) {
+                ;
+
                 // Get the existing card from Next Up and extract episode info
                 const existingCard = nextUpItemsContainer.querySelector('.card');
                 if (existingCard) {
@@ -159,6 +171,7 @@
                                 season: parseInt(match[1], 10),
                                 episode: parseInt(match[2], 10)
                             };
+                            ;
                             break;
                         }
                     }
@@ -166,6 +179,7 @@
 
                 // If we couldn't find it from the DOM, fetch from API
                 if (!targetEpisodeNumber) {
+                    ;
                     targetEpisodeNumber = await fetchNextUpEpisode(seriesId);
                 }
 
@@ -211,6 +225,7 @@
 
             // Check if childrenCollapsible has only one child in its itemsContainer, and hide it if so
             if (childrenItemsContainer && childrenItemsContainer.children.length === 1) {
+                ;
                 childrenCollapsible.style.display = 'none';
             }
 
@@ -260,8 +275,11 @@
                             const leftButton = scrollButtons.querySelector('button[data-direction="left"]');
                             if (leftButton) {
                                 leftButton.removeAttribute('disabled');
+                                ;
                             }
                         }
+
+                        ;
                     } else {
                         WARN(`Could not find target episode card S${targetEpisodeNumber.season}:E${targetEpisodeNumber.episode}`);
                     }
@@ -272,6 +290,8 @@
             if (activePage) {
                 activePage.dataset.flattenedSeriesId = seriesId;
             }
+
+            ;
         } catch (error) {
             ERR('Error rendering flattened season section:', error);
         }
@@ -287,6 +307,8 @@
             return;
         }
 
+        ;
+
         window.KefinTweaksUtils.onViewPage(
             async (view, element, hash, itemPromise) => {
                 // Only handle details pages
@@ -296,6 +318,7 @@
                 // Remove any existing flattened section and reset flag when page changes
                 const existingSection = activePage.querySelector('.flattened-season-section');
                 if (existingSection) {
+                    ;
                     return;
                 }
 
@@ -304,6 +327,8 @@
 
                 // Check if item is a Series and has only 1 ChildCount
                 if (item && item.Type === 'Series' && item.ChildCount === 1) {
+                    ;
+
                     // Small delay to ensure details DOM is ready
                     setTimeout(async () => {
                         await flattenShow(item.Id);
@@ -314,6 +339,8 @@
                 pages: ['details']
             }
         );
+
+        ;
     }
 
     // Initialize the hook when the script loads
@@ -333,5 +360,7 @@
     } else {
         initialize();
     }
+
+    ;
 })();
 

@@ -20,8 +20,11 @@
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks ExclusiveElsewhere]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks ExclusiveElsewhere]', ...args);
+
+    ;
 
     // Get configuration from global config
     const config = window.KefinTweaksConfig?.exclusiveElsewhere || {
@@ -34,10 +37,11 @@
             return;
         }
 
-        const serverName = config.hideServerName ? '' : window.ApiClient.serverId();
+        const serverName = config.hideServerName ? '' : ApiClient.serverName();
 
         const link = document.querySelector('.itemDetailPage:not(.hide) .streaming-lookup-container>div>div:first-child a');
         if (link && !link.classList.contains('exclusive')) {
+            ;
             link.innerHTML = `Only available on ${serverName}`;
             link.classList.add('exclusive');
             link.title = 'Exclusive';
@@ -49,4 +53,6 @@
         childList: true,
         subtree: true
     });
+
+    ;
 })();

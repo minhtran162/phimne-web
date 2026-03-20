@@ -1,0 +1,352 @@
+// /js/arr/arr-links.js
+(function (JE) {
+    'use strict';
+
+    JE.initializeArrLinksScript = async function () {
+        const logPrefix = '🪼 Jellyfin Enhanced: Arr Links:';
+
+        if (!JE?.pluginConfig?.ArrLinksEnabled) {
+            return;
+        }
+
+        // Check admin status on every script initialization
+        let isAdmin = false;
+
+        try {
+            // Use the user object pre-fetched during plugin.js init (Stage 2) when available.
+            // Falls back to a short direct fetch so the module isn't blocked for up to 10 s.
+            let user = JE.currentUser || null;
+            if (!user) {
+                for (let i = 0; i < 5; i++) { // shortened retry window (~2.5s)
+                    try {
+                        user = await ApiClient.getCurrentUser();
+                        if (user) break;
+                    } catch (e) {
+                        // swallow error, retry
+                    }
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+
+            if (!user) {
+                console.error(`${logPrefix} Could not get current user after retries.`);
+                return;
+            }
+
+            isAdmin = user?.Policy?.IsAdministrator === true;
+
+            // Update settings.json if the value changed
+            if (JE?.currentSettings && JE.currentSettings.isAdmin !== isAdmin && typeof JE.saveUserSettings === 'function') {
+                JE.currentSettings.isAdmin = isAdmin;
+                await JE.saveUserSettings('settings.json', JE.currentSettings);
+            } else if (JE?.currentSettings) {
+                JE.currentSettings.isAdmin = isAdmin;
+            }
+        } catch (err) {
+            console.error(`${logPrefix} Error checking admin status:`, err);
+            return;
+        }
+
+        if (!isAdmin) {
+            return;
+        }
+
+        let isAddingLinks = false; // Lock to prevent concurrent runs
+        let debounceTimer = null;
+        let observer = null;
+        const slugCache = new Map(); // Cache Sonarr titleSlugs by TVDB ID
+
+        // Parse URL mappings from config
+        function parseUrlMappings(mappingsString) {
+            const mappings = [];
+            if (!mappingsString) return mappings;
+
+            mappingsString.split('\n').forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                const parts = trimmed.split('|').map(p => p.trim());
+                if (parts.length === 2 && parts[0] && parts[1]) {
+                    mappings.push({
+                        jellyfinUrl: parts[0],
+                        arrUrl: parts[1]
+                    });
+                }
+            });
+
+            return mappings;
+        }
+
+        // Get the appropriate *arr URL based on how Jellyfin is being accessed
+        function getMappedUrl(urlMappings, defaultUrl) {
+            if (!defaultUrl) {
+                return null;
+            }
+
+            if (!urlMappings || urlMappings.length === 0) {
+                return defaultUrl;
+            }
+
+            const serverAddress = (typeof ApiClient !== 'undefined' && ApiClient.serverAddress) ?
+                ApiClient.serverAddress() :
+                window.location.origin;
+
+            const currentUrl = serverAddress.replace(/\/+$/, '').toLowerCase();
+
+            // Check if current Jellyfin URL matches any mapping
+            for (const mapping of urlMappings) {
+                const normalizedJellyfinUrl = mapping.jellyfinUrl.replace(/\/+$/, '').toLowerCase();
+
+                if (currentUrl === normalizedJellyfinUrl) {
+                    return mapping.arrUrl.replace(/\/$/, '');
+                }
+            }
+
+            // No mapping matched, return default URL
+            return defaultUrl;
+        }
+
+        try {
+            const SONARR_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/sonarr.svg';
+            const RADARR_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/radarr-light-hybrid-light.svg';
+            const BAZARR_ICON_URL = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/bazarr.svg';
+
+            // Parse the URL mappings from config for each service
+            const sonarrMappings = parseUrlMappings(JE.pluginConfig.SonarrUrlMappings || '');
+            const radarrMappings = parseUrlMappings(JE.pluginConfig.RadarrUrlMappings || '');
+            const bazarrMappings = parseUrlMappings(JE.pluginConfig.BazarrUrlMappings || '');
+
+            // Get the URL for each service based on current Jellyfin URL
+            const sonarrUrl = getMappedUrl(sonarrMappings, JE.pluginConfig.SonarrUrl);
+            const radarrUrl = getMappedUrl(radarrMappings, JE.pluginConfig.RadarrUrl);
+            const bazarrUrl = getMappedUrl(bazarrMappings, JE.pluginConfig.BazarrUrl);
+
+            const styleId = 'arr-links-styles';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                    .arr-link-sonarr::before,
+                    .arr-link-radarr::before,
+                    .arr-link-bazarr::before {
+                        content: "";
+                        display: inline-block;
+                        width: 25px;
+                        height: 25px;
+                        background-size: contain;
+                        background-repeat: no-repeat;
+                        vertical-align: middle;
+                        margin-right: 5px;
+                    }
+                    .arr-link-sonarr::before { background-image: url(${SONARR_ICON_URL}); }
+                    .arr-link-radarr::before { background-image: url(${RADARR_ICON_URL}); }
+                    .arr-link-bazarr::before { background-image: url(${BAZARR_ICON_URL}); }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function getExternalIds(context) {
+                const ids = { tmdb: null, hasTmdbLink: false };
+                const links = context.querySelectorAll('.itemExternalLinks a, .externalIdLinks a');
+                links.forEach(link => {
+                    const href = link.href;
+                    if (href.includes('themoviedb.org/movie/')) {
+                        ids.tmdb = href.match(/\/movie\/(\d+)/)?.[1];
+                        ids.hasTmdbLink = true;
+                    } else if (href.includes('themoviedb.org/tv/')) {
+                        ids.tmdb = href.match(/\/tv\/(\d+)/)?.[1];
+                        ids.hasTmdbLink = true;
+                    }
+                });
+                return ids;
+            }
+
+            /**
+             * Converts a title string into a URL-friendly slug.
+             * Strips diacritics, replaces '&' with 'and', removes non-alphanumeric
+             * characters, and trims leading/trailing hyphens.
+             * @param {string|null} text - The title to slugify
+             * @returns {string} URL-safe slug (e.g., "Modern Love" -> "modern-love")
+             */
+            function slugify(text) {
+                if (!text) return '';
+                return text
+                    .toString()
+                    .normalize('NFD') // Decompose accented characters
+                    .replace(/[\u0300-\u036f]/g, '') // Strip diacritical marks
+                    .replace(/&/g, 'and') // Replace ampersands
+                    .toLowerCase()
+                    .trim()
+                    .replace(/\s+/g, '-') // Whitespace to hyphens
+                    .replace(/[^\w-]+/g, '') // Remove non-word characters
+                    .replace(/--+/g, '-') // Collapse consecutive hyphens
+                    .replace(/^-+|-+$/g, ''); // Trim leading/trailing hyphens
+            }
+
+            /**
+             * Resolves the Sonarr URL slug for a series.
+             * Queries the backend endpoint (which proxies to Sonarr's API) using the
+             * series' TVDB ID to get the actual titleSlug. Results are cached per session.
+             * Falls back to generating a slug from OriginalTitle or translated Name.
+             * @param {Object} item - Jellyfin item object with Name, OriginalTitle, and ProviderIds
+             * @returns {Promise<string>} The resolved Sonarr slug
+             */
+            async function getSonarrSlug(item) {
+                const tvdbId = String(item.ProviderIds?.Tvdb || '');
+
+                if (tvdbId) {
+                    // Check session cache first to avoid redundant API calls
+                    if (slugCache.has(tvdbId)) {
+                        return slugCache.get(tvdbId);
+                    }
+
+                    try {
+                        const slugResp = await fetch(ApiClient.getUrl(`/JellyfinEnhanced/arr/series-slug?tvdbId=${encodeURIComponent(tvdbId)}`), {
+                            headers: { 'X-MediaBrowser-Token': ApiClient.accessToken() }
+                        });
+                        if (slugResp.ok) {
+                            const slugData = await slugResp.json();
+                            if (slugData.titleSlug) {
+                                slugCache.set(tvdbId, slugData.titleSlug);
+                                return slugData.titleSlug;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn(`${logPrefix} Failed to fetch Sonarr slug, using fallback`, e);
+                    }
+                }
+
+                // Fallback: generate slug from original title (or translated title).
+                // May not match Sonarr's actual slug for disambiguated series (e.g., "modern-love-2019").
+                return slugify(item.OriginalTitle || item.Name);
+            }
+
+            async function addArrLinks() {
+                if (isAddingLinks) {
+                    return;
+                }
+
+                const visiblePage = document.querySelector('#itemDetailPage:not(.hide)');
+                if (!visiblePage) return;
+
+                const anchorElement = visiblePage.querySelector('.itemExternalLinks');
+
+                // Cleanup stale links from any non-visible pages to prevent future conflicts
+                document.querySelectorAll('#itemDetailPage.hide .arr-link').forEach(staleLink => {
+                    if (staleLink.previousSibling && staleLink.previousSibling.nodeType === Node.TEXT_NODE) {
+                        staleLink.previousSibling.remove();
+                    }
+                    staleLink.remove();
+                });
+
+                if (!anchorElement || anchorElement.querySelector('.arr-link')) {
+                    return;
+                }
+
+                isAddingLinks = true;
+                try {
+                    const itemId = new URLSearchParams(window.location.hash.split('?')[1]).get('id');
+                    if (!itemId) return;
+
+                    const item = JE.helpers?.getItemCached ?
+                        await JE.helpers.getItemCached(itemId) :
+                        await ApiClient.getItem(ApiClient.getCurrentUserId(), itemId);
+
+                    // Only process movies and TV shows
+                    if (item?.Type !== 'Movie' && item?.Type !== 'Series') return;
+
+                    const ids = getExternalIds(visiblePage);
+
+                    // Only add ARR links if we find a themoviedb link
+                    if (!ids.hasTmdbLink) {
+                        return;
+                    }
+
+                    if (item.Type === 'Series' && item.Name && sonarrUrl) {
+                        const seriesSlug = await getSonarrSlug(item);
+                        const url = `${sonarrUrl}/series/${seriesSlug}`;
+                        anchorElement.appendChild(document.createTextNode(' '));
+                        anchorElement.appendChild(createLinkButton('Sonarr', url, 'arr-link-sonarr'));
+                    }
+
+                    if (item.Type === 'Movie' && ids.tmdb && radarrUrl) {
+                        const url = `${radarrUrl}/movie/${ids.tmdb}`;
+                        anchorElement.appendChild(document.createTextNode(' '));
+                        anchorElement.appendChild(createLinkButton('Radarr', url, 'arr-link-radarr'));
+                    }
+
+                    if (item.Type === 'Series' && bazarrUrl) {
+                        const url = `${bazarrUrl}/series/`;
+                        anchorElement.appendChild(document.createTextNode(' '));
+                        anchorElement.appendChild(createLinkButton('Bazarr', url, 'arr-link-bazarr'));
+                    } else if (item.Type === 'Movie' && bazarrUrl) {
+                        const url = `${bazarrUrl}/movies/`;
+                        anchorElement.appendChild(document.createTextNode(' '));
+                        anchorElement.appendChild(createLinkButton('Bazarr', url, 'arr-link-bazarr'));
+                    }
+                } finally {
+                    isAddingLinks = false;
+                }
+            }
+
+            function createLinkButton(text, url, iconClass) {
+                const button = document.createElement('a');
+                button.setAttribute('is', 'emby-linkbutton');
+                if (JE.pluginConfig.ShowArrLinksAsText) {
+                    button.textContent = text;
+                    button.className = 'button-link emby-button arr-link';
+                } else {
+                    button.className = `button-link emby-button arr-link ${iconClass}`;
+                }
+                button.href = url;
+                button.target = '_blank';
+                button.rel = 'noopener noreferrer';
+                button.title = text;
+                return button;
+            }
+
+            observer = new MutationObserver(() => {
+                if (!JE?.pluginConfig?.ArrLinksEnabled) {
+                    // Feature disabled - disconnect observer
+                    if (observer) {
+                        observer.disconnect();
+                    }
+                    return;
+                }
+
+                // Debounce to avoid excessive processing on rapid DOM changes
+                if (debounceTimer) {
+                    clearTimeout(debounceTimer);
+                }
+
+                debounceTimer = setTimeout(() => {
+                    addArrLinks();
+                }, 100); // Wait 100ms after last mutation before processing
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class']
+            });
+
+            // Store observer reference for potential cleanup
+            JE._arrLinksObserver = observer;
+
+            // Listen for configuration changes
+            window.addEventListener('JE:configUpdated', () => {
+                const isEnabled = JE?.pluginConfig?.ArrLinksEnabled;
+
+                if (!isEnabled) {
+                    // Disable: disconnect observer
+                    if (observer) {
+                        observer.disconnect();
+                    }
+                }
+            });
+        } catch (err) {
+            console.error(`${logPrefix} Failed to initialize`, err);
+        }
+    };
+})(window.JellyfinEnhanced);

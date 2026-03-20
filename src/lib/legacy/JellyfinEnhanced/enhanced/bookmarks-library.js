@@ -3,48 +3,11 @@
  * Creates <div class="sections bookmarks"></div> for CustomTabs plugin
  */
 
-(function () {
+(function (JE) {
     'use strict';
 
-    if (typeof window.LocalStorageCache === 'undefined') {
-        return console.warn('LocalStorageCache not available');
-    }
-
-    const localStorageCache = new window.LocalStorageCache();
-
-    // FIX: Helper to get userId consistently
-    function getCurrentUserId() {
-        try {
-            const apiClient = window.ApiClient || window.ConnectionManager?.currentApiClient();
-            return apiClient?.getCurrentUserId?.() || 'anonymous';
-        } catch (e) {
-            console.warn('Failed to get user ID', e);
-            return 'anonymous';
-        }
-    }
-
-    // FIX: Load bookmarks with proper userId
-    function loadBookmarksFromCache() {
-        const userId = getCurrentUserId();
-        const cached = localStorageCache.get('bookmarks', userId);
-
-        if (!cached) {
-            return {};
-        }
-
-        // Convert array back to object format
-        if (Array.isArray(cached)) {
-            const bookmarksObj = {};
-            cached.forEach(bm => {
-                if (bm.id) {
-                    const { id, ...data } = bm;
-                    bookmarksObj[id] = data;
-                }
-            });
-            return bookmarksObj;
-        }
-
-        return cached;
+    if (!JE?.pluginConfig?.BookmarksEnabled) {
+        return;
     }
 
     // Inject custom styles
@@ -923,6 +886,7 @@
     let sectionObserver = null;
     let isRendering = false;
     let lastRenderTs = 0;
+    let lastMountedContainer = null;
 
     function getJE() {
     // Try common globals first
@@ -949,6 +913,7 @@
             const ready = !!(je && je.userConfig && je.bookmarks);
 
             if (attempts % 10 === 0 || attempts <= 5) {
+
             }
 
             if (ready) {
@@ -960,9 +925,19 @@
                 hookViewEvents();
                 document.addEventListener('je-bookmarks-updated', renderIfSectionExists);
 
-                // Watch for section being injected by CustomTabs
-                sectionObserver = new MutationObserver(() => renderIfSectionExists());
-                sectionObserver.observe(document.body, { childList: true, subtree: true });
+                // Watch for section being injected by CustomTabs (persistent -- do not disconnect)
+                const observeTarget = document.querySelector('.mainAnimatedPages') || document.body;
+                let mountPending = false;
+                sectionObserver = new MutationObserver(() => {
+                    if (!mountPending) {
+                        mountPending = true;
+                        requestAnimationFrame(() => {
+                            mountPending = false;
+                            renderIfSectionExists();
+                        });
+                    }
+                });
+                sectionObserver.observe(observeTarget, { childList: true, subtree: true });
 
                 // Try immediate render in case tab is already visible
                 renderIfSectionExists();
@@ -979,20 +954,41 @@
         const now = Date.now();
         if (now - lastRenderTs < 150) return;
 
-        const container = document.querySelector('.sections.bookmarks');
-        if (container) {
+        const container = findActiveBookmarksContainer();
+        if (!container) {
+            lastMountedContainer = null;
+            return;
+        }
+
+        // Only render if container changed (new DOM node) or is empty
+        const shouldRender = container !== lastMountedContainer
+      || !container.hasChildNodes()
+      || (lastMountedContainer && !document.contains(lastMountedContainer));
+
+        if (shouldRender) {
             revealSection(container);
             isRendering = true;
             renderBookmarksLibrary(container).finally(() => {
                 isRendering = false;
                 lastRenderTs = Date.now();
             });
-            // Disconnect observer once section is found to prevent self-triggering loops
-            if (sectionObserver) {
-                sectionObserver.disconnect();
-                sectionObserver = null;
-            }
+            lastMountedContainer = container;
         }
+    }
+
+    /**
+   * Find the bookmarks container inside the active (non-hidden) home page.
+   * Returns null if no visible container exists -- never falls back to a
+   * stale DOM-cached copy.
+   * @returns {HTMLElement|null}
+   */
+    function findActiveBookmarksContainer() {
+        const all = document.querySelectorAll('.sections.bookmarks');
+        for (let i = all.length - 1; i >= 0; i--) {
+            const page = all[i].closest('.page');
+            if (page && !page.classList.contains('hide')) return all[i];
+        }
+        return null;
     }
 
     /**
@@ -1000,12 +996,18 @@
    */
     function hookViewEvents() {
         document.addEventListener('viewshow', (e) => {
+            if (isRendering) return;
             // CustomTabs provides a view element on e.detail.view
             const view = e.detail?.view || document;
-            const container = view.querySelector?.('.sections.bookmarks');
+            const container = view.querySelector?.('.sections.bookmarks') || findActiveBookmarksContainer();
             if (container) {
                 revealSection(container);
-                renderBookmarksLibrary(container);
+                isRendering = true;
+                renderBookmarksLibrary(container).finally(() => {
+                    isRendering = false;
+                    lastRenderTs = Date.now();
+                });
+                lastMountedContainer = container;
             }
         });
     }
@@ -1023,7 +1025,7 @@
    * Render bookmarks library content
    */
     async function renderBookmarksLibrary(container) {
-        const bookmarks = JE.userConfig.bookmark?.bookmarks || loadBookmarksFromCache();;
+        const bookmarks = JE.userConfig.bookmark?.bookmarks || {};
         const bookmarkEntries = Object.entries(bookmarks);
 
         // Group by item
@@ -1057,7 +1059,6 @@
             group.bookmarks.sort((a, b) => a.timestamp - b.timestamp);
         });
 
-        const totalItems = Object.keys(groupedByItem).length;
         const totalBookmarks = bookmarkEntries.length;
         let currentTab = container.dataset.currentTab || 'movie';
         if (currentTab === 'tv' && typeCounts.tv.items === 0 && typeCounts.movie.items > 0) {
@@ -1206,7 +1207,9 @@
             const itemId = group.details.itemId;
             if (itemId) {
                 itemPromises.push(
-                    apiClient.getItem(userId, itemId)
+                    (JE.helpers?.getItemCached ?
+                        JE.helpers.getItemCached(itemId, { userId }) :
+                        apiClient.getItem(userId, itemId))
                         .then(item => ({ key, group, item, orphaned: false }))
                         .catch(err => {
                             console.warn(`Failed to fetch item ${itemId}:`, err);
@@ -1560,33 +1563,7 @@
         return `${m}:${s.toString().padStart(2, '0')}`;
     }
 
-    /**
-   * Format date string
-   */
-    function formatDate(dateStr) {
-        if (!dateStr) return 'Unknown';
-        try {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return dateStr;
-        }
-    }
-
-    /**
-   * Escape HTML
-   */
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+    const escapeHtml = JE.escapeHtml;
 
     function normalizeMediaType(mediaType) {
         const type = (mediaType || '').toLowerCase();
@@ -1934,7 +1911,9 @@
             try {
                 // Fetch full details for new item
                 const userId = apiClient.getCurrentUserId();
-                const fullItem = await apiClient.getItem(userId, selectedItem.Id);
+                const fullItem = JE.helpers?.getItemCached ?
+                    await JE.helpers.getItemCached(selectedItem.Id, { userId }) :
+                    await apiClient.getItem(userId, selectedItem.Id);
 
                 const newDetails = {
                     itemId: fullItem.Id,
@@ -2000,7 +1979,9 @@
         // Check each item
         for (const [itemId, group] of Object.entries(byItem)) {
             try {
-                await apiClient.getItem(userId, itemId);
+                await (JE.helpers?.getItemCached ?
+                    JE.helpers.getItemCached(itemId, { userId }) :
+                    apiClient.getItem(userId, itemId));
                 // Item exists, not orphaned
             } catch (e) {
                 // Item doesn't exist, it's orphaned
@@ -2319,4 +2300,4 @@
     } else {
         init();
     }
-})();
+})(window.JellyfinEnhanced);

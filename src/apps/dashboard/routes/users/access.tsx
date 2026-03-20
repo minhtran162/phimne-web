@@ -177,9 +177,9 @@ const UserLibraryAccess = () => {
             }
 
             loading.show();
-            window.ApiClient.getUser(userId).then(function (result) {
+            window.ApiClient.getUser(userId).then(function (result: UserDto) {
                 saveUser(result);
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[userlibraryaccess] failed to fetch user', err);
             });
             e.preventDefault();
@@ -218,7 +218,7 @@ const UserLibraryAccess = () => {
             user.Policy.BlockedMediaFolders = null;
             window.ApiClient.updateUserPolicy(user.Id, user.Policy).then(function () {
                 onSaveComplete();
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[userlibraryaccess] failed to update user policy', err);
             });
         };

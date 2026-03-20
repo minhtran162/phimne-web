@@ -33,14 +33,14 @@ const UserPasswordForm: FunctionComponent<IProps> = ({ userId }: IProps) => {
         user.current = await window.ApiClient.getUser(userId);
         const loggedInUser = await Dashboard.getCurrentUser();
 
-        if (!user.current.Policy || !user.current.Configuration) {
+        if (!user.current?.Policy || !user.current?.Configuration) {
             throw new Error('Unexpected null user policy or configuration');
         }
 
-        (await libraryMenu).setTitle(user.current.Name);
+        (await libraryMenu).setTitle(user.current?.Name ?? '');
 
-        if (user.current.HasConfiguredPassword) {
-            if (!user.current.Policy?.IsAdministrator) {
+        if (user.current?.HasConfiguredPassword) {
+            if (!user.current?.Policy?.IsAdministrator) {
                 (page.querySelector('#btnResetPassword') as HTMLDivElement).classList.remove('hide');
             }
             (page.querySelector('#fldCurrentPassword') as HTMLDivElement).classList.remove('hide');
@@ -49,7 +49,7 @@ const UserPasswordForm: FunctionComponent<IProps> = ({ userId }: IProps) => {
             (page.querySelector('#fldCurrentPassword') as HTMLDivElement).classList.add('hide');
         }
 
-        const canChangePassword = loggedInUser?.Policy?.IsAdministrator || user.current.Policy.EnableUserPreferenceAccess;
+        const canChangePassword = loggedInUser?.Policy?.IsAdministrator || user.current?.Policy?.EnableUserPreferenceAccess;
         (page.querySelector('.passwordSection') as HTMLDivElement).classList.toggle('hide', !canChangePassword);
 
         import('../../autoFocuser').then(({ default: autoFocuser }) => {
@@ -138,7 +138,7 @@ const UserPasswordForm: FunctionComponent<IProps> = ({ userId }: IProps) => {
                     loadUser().catch(err => {
                         console.error('[UserPasswordForm] failed to load user', err);
                     });
-                }).catch(err => {
+                }).catch((err: any) => {
                     console.error('[UserPasswordForm] failed to reset user password', err);
                 });
             }).catch(() => {

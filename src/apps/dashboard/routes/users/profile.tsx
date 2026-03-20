@@ -71,7 +71,7 @@ const UserEdit = () => {
     const loadDeleteFolders = useCallback((page: HTMLDivElement, user: UserDto, mediaFolders: BaseItemDto[]) => {
         window.ApiClient.getJSON(window.ApiClient.getUrl('Channels', {
             SupportsMediaDeletion: true
-        })).then(function (channelsResult) {
+        })).then(function (channelsResult: any) {
             let isChecked;
             let checkedAttribute;
             const itemsArr: ResetProvider[] = [];
@@ -99,7 +99,7 @@ const UserEdit = () => {
             const chkEnableDeleteAllFolders = page.querySelector('.chkEnableDeleteAllFolders') as HTMLInputElement;
             chkEnableDeleteAllFolders.checked = user.Policy?.EnableContentDeletion || false;
             triggerChange(chkEnableDeleteAllFolders);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to fetch channels', err);
         });
     }, []);
@@ -112,21 +112,21 @@ const UserEdit = () => {
             return;
         }
 
-        window.ApiClient.getJSON(window.ApiClient.getUrl('Auth/Providers')).then(function (providers) {
+        window.ApiClient.getJSON(window.ApiClient.getUrl('Auth/Providers')).then(function (providers: any[]) {
             loadAuthProviders(page, user, providers);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to fetch auth providers', err);
         });
-        window.ApiClient.getJSON(window.ApiClient.getUrl('Auth/PasswordResetProviders')).then(function (providers) {
+        window.ApiClient.getJSON(window.ApiClient.getUrl('Auth/PasswordResetProviders')).then(function (providers: any[]) {
             loadPasswordResetProviders(page, user, providers);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to fetch password reset providers', err);
         });
         window.ApiClient.getJSON(window.ApiClient.getUrl('Library/MediaFolders', {
             IsHidden: false
-        })).then(function (folders) {
+        })).then(function (folders: any) {
             loadDeleteFolders(page, user, folders.Items);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to fetch media folders', err);
         });
 
@@ -167,9 +167,9 @@ const UserEdit = () => {
 
     const loadData = useCallback(() => {
         loading.show();
-        getUser().then(function (user) {
+        getUser().then(function (user: any) {
             loadUser(user);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to load data', err);
         });
     }, [loadUser]);
@@ -222,16 +222,16 @@ const UserEdit = () => {
                     state: { openSavedToast: true }
                 });
                 loading.hide();
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[useredit] failed to update user', err);
             });
         };
 
         const onSubmit = (e: Event) => {
             loading.show();
-            getUser().then(function (result) {
+            getUser().then(function (result: any) {
                 saveUser(result);
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[useredit] failed to fetch user', err);
             });
             e.preventDefault();
@@ -243,9 +243,9 @@ const UserEdit = () => {
             (page.querySelector('.deleteAccess') as HTMLDivElement).classList.toggle('hide', this.checked);
         });
 
-        window.ApiClient.getNamedConfiguration('network').then(function (config) {
+        window.ApiClient.getNamedConfiguration('network').then(function (config: any) {
             (page.querySelector('.fldRemoteAccess') as HTMLDivElement).classList.toggle('hide', !config.EnableRemoteAccess);
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[useredit] failed to load network config', err);
         });
 

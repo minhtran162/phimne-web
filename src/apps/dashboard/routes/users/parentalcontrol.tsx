@@ -317,9 +317,9 @@ const UserParentalControl = () => {
             }
 
             loading.show();
-            window.ApiClient.getUser(userId).then(function (result) {
+            window.ApiClient.getUser(userId).then(function (result: any) {
                 saveUser(result);
-            }).catch(err => {
+            }).catch((err: any) => {
                 console.error('[userparentalcontrol] failed to fetch user', err);
             });
             e.preventDefault();

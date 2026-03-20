@@ -1096,6 +1096,7 @@ import globalize from '../../globalize';
     let isPreloadingSections = false; // Prevent parallel preloading
     let discoveryScrollHandler = null; // Reference to scroll handler for cleanup
     let discoveryWheelHandler = null; // Reference to wheel handler for cleanup
+    let discoveryKeyDownHandler = null; // Reference to keydown handler for cleanup
     let discoveryTouchStartHandler = null; // Reference to touchstart handler for cleanup
     let discoveryTouchMoveHandler = null; // Reference to touchmove handler for cleanup
     let scrollTimeout = null; // Reference to scroll timeout for cleanup
@@ -5080,7 +5081,7 @@ import globalize from '../../globalize';
             }
 
             // Only enable scroll-based loading on the home page first tab
-            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active').getAttribute('data-index');
+            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active')?.getAttribute('data-index');
             if (activeTab !== '0') {
                 return;
             }
@@ -5103,7 +5104,7 @@ import globalize from '../../globalize';
             if (!isHomePage) return;
 
             // Only on first tab
-            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active').getAttribute('data-index');
+            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active')?.getAttribute('data-index');
             if (activeTab !== '0') return;
 
             if (isRenderingDiscoveryGroup) return;
@@ -5153,17 +5154,38 @@ import globalize from '../../globalize';
             const lastItem = focusableItems[focusableItems.length - 1];
             if (document.activeElement !== lastItem) return;
 
-            // Prevent page scroll when PageDown is pressed
-            if (event.key === 'PageDown') {
-                event.preventDefault();
-            }
+            // Prevent default behavior to allow our custom scroll logic to trigger
+            if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                const atBottom = scrollTop + windowHeight >= documentHeight - 20; // 20px buffer for remote nav
 
-            if (scrollTimeout) {
-                clearTimeout(scrollTimeout);
+                if (atBottom) {
+                    event.preventDefault();
+                    if (scrollTimeout) {
+                        clearTimeout(scrollTimeout);
+                    }
+                    scrollTimeout = setTimeout(async () => {
+                        await renderNextDiscoveryGroup(container);
+                    }, 200);
+                }
+            } else if (event.key === 'ArrowRight') {
+                // If on last item of a row, potentially trigger load more if at bottom
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                const atBottom = scrollTop + windowHeight >= documentHeight - 20;
+
+                if (atBottom) {
+                    if (scrollTimeout) {
+                        clearTimeout(scrollTimeout);
+                    }
+                    scrollTimeout = setTimeout(async () => {
+                        await renderNextDiscoveryGroup(container);
+                    }, 200);
+                }
             }
-            scrollTimeout = setTimeout(async () => {
-                await renderNextDiscoveryGroup(container);
-            }, 200);
         };
 
         // Store handler reference and add keydown listener
@@ -5183,7 +5205,7 @@ import globalize from '../../globalize';
             if (!isHomePage) return;
 
             // Only on first tab
-            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active').getAttribute('data-index');
+            const activeTab = document.querySelector('.headerTabs .emby-tab-button-active')?.getAttribute('data-index');
             if (activeTab !== '0') return;
 
             if (isRenderingDiscoveryGroup) return;

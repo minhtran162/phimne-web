@@ -284,9 +284,9 @@
         speedOverlay = document.createElement('div');
         speedOverlay.setAttribute('data-speed-overlay', 'true');
         speedOverlay.style.cssText = `
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9); color: white; padding: 20px 30px; border-radius: 8px;
-            font-size: 2em; font-weight: bold; z-index: 999999;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); color: white; padding: 8px 16px; border-radius: 6px;
+            font-size: 1.2em; font-weight: bold; z-index: 999999;
             pointer-events: none; font-family: system-ui;
             opacity: 0; transition: opacity 0.2s ease-out; display: none;
         `;
@@ -295,7 +295,7 @@
 
     function showOverlay(speed) {
         createSpeedOverlay();
-        speedOverlay.textContent = `${speed}x${speed > 1 ? ' ⏩' : ' ▶️'}`;
+        speedOverlay.innerHTML = `${speed}x${speed > 1 ? ' ⏩' : ' ▶️'}`;
         speedOverlay.style.display = 'block';
         setTimeout(() => speedOverlay.style.opacity = '1', 10);
     }

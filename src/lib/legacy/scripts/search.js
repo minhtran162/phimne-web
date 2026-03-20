@@ -8,67 +8,11 @@
     const WARN = (...args) => console.warn('[KefinTweaks Search]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks Search]', ...args);
 
+    ;
+
     // Configuration
     const CONFIG = window.KefinTweaksConfig?.search || {
         enableJellyseerr: false // Toggle for Jellyseerr integration
-    };
-
-    // Override XHR to block automatic search requests from direct URL navigation
-    const OriginalXHR = window.XMLHttpRequest;
-    window.XMLHttpRequest = function() {
-        const xhr = new OriginalXHR();
-        const originalOpen = xhr.open;
-        const originalSend = xhr.send;
-
-        xhr.open = function(method, url, ...args) {
-            // Check if this is a search request we want to block
-            const isSearchRequest = url.includes('/Items?')
-                                  && (url.includes('searchTerm=') || url.includes('query='));
-
-            const isSearchPage = window.location.hash.includes('#/search');
-
-            if (isSearchRequest && isSearchPage) {
-                // Override send to do nothing
-                xhr.send = function() {
-                    // Simulate a successful response
-                    setTimeout(() => {
-                        // Use Object.defineProperty to override read-only properties
-                        Object.defineProperty(xhr, 'readyState', {
-                            value: 4,
-                            writable: true,
-                            configurable: true
-                        });
-                        Object.defineProperty(xhr, 'status', {
-                            value: 200,
-                            writable: true,
-                            configurable: true
-                        });
-                        Object.defineProperty(xhr, 'responseText', {
-                            value: '{"Items":[],"TotalRecordCount":0}',
-                            writable: true,
-                            configurable: true
-                        });
-
-                        // Trigger the event handlers
-                        if (xhr.onreadystatechange) {
-                            xhr.onreadystatechange();
-                        }
-                        if (xhr.onload) {
-                            xhr.onload();
-                        }
-                    }, 100);
-                };
-            } else {
-                // Use original send for non-blocked requests
-                xhr.send = function(...args) {
-                    return originalSend.apply(this, args);
-                };
-            }
-
-            return originalOpen.apply(this, [method, url, ...args]);
-        };
-
-        return xhr;
     };
 
     // config
@@ -89,6 +33,7 @@
     function getCachedResults(searchTerm, searchType) {
         const cacheKey = getCacheKey(searchTerm, searchType);
         const cached = searchCache.get(cacheKey);
+        ;
         return cached;
     }
 
@@ -96,10 +41,13 @@
     function cacheResults(searchTerm, searchType, results) {
         const cacheKey = getCacheKey(searchTerm, searchType);
         searchCache.set(cacheKey, results);
+        ;
     }
 
     // Function to clear search results except jellyseerr-section
     function clearSearchResultsExceptJellyseerr() {
+        ;
+
         // Clear the smart search results container
         const resultsContainer = document.getElementById('smart-search-results');
         if (resultsContainer) {
@@ -110,6 +58,7 @@
     // styles (dedupe by id)
     function addCustomStyles() {
         if (document.getElementById('smart-search-styles')) return;
+        ;
         const style = document.createElement('style');
         style.id = 'smart-search-styles';
         style.textContent = `
@@ -147,6 +96,7 @@
             params.set('type', searchType);
             const newHash = `${baseHash}?${params.toString()}`;
             window.history.replaceState({}, '', window.location.pathname + newHash);
+            ;
         } catch (e) {
             ERR('updateSearchUrl error', e);
         }
@@ -169,6 +119,7 @@
             });
             itemTypes.forEach(t => params.append('includeItemTypes', t));
             const url = `${baseUrl}/Items?${params.toString()}`;
+            ;
             return url;
         } catch (e) {
             ERR('buildSearchUrl error', e);
@@ -178,6 +129,7 @@
 
     // perform smart search
     async function performSmartSearch(searchTerm, searchType = 'core') {
+        ;
         const results = { groupedItems: {}, total: 0 };
 
         const searchPage = document.getElementById('searchPage');
@@ -189,7 +141,7 @@
         // Hide search suggestions
         const searchSuggestions = searchPage.querySelector('.searchSuggestions');
         if (searchSuggestions) {
-            searchSuggestions.remove();
+            searchSuggestions.style.display = 'none';
         }
 
         const noItemsMessage = searchPage.querySelector('.noItemsMessage.dummy-section');
@@ -316,6 +268,7 @@
     function ensureSmartResultsContainer() {
         let smartResults = document.getElementById('smart-search-results');
         if (!smartResults) {
+            ;
             smartResults = document.createElement('div');
             smartResults.id = 'smart-search-results';
             smartResults.className = 'smart-search-results emby-scroller searchResults, padded-top, padded-bottom-page';
@@ -365,15 +318,16 @@
         // Define the order to display sections
         const sectionOrder = ['Movie', 'Series', 'Episode', 'Person', 'MusicArtist', 'MusicAlbum', 'Audio', 'Book', 'AudioBook', 'Photo', 'PhotoAlbum', 'BoxSet', 'Playlist', 'TvChannel', 'TvProgram', 'LiveTvChannel', 'LiveTvProgram'];
 
-        sectionOrder.forEach((itemType) => {
-            if (results.groupedItems[itemType] && results.groupedItems[itemType].length > 0) {
-                const items = results.groupedItems[itemType];
+        for (let i = 0, len = sectionOrder.length; i < len; i++) {
+            const itemType = sectionOrder[i];
+            const items = results.groupedItems[itemType];
+            if (items && items.length > 0) {
                 const title = getTypeDisplayName(itemType);
                 const section = window.cardBuilder.renderCards(items, title, null);
                 frag.appendChild(section);
                 totalShown += items.length;
             }
-        });
+        }
 
         resultsContainer.appendChild(frag);
         stats.textContent = `Search completed in ${ms}ms - ${results.total} results found`;
@@ -398,10 +352,14 @@
                 queryFromUrl = decodeURIComponent(queryFromUrl).replace(/\+/g, ' ');
             }
         }
+        ;
+        ;
         if (originalInput) {
+            ;
         }
 
         if (queryFromUrl) {
+            ;
         }
 
         // Replace original search input with our smart search input
@@ -474,9 +432,9 @@
             wrapper.appendChild(btnRow);
             wrapper.appendChild(stats);
 
-            // Replace the original input with our wrapper
+            // Insert the wrapper before the original input
             originalInput.parentElement.insertBefore(wrapper, originalInput);
-            originalInput.remove(); // Remove the original input
+            originalInput.remove();
             input.focus();
         }
 
@@ -520,17 +478,21 @@
 
         // Function to handle search type toggle
         function setSearchType(type) {
+            ;
             currentSearchType = type;
             updateButtonStates(type);
 
             // If there's a search term, check cache first
             const searchTerm = smartInput.value.trim();
+            ;
             if (searchTerm) {
                 // Map URL type to internal type
                 const internalType = type === 'videos' ? 'core' : type;
+                ;
 
                 // For request type, don't use cache and always perform fresh search
                 if (type === 'request') {
+                    ;
                     // Clear existing search results except jellyseerr-section
                     clearSearchResultsExceptJellyseerr();
                     performSmartSearch(searchTerm, 'request');
@@ -540,6 +502,7 @@
                 // Check if we have cached results for this search term and type
                 const cachedResults = getCachedResults(searchTerm, internalType);
                 if (cachedResults) {
+                    ;
                     displaySmartResults(cachedResults, 0); // 0ms since it's cached
 
                     // Update URL with search query and type even for cached results
@@ -549,6 +512,7 @@
                 }
 
                 // No cache hit, perform new search
+                ;
                 performSmartSearch(searchTerm, internalType);
             }
         }
@@ -625,6 +589,7 @@
         let smartMode = true;
         const setMode = (isSmart) => {
             smartMode = isSmart;
+            ;
             if (smartMode) {
                 wrapper.style.display = '';
                 // Hide search results containers (be more specific to avoid affecting other pages)
@@ -664,18 +629,24 @@
             return;
         }
 
+        ;
+
         // Register handler for search page
         window.KefinTweaksUtils.onViewPage((view, element) => {
+            ;
             // Small delay to ensure DOM is ready
             setTimeout(() => {
                 const searchInput = document.getElementById('searchTextInput');
                 if (searchInput && !document.getElementById('smart-search-wrapper')) {
+                    ;
                     initSmartSearch();
                 }
             }, 100);
         }, {
             pages: ['search']
         });
+
+        ;
     }
 
     // Initialize the hook when the script loads
@@ -688,4 +659,5 @@
     } else {
         initializeSearchHook();
     }
+    ;
 })();

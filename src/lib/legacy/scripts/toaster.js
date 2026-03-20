@@ -6,8 +6,11 @@
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks Toaster]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks Toaster]', ...args);
+
+    ;
 
     /**
      * Get the toast container
@@ -79,6 +82,7 @@
         const existingToast = container.querySelector('.toast');
         if (existingToast) {
             existingToast.remove();
+            ;
         }
 
         // Create the toast element with just 'toast' class initially
@@ -88,6 +92,7 @@
 
         // Add to container first
         container.appendChild(toastElement);
+        ;
 
         // Force a browser reflow by reading a layout property
         // This ensures the element is rendered with just 'toast' class before adding 'toastVisible'
@@ -114,6 +119,7 @@
                 setTimeout(() => {
                     if (toastElement.parentNode) {
                         toastElement.parentNode.removeChild(toastElement);
+                        ;
                         if (customContainer) {
                             container.remove();
                         }
@@ -127,4 +133,7 @@
     window.KefinTweaksToaster = {
         toast
     };
+
+    ;
+    ;
 })();

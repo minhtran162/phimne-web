@@ -3,12 +3,15 @@
 // Adds a skin dropdown to mypreferencesdisplay.html and handles skin switching
 // Requires: utils.js, skinConfig.js modules to be loaded before this script
 
-(function () {
+(function() {
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks SkinManager]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks SkinManager]', ...args);
+
+    ;
 
     // Configuration from user config
     let SKINS_CONFIG = [];
@@ -44,125 +47,32 @@
                 return cachedServerVersion;
             }
 
-            // Try multiple methods to get the server version
-            // Method 1: Check if we can get version directly from ApiClient
-            if (window.ApiClient && window.ApiClient._serverVersion) {
-                cachedServerVersion = getMajorServerVersion(window.ApiClient._serverVersion);
-                if (cachedServerVersion !== null) {
-                    return cachedServerVersion;
-                }
+            if (!window.ApiClient || !window.ApiClient._appName || !window.ApiClient._appVersion) {
+                return null;
             }
 
-            // Method 2: Check app version (for Jellyfin Web)
-            if (window.ApiClient && window.ApiClient._appVersion) {
-                const appName = window.ApiClient._appName;
-                if (appName === 'Jellyfin Web' || appName === 'Phim Ne' || appName === 'Jellyfin Web (Mobile)') {
-                    cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
-                    if (cachedServerVersion !== null) {
-                        return cachedServerVersion;
+            if (window.ApiClient._appName === 'Jellyfin Web' && window.ApiClient._appVersion) {
+                cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
+                return cachedServerVersion;
+            }
+
+            // Check the server version instead of app version
+            if (!window.ApiClient._serverVersion) {
+                // Wait 10s to see if it becomes ready, check every 500ms
+                const startTime = Date.now();
+                while (Date.now() - startTime < 10000) {
+                    if (window.ApiClient._serverVersion) {
+                        break;
                     }
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
 
-            // Method 3: Try to fetch from System/Info endpoint (for Android WebView)
-            if (window.ApiClient && window.ApiClient.serverAddress && window.ApiClient.accessToken) {
-                try {
-                    const server = window.ApiClient.serverAddress();
-                    const token = window.ApiClient.accessToken();
-
-                    if (server && token) {
-                        const response = await fetch(`${server}/System/Info`, {
-                            headers: { 'X-Emby-Token': token }
-                        });
-
-                        if (response.ok) {
-                            const systemInfo = await response.json();
-                            if (systemInfo && systemInfo.Version) {
-                                cachedServerVersion = getMajorServerVersion(systemInfo.Version);
-                                if (cachedServerVersion !== null) {
-                                    return cachedServerVersion;
-                                }
-                            }
-                        }
-                    }
-                } catch (fetchError) {
-                    // Silent fail, try next method
-                }
-            }
-
-            // Method 4: Try to extract from the current page (Android WebView fallback)
-            // Check for server version in meta tags or scripts
-            const versionMeta = document.querySelector('meta[name="jellyfin-server-version"]');
-            if (versionMeta && versionMeta.content) {
-                cachedServerVersion = getMajorServerVersion(versionMeta.content);
-                if (cachedServerVersion !== null) {
-                    return cachedServerVersion;
-                }
-            }
-
-            // Method 5: Look for version in any script tags (common pattern)
-            const scripts = document.getElementsByTagName('script');
-            for (const script of scripts) {
-                if (script.src) {
-                    const versionMatch = script.src.match(/serverVersion=([0-9.]+)/i);
-                    if (versionMatch && versionMatch[1]) {
-                        cachedServerVersion = getMajorServerVersion(versionMatch[1]);
-                        if (cachedServerVersion !== null) {
-                            return cachedServerVersion;
-                        }
-                    }
-                }
-            }
-
-            // Method 6: Check localStorage or sessionStorage for cached version
-            try {
-                const storedVersion = localStorage.getItem('jellyfin_server_version')
-                    || sessionStorage.getItem('jellyfin_server_version');
-                if (storedVersion) {
-                    cachedServerVersion = getMajorServerVersion(storedVersion);
-                    if (cachedServerVersion !== null) {
-                        return cachedServerVersion;
-                    }
-                }
-            } catch (e) {
-                // Ignore storage errors
-            }
-
-            // Method 7: Wait and retry (for Android WebView async initialization)
-            if (!versionPollingStarted) {
-                versionPollingStarted = true;
-
-                // Start polling in background
-                setTimeout(async () => {
-                    for (let i = 0; i < 10; i++) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-
-                        // Re-try the detection methods
-                        if (window.ApiClient && window.ApiClient._serverVersion) {
-                            cachedServerVersion = getMajorServerVersion(window.ApiClient._serverVersion);
-                            return;
-                        }
-
-                        if (window.ApiClient && window.ApiClient._appVersion) {
-                            const appName = window.ApiClient._appName;
-                            if (appName === 'Jellyfin Web' || appName === 'Phim Ne') {
-                                cachedServerVersion = getMajorServerVersion(window.ApiClient._appVersion);
-                                return;
-                            }
-                        }
-                    }
-                }, 0);
-            }
-
-            // Final fallback: Default to version 10 (most common for Android WebView)
-            WARN('Could not determine server version, defaulting to version 10');
-            cachedServerVersion = 10;
+            cachedServerVersion = getMajorServerVersion(window.ApiClient._serverVersion);
             return cachedServerVersion;
         } catch (error) {
             WARN('Error getting server version:', error);
-            // Default to version 10 as fallback
-            cachedServerVersion = 10;
-            return cachedServerVersion;
+            return null;
         }
     }
 
@@ -181,47 +91,18 @@
 
         // New structure: array of objects with majorServerVersions and urls
         if (Array.isArray(skin.url) && skin.url.length > 0 && typeof skin.url[0] === 'object' && skin.url[0].majorServerVersions) {
-            // If we couldn't determine version, use first available URL set as fallback
-            if (currentMajorVersion === null) {
-                WARN(`Could not determine server version for skin ${skin.name}, using first available version`);
-                const firstUrlObj = skin.url[0];
-                if (firstUrlObj && firstUrlObj.urls) {
-                    return Array.isArray(firstUrlObj.urls) ? firstUrlObj.urls : [firstUrlObj.urls];
-                }
-                return null;
-            }
-
             // Find all URL objects that match the current server version
             const matchingUrlObjects = skin.url.filter(urlObj => {
                 if (!urlObj.majorServerVersions || !Array.isArray(urlObj.majorServerVersions)) {
                     return false;
                 }
-                return urlObj.majorServerVersions.includes(currentMajorVersion);
+                return currentMajorVersion !== null && urlObj.majorServerVersions.includes(currentMajorVersion);
             });
 
             if (matchingUrlObjects.length === 0) {
-                // If no match, try to find a URL object that doesn't specify versions (catch-all)
-                const catchAllUrlObjects = skin.url.filter(urlObj =>
-                    !urlObj.majorServerVersions
-                    || !Array.isArray(urlObj.majorServerVersions)
-                    || urlObj.majorServerVersions.length === 0
-                );
-
-                if (catchAllUrlObjects.length > 0) {
-                    WARN(`No version-specific URLs found for skin ${skin.name} and version ${currentMajorVersion}, using catch-all URLs`);
-                    // Use catch-all URLs
-                    const allUrls = [];
-                    catchAllUrlObjects.forEach(urlObj => {
-                        if (Array.isArray(urlObj.urls)) {
-                            allUrls.push(...urlObj.urls);
-                        } else if (urlObj.urls) {
-                            allUrls.push(urlObj.urls);
-                        }
-                    });
-                    return allUrls.length > 0 ? allUrls : null;
+                if (currentMajorVersion !== null) {
+                    ;
                 }
-
-                WARN(`No matching URLs found for skin ${skin.name} and server version ${currentMajorVersion}`);
                 return null;
             }
 
@@ -264,46 +145,57 @@
             return skins;
         }
 
-        return skins.filter(skin => {
+        const len = skins.length;
+        const result = [];
+        for (let i = 0; i < len; i++) {
+            const skin = skins[i];
             // Check if skin has URL configuration
             if (!skin.url) {
                 // Skin with no URL (like Default) - check old majorServerVersions field for backward compatibility
                 if (skin.majorServerVersions && Array.isArray(skin.majorServerVersions)) {
-                    const isSupported = skin.majorServerVersions.includes(currentMajorVersion);
-                    if (!isSupported) {
+                    if (skin.majorServerVersions.includes(currentMajorVersion)) {
+                        result.push(skin);
                     }
-                    return isSupported;
+                    continue;
                 }
                 // No version info, include for backward compatibility
-                return true;
+                result.push(skin);
+                continue;
             }
 
             // New structure: check majorServerVersions in URL objects
             if (Array.isArray(skin.url) && skin.url.length > 0 && typeof skin.url[0] === 'object' && skin.url[0].majorServerVersions) {
                 // Check if any URL object supports the current version
-                const hasMatchingVersion = skin.url.some(urlObj => {
-                    if (!urlObj.majorServerVersions || !Array.isArray(urlObj.majorServerVersions)) {
-                        return false;
+                let hasMatchingVersion = false;
+                const urls = skin.url;
+                for (let j = 0, uLen = urls.length; j < uLen; j++) {
+                    const urlObj = urls[j];
+                    if (urlObj.majorServerVersions && Array.isArray(urlObj.majorServerVersions)) {
+                        if (urlObj.majorServerVersions.includes(currentMajorVersion)) {
+                            hasMatchingVersion = true;
+                            break;
+                        }
                     }
-                    return urlObj.majorServerVersions.includes(currentMajorVersion);
-                });
-
-                if (!hasMatchingVersion) {
                 }
-                return hasMatchingVersion;
+
+                if (hasMatchingVersion) {
+                    result.push(skin);
+                }
+                continue;
             }
 
             // Old structure: check top-level majorServerVersions field (backward compatibility)
             if (skin.majorServerVersions && Array.isArray(skin.majorServerVersions)) {
-                const isSupported = skin.majorServerVersions.includes(currentMajorVersion);
-                if (!isSupported) {
+                if (skin.majorServerVersions.includes(currentMajorVersion)) {
+                    result.push(skin);
                 }
-                return isSupported;
+                continue;
             }
 
             // No version info specified, include for backward compatibility
-            return true;
-        });
+            result.push(skin);
+        }
+        return result;
     }
 
     /**
@@ -326,7 +218,7 @@
         // - https://ranaldsgift.github.io/KefinTweaks/skins/elegantKefin.css
         // - https://cdn.jsdelivr.net/gh/ranaldsgift/KefinTweaks@main/skins/elegantKefin.css
         // - https://selfhosted.com/KefinTweaks/skins/elegantKefin.css
-        const kefinTweaksSkinPattern = /\/jellyfintweaks\/skins\/([^\/\?]+\.css)(?:\?.*)?$/i;
+        const kefinTweaksSkinPattern = /\/KefinTweaks\/skins\/([^\/\?]+\.css)(?:\?.*)?$/i;
         const match = normalized.match(kefinTweaksSkinPattern);
 
         if (match) {
@@ -547,6 +439,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 return false;
             }
 
+            ;
             return true;
         } catch (error) {
             ERR('Error creating config backup:', error);
@@ -577,19 +470,22 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 }
                 const matches = skinsMatchExactly(adminSkin, legacySkin);
                 if (!matches) {
-
+                    // Debug: Log why skins with same name don't match
+                    ;
                 }
                 return matches;
             });
 
             if (matchingLegacyDefault) {
                 // Exact match found - remove from admin config
+                ;
                 skinsToRemove.add(adminSkin.name);
                 return; // Skip adding to cleanedAdminSkins
             }
 
             // Special case: Jellypane with old URL format
             if (isJellypaneWithOldUrlFormat(adminSkin)) {
+                ;
                 skinsToRemove.add(adminSkin.name);
                 return; // Skip adding to cleanedAdminSkins
             }
@@ -616,12 +512,15 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             if (window.KefinTweaksUtils && window.KefinTweaksUtils.saveConfigToJavaScriptInjector) {
                 const saveSuccess = await window.KefinTweaksUtils.saveConfigToJavaScriptInjector(window.KefinTweaksConfig, { waitForLogin: false });
                 if (saveSuccess) {
+                    ;
                 } else {
                     WARN('Failed to save cleaned config to JS Injector');
                 }
             } else {
                 WARN('KefinTweaksUtils.saveConfigToJavaScriptInjector not available, cannot save cleaned config');
             }
+
+            ;
         }
 
         adminSkins = cleanedAdminSkins;
@@ -672,6 +571,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         const skinsAfterFilter = SKINS_CONFIG.length;
 
         if (skinsBeforeFilter !== skinsAfterFilter) {
+            ;
         }
 
         // Expose merged config globally for use by other scripts
@@ -679,6 +579,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         const enabledCount = mergedSkins.filter(s => s.enabled !== false).length;
         const disabledCount = mergedSkins.length - enabledCount;
+        ;
     }
 
     /**
@@ -733,6 +634,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Start with admin themes
         THEMES_CONFIG = [...adminThemes];
+
+        ;
     }
 
     // Track loaded skin CSS URLs
@@ -1100,10 +1003,12 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
     function loadOptionalIncludeCSS(url, skinName) {
         // Check if this CSS is already loaded
         if (loadedOptionalIncludesUrls.has(url)) {
+            ;
             return;
         }
 
         if (!url || url === '') {
+            ;
             return;
         }
 
@@ -1132,6 +1037,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         }
 
         loadedOptionalIncludesUrls.add(url);
+        ;
     }
 
     // Tooltip management
@@ -1289,6 +1195,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             }
         }
 
+        ;
         return true;
     }
 
@@ -1313,30 +1220,27 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         loadSelectedTheme();
         loadSelectedColorScheme();
 
-        // Verify skin application after a longer delay for Android WebView
+        ;
+
+        // Verify skin application after a short delay to allow CSS to load
         setTimeout(() => {
             if (!verifySkinApplication()) {
                 if (retryCount < MAX_RETRIES) {
                     WARN(`Skin application verification failed, retrying... (attempt ${retryCount + 1}/${MAX_RETRIES})`);
                     setTimeout(() => {
                         initialize(retryCount + 1);
-                    }, 1000); // Wait 1s before retry for Android WebView
+                    }, 500); // Wait 500ms before retry
                 } else {
-                    ERR(`Skin application verification failed after ${MAX_RETRIES} attempts - applying fallback`);
-                    // Apply fallback: load default skin
-                    const defaultSkinName = getDefaultSkinName();
-                    const defaultSkin = SKINS_CONFIG.find(skin => skin.name === defaultSkinName);
-                    if (defaultSkin) {
-                        loadSkin(defaultSkin);
-                    }
-                    // Register handlers anyway
+                    ERR(`Skin application verification failed after ${MAX_RETRIES} attempts - giving up`);
+                    // Register handlers even if verification failed (give up case)
                     registerHandlers();
                 }
             } else {
+                ;
                 // Register handlers after successful verification
                 registerHandlers();
             }
-        }, 500); // Wait 500ms for CSS to load before verification (longer for Android)
+        }, 200); // Wait 200ms for CSS to load before verification
     }
 
     /**
@@ -1345,6 +1249,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
     function registerHandlers() {
         // Only register if not already registered
         if (unregisterDisplayPreferencesHandler) {
+            ;
             return;
         }
 
@@ -1357,6 +1262,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         unregisterAnyPageHandler = window.KefinTweaksUtils.onViewPage(handleAnyPage, {
             pages: []
         });
+
+        ;
     }
 
     /**
@@ -1365,6 +1272,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
      * @param {Element} element - The view element
      */
     function handleDisplayPreferencesPage(view, element) {
+        ;
+
         // Wait for the page to be fully loaded
         setTimeout(() => {
             addSkinDropdown();
@@ -1405,6 +1314,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Check if appearance button already exists
         if (headerRight.querySelector('.headerAppearanceButton')) {
+            ;
             return;
         }
 
@@ -1433,10 +1343,13 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             headerRight.appendChild(appearanceButton);
         }
 
+        ;
+
         // Unregister the handleAnyPage handler since button is now added and persistent
         if (unregisterAnyPageHandler) {
             unregisterAnyPageHandler();
             unregisterAnyPageHandler = null;
+            ;
         }
     }
 
@@ -1555,6 +1468,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         setTimeout(() => {
             document.addEventListener('click', handlePopoverClickOutside);
         }, 10);
+
+        ;
     }
 
     /**
@@ -1697,6 +1612,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             return;
         }
 
+        ;
+
         // Save skin selection to localStorage
         localStorage.setItem(STORAGE_KEY, selectedSkinName);
 
@@ -1775,6 +1692,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
     function handleColorSchemeChange(event) {
         const selectedColorSchemeName = event.target.value;
         const selectedOption = event.target.selectedOptions[0];
+
+        ;
 
         // Save color scheme selection to localStorage
         localStorage.setItem(COLOR_SCHEMES_STORAGE_KEY, selectedColorSchemeName);
@@ -2132,6 +2051,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                                 // Reload based on updated config (will reload both global and skin-specific)
                                 loadOptionalIncludes(currentSkin);
                             }
+
+                            ;
                         } else {
                             // Handle skin-specific optional includes
                             const includeUrl = checkbox.getAttribute('data-include-url');
@@ -2151,6 +2072,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
                                 // Then reload based on userConfig (will reload both global and skin-specific)
                                 loadOptionalIncludes(skin);
+
+                                ;
                             }
                         }
                     });
@@ -2302,6 +2225,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Check if skin dropdown already exists
         if (form.querySelector('.fldSkin')) {
+            ;
             return;
         }
 
@@ -2338,6 +2262,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Update label with gear icon
         updateDisplayPreferencesSkinLabel();
+
+        ;
     }
 
     /**
@@ -2400,6 +2326,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Check if color schemes dropdown already exists
         if (form.querySelector('.fldColorSchemes')) {
+            ;
             return;
         }
 
@@ -2423,6 +2350,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Update color schemes based on current skin selection
         updateColorSchemesDropdown();
+
+        ;
     }
 
     /**
@@ -2455,6 +2384,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             if (!isValidScheme) {
                 // Remove invalid color scheme from localStorage
                 localStorage.removeItem(COLOR_SCHEMES_STORAGE_KEY);
+                ;
             }
         } else {
             // No color schemes available, remove from localStorage
@@ -2501,9 +2431,11 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
                 // Show the dropdown
                 colorSchemesContainer.style.display = '';
+                ;
             } else {
                 // Hide the dropdown if no color schemes
                 colorSchemesContainer.style.display = 'none';
+                ;
             }
         }
 
@@ -2532,6 +2464,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
 
         // Check if custom themes have already been added
         if (themeSelect.hasAttribute('data-kefin-themes-added')) {
+            ;
             return;
         }
 
@@ -2540,9 +2473,11 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             addCustomThemeOptions(themeSelect);
         } else {
             // Wait for Jellyfin to add its options using MutationObserver
+            ;
             const observer = new MutationObserver((mutations) => {
                 mutations.forEach((mutation) => {
                     if (mutation.type === 'childList' && themeSelect.options.length > 0) {
+                        ;
                         addCustomThemeOptions(themeSelect);
                         observer.disconnect(); // Stop observing once we've added our options
                     }
@@ -2554,6 +2489,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             // Fallback timeout in case MutationObserver doesn't trigger
             setTimeout(() => {
                 if (!themeSelect.hasAttribute('data-kefin-themes-added') && themeSelect.options.length > 0) {
+                    ;
                     addCustomThemeOptions(themeSelect);
                 }
                 observer.disconnect();
@@ -2586,7 +2522,10 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         const cachedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         if (cachedTheme) {
             themeSelect.value = cachedTheme;
+            ;
         }
+
+        ;
     }
 
     /**
@@ -2598,6 +2537,8 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         const selectedThemeValue = event.target.value;
 
         if (selectedOption) {
+            ;
+
             // Save selection to localStorage
             localStorage.setItem(THEME_STORAGE_KEY, selectedThemeValue);
 
@@ -2610,6 +2551,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             }
         } else {
             // Default Jellyfin theme selected
+            ;
 
             // Save selection to localStorage
             localStorage.setItem(THEME_STORAGE_KEY, selectedThemeValue);
@@ -2634,9 +2576,11 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             cssThemeLink.type = 'text/css';
             cssThemeLink.setAttribute('data-kefin-custom-theme', 'true');
             document.head.appendChild(cssThemeLink);
+            ;
         }
 
         cssThemeLink.href = url;
+        ;
     }
 
     /**
@@ -2648,6 +2592,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         if (cssThemeLink && cssThemeLink.hasAttribute('data-kefin-custom-theme')) {
             // Only remove if we created it
             cssThemeLink.remove();
+            ;
         }
     }
 
@@ -2661,6 +2606,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             const selectedTheme = THEMES_CONFIG.find(theme => theme.name === selectedThemeValue);
 
             if (selectedTheme) {
+                ;
                 updateThemeCSS(selectedTheme.url);
 
                 // Set the dropdown selection
@@ -2674,6 +2620,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 if (themeSelect) {
                     const option = themeSelect.querySelector(`option[value="${selectedThemeValue}"]`);
                     if (option && !option.hasAttribute('data-custom-theme')) {
+                        ;
                         themeSelect.value = selectedThemeValue;
                         resetThemeCSS();
                     } else {
@@ -2688,6 +2635,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         const cssColorSchemesLink = document.getElementById('cssColorSchemes');
         if (cssColorSchemesLink && cssColorSchemesLink.hasAttribute('data-kefin-color-schemes')) {
             cssColorSchemesLink.remove();
+            ;
         }
     }
 
@@ -2731,6 +2679,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 // Fallback to appending to head if no reference point found
                 document.head.appendChild(cssColorSchemesLink);
             }
+            ;
         }
 
         // Find the scheme by URL and update localStorage
@@ -2740,25 +2689,31 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         if (selectedSkin && selectedSkin.colorSchemes) {
             const matchingScheme = selectedSkin.colorSchemes.find(scheme => scheme.url === url);
             if (matchingScheme) {
+                ;
+
                 // Update all color scheme dropdowns to match the applied scheme
                 const displayDropdown = document.getElementById('selectColorSchemes');
                 const popoverDropdown = document.getElementById('selectColorSchemesPopover');
 
                 if (displayDropdown && matchingScheme) {
                     displayDropdown.value = matchingScheme.name;
+                    ;
                 }
 
                 if (popoverDropdown && matchingScheme) {
                     popoverDropdown.value = matchingScheme.name;
+                    ;
                 }
 
                 if (cssColorSchemesLink) {
                     cssColorSchemesLink.href = url;
+                    ;
                 }
                 return;
             }
         }
         // If no skin or no color schemes, reset to default
+        ;
         removeColorSchemesCSS();
     }
 
@@ -2777,8 +2732,10 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 const selectedColorScheme = selectedSkin.colorSchemes.find(scheme => scheme.name === selectedColorSchemeName);
 
                 if (selectedColorScheme) {
+                    ;
                     updateColorSchemesCSS(selectedColorScheme.url);
                 } else {
+                    ;
                     // Use the default color scheme for this skin
                     const defaultColorScheme = getDefaultColorScheme(selectedSkin);
                     if (defaultColorScheme) {
@@ -2803,9 +2760,11 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                 if (defaultColorScheme) {
                     const defaultScheme = selectedSkin.colorSchemes.find(scheme => scheme.name === defaultColorScheme);
                     if (defaultScheme) {
+                        ;
                         updateColorSchemesCSS(defaultScheme.url);
                     }
                 } else {
+                    ;
                     updateColorSchemesCSS(null);
                 }
             }
@@ -2832,6 +2791,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         // Check if a default skin is specified in the main configuration
         const configDefaultSkin = window.KefinTweaksConfig?.defaultSkin;
         if (configDefaultSkin) {
+            ;
             return configDefaultSkin;
         }
 
@@ -2847,6 +2807,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         const selectedSkin = SKINS_CONFIG.find(skin => skin.name === selectedSkinName);
 
         if (selectedSkin) {
+            ;
             loadSkin(selectedSkin);
 
             // Update color schemes dropdown after skin is loaded
@@ -2872,12 +2833,13 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
      * Load a specific skin
      * @param {Object} skin - The skin configuration object
      */
-    async function loadSkin(skin) {
+    function loadSkin(skin) {
         // Check if this skin is already loaded by looking at the DOM
         const currentSkinLink = document.querySelector('link[data-kefin-skin="true"]');
         const currentSkinName = currentSkinLink ? currentSkinLink.getAttribute('data-skin') : null;
 
         if (currentSkinName === skin.name) {
+            ;
             return;
         }
 
@@ -2890,54 +2852,19 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             }
         });
 
+        // Performance optimization: Load new CSS first, then remove old CSS
+        // This prevents the double-reflow/recalc that causes UI freezing
+
         // Step 1: Load the new CSS first (gets cached and starts loading)
         requestAnimationFrame(async () => {
             const cssUrls = await getSkinUrlsForCurrentVersion(skin);
 
             if (!cssUrls || cssUrls.length === 0) {
-                // If no URLs found, try to load any available URLs (fallback)
-                WARN(`No URLs found for skin ${skin.name}, attempting fallback`);
-
-                if (skin.url) {
-                    // Try to extract URLs directly
-                    if (Array.isArray(skin.url) && skin.url.length > 0) {
-                        const fallbackUrls = [];
-
-                        // Handle both new and old format
-                        for (const urlEntry of skin.url) {
-                            if (typeof urlEntry === 'string') {
-                                fallbackUrls.push(urlEntry);
-                            } else if (urlEntry && urlEntry.urls) {
-                                if (Array.isArray(urlEntry.urls)) {
-                                    fallbackUrls.push(...urlEntry.urls);
-                                } else {
-                                    fallbackUrls.push(urlEntry.urls);
-                                }
-                            }
-                        }
-
-                        if (fallbackUrls.length > 0) {
-                            fallbackUrls.forEach(url => {
-                                if (url) { // Skip null/empty URLs
-                                    loadSkinCSS(url, skin.name);
-                                }
-                            });
-                            // Load optional includes for this skin
-                            loadOptionalIncludes(skin);
-                            return;
-                        }
-                    } else if (typeof skin.url === 'string') {
-                        loadSkinCSS(skin.url, skin.name);
-                        // Load optional includes for this skin
-                        loadOptionalIncludes(skin);
-                        return;
-                    }
-                }
-
-                ERR(`Could not load any CSS for skin ${skin.name}`);
+                ;
                 return;
             }
 
+            ;
             cssUrls.forEach(url => {
                 if (url) { // Skip null/empty URLs
                     loadSkinCSS(url, skin.name);
@@ -2957,10 +2884,12 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
     function loadSkinCSS(url, skinName) {
         // Check if this CSS is already loaded
         if (loadedSkinUrls.has(url)) {
+            ;
             return;
         }
 
         if (!url || url === '') {
+            ;
             return;
         }
 
@@ -2993,6 +2922,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
         }
 
         loadedSkinUrls.add(url);
+        ;
 
         // Defer expensive DOM operations (cssColorSchemes repositioning)
         // to avoid blocking during the initial CSS load
@@ -3008,6 +2938,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
                     cssColorSchemesLink.remove();
                     // Insert it after the last skin CSS link
                     lastSkinLink.parentNode.insertBefore(cssColorSchemesLink, lastSkinLink.nextSibling);
+                    ;
                 }
             }
         });
@@ -3023,6 +2954,7 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
             const url = link.href;
             loadedSkinUrls.delete(url);
             link.remove();
+            ;
         });
 
         // Clear the tracking set
@@ -3035,4 +2967,6 @@ window.KefinTweaksConfig = ${JSON.stringify(configToBackup, null, 2)};`;
     } else {
         initialize();
     }
+
+    ;
 })();

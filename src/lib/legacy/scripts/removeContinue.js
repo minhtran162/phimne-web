@@ -12,6 +12,8 @@
     const WARN = (...args) => console.warn('[KefinTweaks RemoveContinue]', ...args);
     const ERROR = (...args) => console.error('[KefinTweaks RemoveContinue]', ...args);
 
+    ;
+
     // Add CSS for positioning the remove button in top right corner
     const style = document.createElement('style');
     style.textContent = `
@@ -124,6 +126,8 @@
 
                 // Remove the card from the DOM
                 card.remove();
+
+                ;
             } catch (error) {
                 ERROR('Failed to remove from continue watching:', error);
 
@@ -138,6 +142,8 @@
 
         // Add the button as a sibling before the .cardOverlayButton-br container
         buttonContainer.parentNode.insertBefore(removeButton, buttonContainer);
+
+        ;
     }
 
     // Function to fetch current user data for an item
@@ -210,6 +216,8 @@
 
             // Then update it to reset progress while preserving played status
             await updateUserDataProgress(itemId, userData);
+
+            ;
         } catch (error) {
             ERROR('Failed to reset progress:', error);
             throw error;
@@ -275,6 +283,12 @@
 
     // Debug function for troubleshooting (available in console)
     window.debugRemoveContinueButtons = function() {
+        ;
+        ;
+        ;
+        ;
         processExistingOverlayContainers();
     };
+
+    ;
 })();

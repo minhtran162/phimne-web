@@ -136,6 +136,7 @@
 
                 return new Promise((resolve) => {
                     request.onsuccess = () => {
+                        ;
                         resolve(true);
                     };
 
@@ -162,6 +163,7 @@
 
                 return new Promise((resolve) => {
                     request.onsuccess = () => {
+                        ;
                         resolve(true);
                     };
 
@@ -200,6 +202,7 @@
                             }
                             cursor.continue();
                         } else {
+                            ;
                             resolve(count);
                         }
                     };
@@ -218,5 +221,7 @@
 
     // Create global instance
     window.IndexedDBCache = IndexedDBCache;
+
+    ;
 })();
 

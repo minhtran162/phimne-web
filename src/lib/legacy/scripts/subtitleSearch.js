@@ -5,17 +5,20 @@
 
 (function() {
     'use strict';
-
+    
     // Common logging function
+    
     const WARN = (...args) => console.warn('[KefinTweaks SubtitleSearch]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks SubtitleSearch]', ...args);
-
+    
+   ;
+    
     // State management
     let isInitialized = false;
     let isAddingCCButton = false;
     let onViewPageUnregister = null;
     let dialogCheckInterval = null;
-
+    
     // Configuration
     const CONFIG = {
         searchButtonText: 'Search Subtitles',
@@ -23,14 +26,15 @@
         downloadIcon: 'file_download',
         ccIcon: 'closed_caption'
     };
-
+    
+    
     /**
      * Check if ApiClient is available
      */
     function isApiClientAvailable() {
         return typeof ApiClient !== 'undefined' && ApiClient && typeof ApiClient.getCurrentUser === 'function';
     }
-
+    
     /**
      * Check if user has subtitle management permissions
      */
@@ -41,9 +45,10 @@
         }
 
         if (!ApiClient._loggedIn) {
+           ;
             return false;
         }
-
+        
         try {
             const user = await ApiClient.getCurrentUser();
             if (!user || !user.Policy) {
@@ -51,15 +56,20 @@
                 return false;
             }
 
+            if (user.Policy.IsAdministrator) {
+               ;
+                return true;
+            }
+            
             const hasPermission = user.Policy.EnableSubtitleManagement;
-
+           ;
             return hasPermission;
         } catch (error) {
             ERR('Error checking subtitle permissions:', error);
             return false;
         }
     }
-
+    
     /**
      * Get the current item ID from the OSD
      */
@@ -69,12 +79,12 @@
             WARN('Rating button not found, cannot get item ID');
             return null;
         }
-
+        
         const itemId = ratingButton.getAttribute('data-id');
-
+       ;
         return itemId;
     }
-
+    
     /**
      * Get the preferred subtitle language
      */
@@ -83,32 +93,34 @@
             WARN('ApiClient not available, using default language: eng');
             return 'eng';
         }
-
+        
         try {
             const user = await ApiClient.getCurrentUser();
             if (!user || !user.Configuration) {
                 return 'eng';
             }
-
+            
             // Try subtitle language preference first
             if (user.Configuration.SubtitleLanguagePreference) {
+               ;
                 return user.Configuration.SubtitleLanguagePreference;
             }
-
+            
             // Fall back to audio language preference
             if (user.Configuration.AudioLanguagePreference) {
+               ;
                 return user.Configuration.AudioLanguagePreference;
             }
-
+            
             // Default to English
-
+           ;
             return 'eng';
         } catch (error) {
             ERR('Error getting preferred language:', error);
             return 'eng';
         }
     }
-
+    
     /**
      * Check if CC button already exists
      */
@@ -116,7 +128,7 @@
         const existingButton = document.querySelector('#videoOsdPage:not(.hide) .btnSubtitles');
         return existingButton !== null;
     }
-
+    
     /**
      * Create the CC button element
      */
@@ -125,65 +137,70 @@
         button.setAttribute('is', 'paper-icon-button-light');
         button.className = 'btnSubtitles autoSize paper-icon-button-light';
         button.title = 'Subtitles';
-
+        
         const icon = document.createElement('span');
         icon.className = 'xlargePaperIconButton material-icons closed_caption';
         icon.setAttribute('aria-hidden', 'true');
-
+        
         button.appendChild(icon);
         return button;
     }
-
+    
     /**
      * Add CC button to OSD controls
      */
     function addCCButton() {
         if (isAddingCCButton) {
+           ;
             return;
         }
-
+        
         if (ccButtonExists()) {
+           ;
             return;
         }
-
+        
         isAddingCCButton = true;
-
+        
         try {
             const buttonsContainer = document.querySelector('#videoOsdPage:not(.hide) .osdControls > .buttons');
             if (!buttonsContainer) {
                 WARN('OSD buttons container not found');
                 return;
             }
-
+            
             const ratingButton = buttonsContainer.querySelector('.btnUserRating');
             if (!ratingButton) {
                 WARN('Rating button not found in buttons container');
                 return;
             }
-
+            
             const ccButton = createCCButton();
-
+            
             // Insert CC button before the rating button
             buttonsContainer.insertBefore(ccButton, ratingButton);
-
+            
             // Add click handler to open subtitle dialog
             ccButton.addEventListener('click', () => {
+               ;
                 openSubtitleDialog();
             });
+            
+           ;
         } catch (error) {
             ERR('Error adding CC button:', error);
         } finally {
             isAddingCCButton = false;
         }
     }
-
+    
     /**
      * Create subtitle dialog with search functionality
      */
     function createSubtitleDialog() {
         const dialog = document.createElement('div');
         dialog.className = 'dialogContainer';
-
+        
         dialog.innerHTML = `
             <div class="focuscontainer dialog actionsheet-not-fullscreen actionSheet centeredDialog opened" 
                  data-history="true" data-removeonclose="true" 
@@ -208,10 +225,10 @@
                 </div>
             </div>
         `;
-
+        
         return dialog;
     }
-
+    
     /**
      * Open subtitle dialog
      */
@@ -223,26 +240,29 @@
                 dialog.remove();
             }
         });
-
+        
         const dialog = createSubtitleDialog();
         document.body.appendChild(dialog);
-
+        
         // Add search button click handler
         const searchButton = dialog.querySelector('#subtitleSearchButton');
         if (searchButton) {
             searchButton.addEventListener('click', () => {
+               ;
                 searchSubtitles();
             });
         }
-
+        
         // Add click handler to close dialog when clicking outside
         dialog.addEventListener('click', (e) => {
             if (e.target === dialog) {
                 dialog.remove();
             }
         });
+        
+       ;
     }
-
+    
     /**
      * Create subtitle search results dialog
      */
@@ -250,8 +270,8 @@
         const dialog = document.createElement('div');
         dialog.className = 'dialogContainer';
         dialog.id = 'subtitleSearchResultsDialog';
-        const serverName = ApiClient.serverName() ?? 'Jellyfin';
-
+        let serverName = ApiClient.serverName() ?? 'Jellyfin';
+        
         dialog.innerHTML = `
             <div class="focuscontainer dialog actionsheet-not-fullscreen actionSheet centeredDialog opened" 
                  data-history="true" data-removeonclose="true" 
@@ -269,10 +289,10 @@
                 </div>
             </div>
         `;
-
+        
         return dialog;
     }
-
+    
     /**
      * Search for subtitles
      */
@@ -282,36 +302,38 @@
             ERR('Cannot search subtitles without item ID');
             return;
         }
-
+        
         const language = await getPreferredLanguage();
-
+        
         // Remove any existing search results dialog
         const existingResultsDialog = document.querySelector('#subtitleSearchResultsDialog');
         if (existingResultsDialog) {
             existingResultsDialog.remove();
         }
-
+        
         // Create and show search results dialog
         const resultsDialog = createSearchResultsDialog();
         document.body.appendChild(resultsDialog);
-
+        
         const resultsContainer = resultsDialog.querySelector('#subtitleSearchResults');
-
+        
         // Add click handler to close dialog when clicking outside
         resultsDialog.addEventListener('click', (e) => {
             if (e.target === resultsDialog) {
                 resultsDialog.remove();
             }
         });
-
+        
         try {
+           ;
+            
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available for authorization');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
-
+            
             const response = await fetch(`${serverUrl}/Items/${itemId}/RemoteSearch/Subtitles/${language}`, {
                 method: 'GET',
                 headers: {
@@ -319,20 +341,22 @@
                     'Authorization': `MediaBrowser Token="${token}"`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const subtitles = await response.json();
-
+           ;
+            
             displaySubtitleResults(subtitles, resultsContainer, itemId);
+            
         } catch (error) {
             ERR('Error searching subtitles:', error);
             resultsContainer.innerHTML = '<div class="listItem"><div class="listItemBody"><div class="listItemBodyText">Error searching subtitles</div></div></div>';
         }
     }
-
+    
     /**
      * Display subtitle search results
      */
@@ -341,11 +365,11 @@
             container.innerHTML = '<div class="listItem"><div class="listItemBody"><div class="listItemBodyText">No subtitles found</div></div></div>';
             return;
         }
-
+        
         const resultsHTML = subtitles.map(subtitle => {
             const matchType = subtitle.IsHashMatch ? 'Perfect match' : 'Partial match';
             const downloads = subtitle.DownloadCount?.toLocaleString() || '0';
-
+            
             return `
                 <div class="listItem listItem-border" data-subid="${subtitle.Id}">
                     <span class="listItemIcon material-icons closed_caption" aria-hidden="true"></span>
@@ -368,23 +392,23 @@
                 </div>
             `;
         }).join('');
-
+        
         container.innerHTML = resultsHTML;
-
+        
         // Add download button handlers
         container.querySelectorAll('.btnDownload').forEach(button => {
             button.addEventListener('click', (e) => {
                 const subId = e.currentTarget.getAttribute('data-subid');
                 const subtitleName = e.currentTarget.closest('.listItem').querySelector('.listItemBody>div:first-child').textContent;
-
+                
                 // Hide dialog immediately and show progress
                 hideDialogAndShowProgress();
-
+                
                 downloadSubtitle(itemId, subId, subtitleName);
             });
         });
     }
-
+    
     /**
      * Get existing subtitle streams from item
      */
@@ -393,10 +417,10 @@
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
-
+            
             const response = await fetch(`${serverUrl}/Items/${itemId}`, {
                 method: 'GET',
                 headers: {
@@ -404,14 +428,14 @@
                     'Authorization': `MediaBrowser Token="${token}"`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const itemData = await response.json();
             const existingSubripStreams = [];
-
+            
             if (itemData.MediaStreams) {
                 itemData.MediaStreams.forEach((stream, index) => {
                     if (stream.Type === 'Subtitle' && stream.Codec === 'subrip') {
@@ -424,46 +448,54 @@
                     }
                 });
             }
-
+            
+           ;
             return existingSubripStreams;
+            
         } catch (error) {
             ERR('Error getting existing subtitle streams:', error);
             return [];
         }
     }
-
+    
     /**
      * Poll for newly added subtitle stream with retry mechanism
      */
     async function pollForNewSubtitleStream(itemId, existingStreams) {
         const maxAttempts = 20;
         const pollInterval = 5000; // 3 seconds
-
+        
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+           ;
+            
             try {
                 const newStreamIndex = await findNewSubtitleStream(itemId, existingStreams);
-
+                
                 if (newStreamIndex !== null) {
+                   ;
                     return newStreamIndex;
                 }
-
+                
                 // If not the last attempt, wait before trying again
                 if (attempt < maxAttempts) {
+                   ;
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                 }
+                
             } catch (error) {
                 ERR(`Error on polling attempt ${attempt}:`, error);
-
+                
                 // If not the last attempt, wait before trying again
                 if (attempt < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                 }
             }
         }
-
+        
+       ;
         return null;
     }
-
+    
     /**
      * Find newly added subtitle stream
      */
@@ -472,10 +504,10 @@
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
-
+            
             const response = await fetch(`${serverUrl}/Items/${itemId}`, {
                 method: 'GET',
                 headers: {
@@ -483,14 +515,14 @@
                     'Authorization': `MediaBrowser Token="${token}"`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const itemData = await response.json();
             const currentSubripStreams = [];
-
+            
             if (itemData.MediaStreams) {
                 itemData.MediaStreams.forEach((stream, index) => {
                     if (stream.Type === 'Subtitle' && stream.Codec === 'subrip') {
@@ -503,26 +535,31 @@
                     }
                 });
             }
-
+            
+           ;
+            
             // Find the new stream by comparing with existing ones
             const newStream = currentSubripStreams.find(currentStream => {
-                return !existingStreams.some(existingStream =>
-                    existingStream.language === currentStream.language
-                    && existingStream.displayTitle === currentStream.displayTitle
+                return !existingStreams.some(existingStream => 
+                    existingStream.language === currentStream.language &&
+                    existingStream.displayTitle === currentStream.displayTitle
                 );
             });
-
+            
             if (newStream) {
+               ;
                 return newStream.index;
             }
-
+            
+           ;
             return null;
+            
         } catch (error) {
             ERR('Error finding new subtitle stream:', error);
             return null;
         }
     }
-
+    
     /**
      * Get session data using device ID
      */
@@ -531,19 +568,21 @@
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
             const deviceId = ApiClient.deviceId();
-
+            
             if (!deviceId) {
                 throw new Error('Device ID not available');
             }
-
+            
             if (!serverUrl) {
                 throw new Error('Server URL not available');
             }
-
+            
+           ;
+            
             // Get session from the endpoint with device ID
             const response = await fetch(`${serverUrl}/Sessions?deviceId=${deviceId}`, {
                 method: 'GET',
@@ -552,23 +591,25 @@
                     'Authorization': `MediaBrowser Token="${token}"`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const sessions = await response.json();
-
+            
             // Return the first session if available, or the sessions array itself
             if (Array.isArray(sessions) && sessions.length > 0) {
+               ;
                 return sessions[0];
             } else if (sessions && !Array.isArray(sessions)) {
                 // If it's not an array, it might be a single session object
-
+               ;
                 return sessions;
             } else {
                 throw new Error('No active session found for device');
             }
+            
         } catch (error) {
             ERR('Error getting session:', error);
             throw error;
@@ -583,11 +624,12 @@
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
             const userId = ApiClient.getCurrentUserId();
 
+            
             const response = await fetch(`${serverUrl}/Sessions/${sessionId}/Command`, {
                 method: 'POST',
                 headers: {
@@ -595,25 +637,26 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    Name: 'SetSubtitleStreamIndex',
+                    Name: "SetSubtitleStreamIndex",
                     ControllingUserId: userId,
                     Arguments: { Index: subtitleStreamIndex }
                 })
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const result = await response.text();
-
+           ;
+            
             return true;
         } catch (error) {
             ERR('Error sending SetSubtitleStreamIndex command:', error);
             return false;
         }
     }
-
+    
     /**
      * Trigger custom playback progress event (to be called by external progress monitoring)
      */
@@ -623,7 +666,7 @@
         });
         document.dispatchEvent(event);
     }
-
+    
     /**
      * Listen for progress updates to verify subtitle stream change
      */
@@ -632,7 +675,7 @@
             let timeoutId;
             let progressListener;
             let checkInterval;
-
+            
             const cleanup = () => {
                 if (timeoutId) clearTimeout(timeoutId);
                 if (progressListener) {
@@ -642,22 +685,26 @@
                     clearInterval(checkInterval);
                 }
             };
-
+            
             // Set timeout
             timeoutId = setTimeout(() => {
+               ;
                 cleanup();
                 resolve(false);
             }, timeout);
-
+            
             // Listen for progress updates
             progressListener = (event) => {
                 try {
                     const progressData = event.detail;
-
+                   ;
+                    
                     if (progressData && progressData.SubtitleStreamIndex !== undefined) {
                         const currentSubtitleIndex = progressData.SubtitleStreamIndex;
-
+                       ;
+                        
                         if (currentSubtitleIndex === expectedSubtitleIndex) {
+                           ;
                             cleanup();
                             resolve(true);
                         }
@@ -666,15 +713,16 @@
                     ERR('Error processing progress update:', error);
                 }
             };
-
+            
             // Listen for custom progress events
             document.addEventListener('playbackprogress', progressListener);
-
+            
             // Also check current session state periodically as backup
             checkInterval = setInterval(async () => {
                 try {
                     const session = await getSession();
                     if (session && session.PlayState && session.PlayState.SubtitleStreamIndex === expectedSubtitleIndex) {
+                       ;
                         cleanup();
                         resolve(true);
                     }
@@ -684,7 +732,7 @@
             }, 1000);
         });
     }
-
+    
     /**
      * Update playback progress with new subtitle stream using PlayNow command
      */
@@ -693,34 +741,36 @@
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available');
             }
-
+            
+           ;
+            
             // Get session data
             const session = await getSession();
             const sessionId = session.Id;
             const playState = session.PlayState;
-
+            
             if (!playState) {
                 throw new Error('No play state found in session');
             }
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
-
+            
             // Get current item ID
             const itemId = getCurrentItemId();
             if (!itemId) {
                 throw new Error('No current item ID found');
             }
-
+            
             // Prepare PlayNow command parameters
             const params = new URLSearchParams({
-                playCommand: 'PlayNow',
+                playCommand: "PlayNow",
                 itemIds: itemId,
-                startPositionTicks: playState.PositionTicks?.toString() || '0',
+                startPositionTicks: playState.PositionTicks?.toString() || "0",
                 subtitleStreamIndex: subtitleStreamIndex.toString(),
-                audioStreamIndex: playState.AudioStreamIndex?.toString() || '0'
+                audioStreamIndex: playState.AudioStreamIndex?.toString() || "0"
             });
-
+            
             // Use PlayNow command to restart playback with new subtitle
             const commandResponse = await fetch(`${serverUrl}/Sessions/${sessionId}/Playing?${params.toString()}`, {
                 method: 'POST',
@@ -728,38 +778,46 @@
                     'X-Emby-Token': token
                 }
             });
-
+            
             if (!commandResponse.ok) {
                 throw new Error(`HTTP ${commandResponse.status}: ${commandResponse.statusText}`);
             }
-
+            
             const commandResult = await commandResponse.text();
-
+           ;
+            
             // Wait a moment for the playback to restart
             await new Promise(resolve => setTimeout(resolve, 1000));
-
+            
             // Verify that the subtitle stream was actually changed
-
+           ;
             const verificationSuccess = await listenForSubtitleStreamChange(sessionId, subtitleStreamIndex, 10000);
-
+            
             if (verificationSuccess) {
-
+               ;
             } else {
+               ;
+                
                 // Try the direct command as fallback
                 const fallbackSuccess = await setSubtitleStreamIndex(sessionId, subtitleStreamIndex);
-
+                
                 if (fallbackSuccess) {
-
+                   ;
                 } else {
                     throw new Error('Both PlayNow and SetSubtitleStreamIndex commands failed');
                 }
             }
+            
         } catch (error) {
             ERR('Error changing subtitle stream:', error);
             throw error;
         }
     }
 
+
+    
+    
+    
     /**
      * Hide search results dialog and show download progress in top-right
      */
@@ -769,11 +827,11 @@
         if (resultsDialog) {
             resultsDialog.style.display = 'none';
         }
-
+        
         // Show download progress indicator
         showDownloadProgress();
     }
-
+    
     /**
      * Show download progress message
      */
@@ -782,99 +840,108 @@
             window.KefinTweaksToaster.toast('Downloading subtitle...', null, false);
         }
     }
-
+    
     /**
      * Show download success message
      */
     function showDownloadSuccess() {
         hideDownloadProgress();
-
+        
         if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
             window.KefinTweaksToaster.toast('Subtitle downloaded and activated!');
         }
     }
-
+    
     /**
      * Show download error message
      */
     function showDownloadError(message) {
         hideDownloadProgress();
-
+        
         if (window.KefinTweaksToaster && window.KefinTweaksToaster.toast) {
             window.KefinTweaksToaster.toast(message || 'Failed to download subtitle', '5');
         }
     }
-
+    
     /**
      * Hide download progress UI (no-op now, kept for compatibility)
      */
     function hideDownloadProgress() {
         // No longer needed since we use toaster.toast() which auto-dismisses
     }
-
+    
     /**
      * Download subtitle
      */
     async function downloadSubtitle(itemId, subId, subtitleName) {
         try {
+           ;
+            
             if (!isApiClientAvailable()) {
                 throw new Error('ApiClient not available for authorization');
             }
-
+            
             // Get existing subtitle streams before download
             const existingStreams = await getExistingSubtitleStreams(itemId);
-
+            
             const token = ApiClient.accessToken();
             const serverUrl = ApiClient.serverAddress();
-
+            
             const response = await fetch(`${serverUrl}/Items/${itemId}/RemoteSearch/Subtitles/${subId}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `MediaBrowser Token="${token}"`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
+           ;
+            
             // Poll for new subtitle stream with retry mechanism
             const newSubtitleIndex = await pollForNewSubtitleStream(itemId, existingStreams);
-
+            
             if (newSubtitleIndex !== null) {
+               ;
+                
                 // Update playback progress to use the new subtitle
                 await updatePlaybackProgress(newSubtitleIndex, subtitleName);
-
+                
                 // Hide progress and show success
                 hideDownloadProgress();
                 showDownloadSuccess();
-
+                
                 // Remove the search results dialog on success
                 const resultsDialog = document.querySelector('#subtitleSearchResultsDialog');
                 if (resultsDialog) {
                     resultsDialog.remove();
                 }
             } else {
+               ;
+                
                 // Hide progress and show error
                 hideDownloadProgress();
                 showDownloadError('Could not detect new subtitle');
-
+                
                 // Show the dialog again on error
                 const resultsDialog = document.querySelector('#subtitleSearchResultsDialog');
                 if (resultsDialog) {
                     resultsDialog.style.display = 'block';
                 }
             }
-
+            
             // Show success message (optional)
             // You could add a toast notification here
+            
         } catch (error) {
             ERR('Error downloading subtitle:', error);
-
+            
             // Hide progress and show error
             hideDownloadProgress();
             showDownloadError('Failed to download subtitle');
-
+            
             // Show the dialog again on error
             const resultsDialog = document.querySelector('#subtitleSearchResultsDialog');
             if (resultsDialog) {
@@ -882,13 +949,13 @@
             }
         }
     }
-
+    
     /**
      * Add search button to existing subtitle dialogs
      */
     function addSearchButtonToExistingDialogs() {
         const subtitleDialogs = document.querySelectorAll('.dialogContainer:not(.hide)');
-
+        
         subtitleDialogs.forEach(dialog => {
             const title = dialog.querySelector('.actionSheetTitle');
             if (title && title.innerHTML === 'Subtitles') {
@@ -896,19 +963,19 @@
                 if (dialog.querySelector('#subtitleSearchButton')) {
                     return;
                 }
-
+                
                 const scroller = dialog.querySelector('.actionSheetScroller');
                 if (!scroller) {
                     return;
                 }
-
+                
                 // Create search button
                 const searchButton = document.createElement('button');
                 searchButton.setAttribute('is', 'emby-button');
                 searchButton.type = 'button';
                 searchButton.className = 'listItem listItem-button actionSheetMenuItem emby-button';
                 searchButton.id = 'subtitleSearchButton';
-
+                
                 searchButton.innerHTML = `
                     <span class="actionsheetMenuItemIcon listItemIcon listItemIcon-transparent material-icons ${CONFIG.searchIcon}" 
                           aria-hidden="true"></span>
@@ -916,10 +983,10 @@
                         <div class="listItemBodyText actionSheetItemText">${CONFIG.searchButtonText}</div>
                     </div>
                 `;
-
+                
                 // Insert before the title
                 title.parentNode.insertBefore(searchButton, title);
-
+                
                 // Add CSS offset to the dialog container
                 const dialogContainer = dialog.querySelector('.focuscontainer.dialog');
                 if (dialogContainer) {
@@ -933,15 +1000,19 @@
                         dialogContainer.style.top = '-33px';
                     }
                 }
-
+                
                 // Add click handler
                 searchButton.addEventListener('click', () => {
+                   ;
                     searchSubtitles();
                 });
+                
+                
+               ;
             }
         });
     }
-
+    
     /**
      * Start checking for subtitle dialogs periodically (only when on video page)
      * This is much more efficient than a MutationObserver watching the entire document
@@ -951,14 +1022,14 @@
         if (dialogCheckInterval) {
             clearInterval(dialogCheckInterval);
         }
-
+        
         // Check for dialogs periodically while on video page
         // The interval is automatically stopped when navigating away via onViewPage
         dialogCheckInterval = setInterval(() => {
             addSearchButtonToExistingDialogs();
         }, 500); // Check every 500ms
     }
-
+    
     /**
      * Stop checking for subtitle dialogs
      */
@@ -968,7 +1039,8 @@
             dialogCheckInterval = null;
         }
     }
-
+    
+    
     /**
      * Initialize subtitle search functionality for video page
      */
@@ -976,54 +1048,68 @@
         try {
             // Check if ApiClient is available first
             if (!isApiClientAvailable()) {
+               ;
                 return;
             }
-
+            
             // Check permissions first
             const hasPermission = await checkSubtitlePermissions();
             if (!hasPermission) {
+               ;
                 return;
             }
-
+            
+           ;
+            
             // Add CC button if it doesn't exist
             addCCButton();
-
+            
             // Start checking for subtitle dialogs
             startDialogCheck();
+            
+           ;
+            
         } catch (error) {
             ERR('Error initializing subtitle search:', error);
         }
     }
-
+    
     /**
      * Initialize subtitle search functionality
      */
     async function initialize() {
         if (isInitialized) {
+           ;
             return;
         }
-
+        
         try {
             // Check if ApiClient is available first
             if (!isApiClientAvailable()) {
+               ;
                 return;
             }
-
+            
             // Check permissions first
             const hasPermission = await checkSubtitlePermissions();
             if (!hasPermission) {
+               ;
                 return;
             }
-
+            
+           ;
+            
             // Wait for KefinTweaksUtils to be available
             if (!window.KefinTweaksUtils || !window.KefinTweaksUtils.onViewPage) {
+               ;
                 setTimeout(initialize, 1000);
                 return;
             }
-
+            
             // Register onViewPage handler for video page
             onViewPageUnregister = window.KefinTweaksUtils.onViewPage(async (view, element, hash) => {
                 if (hash && hash.includes('#/video')) {
+                   ;
                     // Small delay to ensure OSD is ready
                     setTimeout(() => {
                         initializeForVideoPage();
@@ -1035,45 +1121,50 @@
             }, {
                 pages: ['video']
             });
-
+            
             // Also check current page on initial load
             if (window.location.hash.includes('#/video')) {
                 setTimeout(() => {
                     initializeForVideoPage();
                 }, 500);
             }
-
+            
             isInitialized = true;
+           ;
+            
         } catch (error) {
             ERR('Error initializing subtitle search:', error);
         }
     }
-
+    
     /**
      * Clean up resources
      */
     function cleanup() {
         stopDialogCheck();
-
+        
         if (onViewPageUnregister) {
             onViewPageUnregister();
             onViewPageUnregister = null;
         }
-
+        
         isInitialized = false;
+       ;
     }
-
+    
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initialize);
     } else {
         initialize();
     }
-
+    
     // Expose functions globally for debugging
     window.subtitleSearchCleanup = cleanup;
     window.getSession = getSession;
     window.setSubtitleStreamIndex = setSubtitleStreamIndex;
     window.listenForSubtitleStreamChange = listenForSubtitleStreamChange;
     window.triggerPlaybackProgressEvent = triggerPlaybackProgressEvent;
+
+   ;    
 })();

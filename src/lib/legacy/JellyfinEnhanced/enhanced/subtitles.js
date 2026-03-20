@@ -106,13 +106,20 @@
         startSubtitleObserver();
 
         // Also apply styles to the legacy ::cue for Jellyfin versions <10.11
-        const styleElement = document.getElementById('htmlvideoplayer-cuestyle');
-        if (styleElement?.sheet) {
+        const oldStyleElement = document.getElementById('htmlvideoplayer-cuestyle');
+        if (oldStyleElement?.sheet) {
+            let styleElement = document.getElementById('je-html-videoplayer-cuestyle');
+            if (!styleElement?.sheet) {
+                styleElement = document.createElement('style');
+                styleElement.id = 'je-html-videoplayer-cuestyle';
+                document.head.appendChild(styleElement);
+            }
+
             try {
                 while (styleElement.sheet.cssRules.length > 0) styleElement.sheet.deleteRule(0);
                 if (JE.currentSettings.disableCustomSubtitleStyles) return;
                 const cueRule = `
-                .htmlvideoplayer::cue {
+                video.htmlvideoplayer::cue {
                     background-color: ${bgColor} !important;
                     color: ${textColor} !important;
                     font-size: ${fontSize}vw !important;
@@ -138,17 +145,22 @@
             return;
         }
 
-        const stylePreset = JE.subtitlePresets[JE.currentSettings.selectedStylePresetIndex ?? 0];
+        const textColor = JE.currentSettings.customSubtitleTextColor || '#FFFFFFFF';
+        const bgColor = JE.currentSettings.customSubtitleBgColor || '#00000000';
+        const textShadow = bgColor === 'transparent' || bgColor === '#00000000' ?
+            '0 0 4px #000, 0 0 8px #000, 1px 1px 2px #000' :
+            'none';
+
         const fontSizePreset = JE.fontSizePresets[JE.currentSettings.selectedFontSizePresetIndex ?? 2];
         const fontFamilyPreset = JE.fontFamilyPresets[JE.currentSettings.selectedFontFamilyPresetIndex ?? 0];
 
-        if (stylePreset && fontSizePreset && fontFamilyPreset) {
+        if (fontSizePreset && fontFamilyPreset) {
             JE.applySubtitleStyles(
-                stylePreset.textColor,
-                stylePreset.bgColor,
+                textColor,
+                bgColor,
                 fontSizePreset.size,
                 fontFamilyPreset.family,
-                stylePreset.textShadow
+                textShadow
             );
         }
     };

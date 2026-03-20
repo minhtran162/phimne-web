@@ -3,7 +3,8 @@
     'use strict';
 
     const ui = {};
-    const logPrefix = '🪼 Jellyfin Enhanced: Jellyseerr UI:';
+    const logPrefix = '🪼 Jellyfin Enhanced: Seerr UI:';
+    const escapeHtml = JE.escapeHtml;
 
     // State variables managed by the main jellyseerr.js, but used by UI functions
     let jellyseerrHoverPopover = null;
@@ -27,8 +28,8 @@
         person_off: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img" style="margin-left:0.5em;"><path d="M8.65,5.82C9.36,4.72,10.6,4,12,4c2.21,0,4,1.79,4,4c0,1.4-0.72,2.64-1.82,3.35L8.65,5.82z M20,17.17 c-0.02-1.1-0.63-2.11-1.61-2.62c-0.54-0.28-1.13-0.54-1.77-0.76L20,17.17z M20.49,20.49L3.51,3.51c-0.39-0.39-1.02-0.39-1.41,0l0,0 c-0.39,0.39-0.39,1.02,0,1.41l8.18,8.18c-1.82,0.23-3.41,0.8-4.7,1.46C4.6,15.08,4,16.11,4,17.22L4,20h13.17l1.9,1.9 c0.39,0.39,1.02,0.39,1.41,0l0,0C20.88,21.51,20.88,20.88,20.49,20.49z"/></svg>',
         //pending
         pending: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img" style="margin-left:0.5em;"><path d="M12,2C6.48,2,2,6.48,2,12c0,5.52,4.48,10,10,10s10-4.48,10-10C22,6.48,17.52,2,12,2z M12,20c-4.42,0-8-3.58-8-8 c0-4.42,3.58-8,8-8s8,3.58,8,8C20,16.42,16.42,20,12,20z"/><circle cx="7" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="17" cy="12" r="1.5"/></svg>',
-        //calendar_month
-        requested: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img" style="margin-left:0.5em;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"></path></svg>',
+        //schedule
+        requested: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>',
         //check_circle_outline
         partially_available: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" role="img" style="margin-left:0.5em;"><path d="M9.71 11.29a1 1 0 0 0-1.42 1.42l3 3A1 1 0 0 0 12 16a1 1 0 0 0 .72-.34l7-8a1 1 0 0 0-1.5-1.32L12 13.54z"/><path d="M21 11a1 1 0 0 0-1 1 8 8 0 0 1-8 8A8 8 0 0 1 6.33 6.36 7.93 7.93 0 0 1 12 4a8.79 8.79 0 0 1 1.9.22 1 1 0 1 0 .47-1.94A10.54 10.54 0 0 0 12 2a10 10 0 0 0-7 17.09A9.93 9.93 0 0 0 12 22a10 10 0 0 0 10-10 1 1 0 0 0-1-1z"/></svg>',
         //cancel
@@ -137,8 +138,9 @@
             ...(item.mediaInfo?.downloadStatus4k || [])
         ];
 
+        // Download status fields originate from the Jellyseerr API and must be
+        // escaped before interpolation into HTML to prevent stored XSS.
         if (allDownloads.length === 0) {
-            console.debug(`${logPrefix} No download status found`);
             return null;
         }
 
@@ -161,7 +163,7 @@
                 // For queued items, show 0% progress
                 popoverHTML += `
                     <div class="jellyseerr-popover-item">
-                        <div class="title">${downloadStatus.title || JE.t('jellyseerr_popover_downloading')}</div>
+                        <div class="title">${escapeHtml(downloadStatus.title) || JE.t('jellyseerr_popover_downloading')}</div>
                         <div class="jellyseerr-hover-progress"><div class="bar" style="width:0%;"></div></div>
                         <div class="row">
                             <div>0%</div>
@@ -175,19 +177,19 @@
                 const etaText = formatEtaText(downloadStatus);
                 popoverHTML += `
                     <div class="jellyseerr-popover-item">
-                        <div class="title">${downloadStatus.title || JE.t('jellyseerr_popover_downloading')}</div>
+                        <div class="title">${escapeHtml(downloadStatus.title) || JE.t('jellyseerr_popover_downloading')}</div>
                         <div class="jellyseerr-hover-progress"><div class="bar" style="width:${percentage}%;"></div></div>
                         <div class="row">
                             <div>${percentage}%</div>
-                            <div class="status">${statusDisplay}</div>
-                            ${etaText ? `<div class="eta">${etaText}</div>` : ''}
+                            <div class="status">${escapeHtml(statusDisplay)}</div>
+                            ${etaText ? `<div class="eta">${escapeHtml(etaText)}</div>` : ''}
                         </div>
                     </div>`;
             }
         });
 
         popover.innerHTML = popoverHTML;
-        console.debug(`${logPrefix} Popover filled for ${allDownloads.length} download item(s)`);
+
         return popover;
     }
 
@@ -284,6 +286,17 @@
             request4KBtn.innerHTML = `<span>4K Requested</span>${icons.pending}`;
             request4KBtn.disabled = true;
             request4KBtn.classList.add(status4k === 3 ? 'chip-processing' : 'chip-pending');
+        } else if (status4k === 6) {
+            // 4K is blocklisted
+            request4KBtn.innerHTML = `<span>${JE.t('jellyseerr_btn_blocklisted')}</span>${icons.blocklisted}`;
+            request4KBtn.disabled = true;
+            request4KBtn.classList.add('chip-blocklisted');
+        } else if (status4k === 7) {
+            // 4K was deleted and can be requested again
+            request4KBtn.innerHTML = `<span>${JE.t('jellyseerr_btn_request_4k')}</span>`;
+            request4KBtn.dataset.tmdbId = item.id;
+            request4KBtn.dataset.action = 'request4k';
+            request4KBtn.classList.add('chip-requested');
         } else {
             // 4K can be requested
             request4KBtn.innerHTML = `<span>${JE.t('jellyseerr_btn_request_4k')}</span>`;
@@ -313,7 +326,7 @@
     // ================================
 
     /**
-     * Adds main CSS styles for Jellyseerr integration.
+     * Adds main CSS styles for Seerr integration.
      */
     ui.addMainStyles = function() {
         const styleId = 'jellyseerr-styles';
@@ -323,19 +336,19 @@
         style.textContent = `
             /* LAYOUT & ICONS */
             .jellyseerr-section { margin-bottom: 1em; }
-            .jellyseerr-section .itemsContainer { white-space: nowrap; }
+            .jellyseerr-section .itemsContainer { }
             #jellyseerr-search-icon { position: absolute; right: 10px; top: 68%; transform: translateY(-50%); user-select: none; z-index: 10; transition: filter .2s, opacity .2s, transform .2s; }
             .inputContainer { position: relative !important; }
-            .jellyseerr-icon { width: 30px; height: 50px; filter: drop-shadow(2px 2px 6px #000); }
-            #jellyseerr-search-icon.is-active { filter: drop-shadow(2px 2px 6px #000); opacity: 1; }
-            #jellyseerr-search-icon.is-disabled { filter: grayscale(1); opacity: .8; }
-            #jellyseerr-search-icon.is-no-user { filter: hue-rotate(125deg) brightness(100%); }
+            .jellyseerr-icon { width: 30px; height: 30px; filter: drop-shadow(2px 2px 6px rgba(0,0,0,0.8)); }
+            #jellyseerr-search-icon.is-active { filter: drop-shadow(2px 2px 6px rgba(0,0,0,0.8)); opacity: 1; }
+            #jellyseerr-search-icon.is-disabled { filter: grayscale(1) opacity(0.4) drop-shadow(2px 2px 6px rgba(0,0,0,0.5)); }
+            #jellyseerr-search-icon.is-no-user { filter: drop-shadow(2px 2px 6px rgba(255, 0, 0, 0.8)); }
             #jellyseerr-search-icon.is-filter-active { filter: drop-shadow(2px 2px 6px #3b82f6) brightness(1.2); transform: translateY(-50%) scale(1.1); }
             #jellyseerr-search-icon:hover { transform: translateY(-50%) scale(1.05); transition: transform 0.2s ease; }
             /* CARDS & BADGES */
             .jellyseerr-card { position: relative; }
             .jellyseerr-card .cardScalable { contain: paint; }
-            .jellyseerr-icon-on-card { width: 1.2em; height: 1.2em; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); flex-shrink: 0; }
+            .jellyseerr-icon-on-card { width: 1.2em !important; height: 1.2em !important; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); flex-shrink: 0; }
             .jellyseerr-status-badge { position: absolute; top: 8px; right: 8px; z-index: 100; width: 1.5em; height: 1.5em; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.3); box-shadow: 0 0 1px rgba(255,255,255,0.4) inset, 0 4px 12px rgba(0,0,0,0.6); }
             .jellyseerr-status-badge svg { width: 1.4em; height: 1.4em; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.6)); }
             .jellyseerr-status-badge.status-available { background-color: rgba(34, 197, 94, 0.7); border-color: rgba(34, 197, 94, 0.3); }
@@ -343,7 +356,8 @@
             .jellyseerr-status-badge.status-requested { background-color: rgba(136, 61, 206, 0.7); border-color: rgba(147, 51, 234, 0.3); }
             .jellyseerr-status-badge.status-pending { background-color: rgba(251, 146, 60, 0.7); border-color: rgba(251, 146, 60, 0.3); }
             .jellyseerr-status-badge.status-partially-available { background-color: rgba(34, 197, 94, 0.7); border-color: rgba(34, 197, 94, 0.3); }
-            .jellyseerr-status-badge.status-rejected { background-color: rgba(220, 38, 38, 0.7); border-color: rgba(220, 38, 38, 0.3); }
+            .jellyseerr-status-badge.status-blocklisted { background-color: rgba(120, 53, 15, 0.7); border-color: rgba(120, 53, 15, 0.3); }
+            .jellyseerr-status-badge.status-deleted { background-color: rgba(220, 38, 38, 0.78); border-color: rgba(248, 113, 113, 0.6); }
             @keyframes jellyseerr-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             .jellyseerr-status-badge.status-processing svg { animation: jellyseerr-spin 1s linear infinite; }
             .jellyseerr-media-badge { position: absolute; top: 8px; left: 8px; z-index: 100; color: #fff; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(0,0,0,0.2); font-size: 1em; font-weight: 500; text-transform: uppercase; letter-spacing: 1.5px; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8); box-shadow: 0 4px 4px -1px rgba(0,0,0,0.1), 0 2px 2px -2px rgba(0,0,0,0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
@@ -373,7 +387,7 @@
             .jellyseerr-elsewhere-icons img { width: 1.8em; border-radius: 0.7em; background-color: rgba(255,255,255,0.5); padding: 2px;}
             .jellyseerr-meta { display: flex; justify-content: center; align-items: center; gap: 1em; padding: 0 .75em; }
             .jellyseerr-rating { display: flex; align-items: center; gap: .3em; color: #bdbdbd; }
-            .cardText-first > a[is="emby-linkbutton"] { padding: 0 !important; margin: 0 !important; color: inherit; text-decoration: none; }
+            .cardText-first > a.jellyseerr-more-info-link { padding: 0 !important; margin: 0 !important; color: inherit; text-decoration: none; }
             /* REQUEST BUTTONS */
             .jellyseerr-request-button { display: flex; justify-content: center; align-items: center; gap: 0.5em; white-space: normal; text-align: center; padding: 0.6em 1.2em; line-height: 1.2; font-size: 0.9em; transition: background .2s, border-color .2s, color .2s, transform .2s; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; position: relative; z-index: 10; }
             .jellyseerr-request-button svg { width: 1.2em; height: 1.2em; flex-shrink: 0; vertical-align: middle; }
@@ -385,7 +399,8 @@
             .jellyseerr-request-button.jellyseerr-button-pending { background-color: #b45309 !important; color: #fff !important; }
             .jellyseerr-request-button.jellyseerr-button-pending:hover:not(:disabled) { background-color: #d97706 !important; transform: translateY(-2px); }
             .jellyseerr-request-button.jellyseerr-button-processing { background-color: #581c87 !important; color: #fff !important; }
-            .jellyseerr-request-button.jellyseerr-button-rejected { background-color: #8a1c1c !important; color: #fff !important; }
+            .jellyseerr-request-button.jellyseerr-button-blocklisted { background-color: #78350f !important; color: #fff !important; }
+            .jellyseerr-request-button.jellyseerr-button-deleted { background-color: #dc2626 !important; color: #fff !important; }
             .jellyseerr-request-button.jellyseerr-button-partially-available { background-color: #4ca46c !important; color: #fff !important; }
             .jellyseerr-request-button.jellyseerr-button-partially-available:hover:not(:disabled) { background-color: #5bb876 !important; transform: translateY(-2px); }
             .jellyseerr-request-button.jellyseerr-button-available { background-color: #16a34a !important; color: #fff !important; }
@@ -399,7 +414,7 @@
                 overflow: visible !important;
             }
             .jellyseerr-card .cardBox { overflow: visible !important; }
-            .jellyseerr-section .scrollSlider { overflow: visible !important; }
+            .jellyseerr-section .vertical-wrap { overflow: visible !important; }
 
             /* Library item styling */
             .jellyseerr-card-in-library .cardText-first a {
@@ -457,8 +472,11 @@
             .jellyseerr-button-group .jellyseerr-button-processing ~ .jellyseerr-split-arrow {
                 background-color: #581c87 !important;
             }
-            .jellyseerr-button-group .jellyseerr-button-rejected ~ .jellyseerr-split-arrow {
-                background-color: #8a1c1c !important;
+            .jellyseerr-button-group .jellyseerr-button-blocklisted ~ .jellyseerr-split-arrow {
+                background-color: #78350f !important;
+            }
+            .jellyseerr-button-group .jellyseerr-button-deleted ~ .jellyseerr-split-arrow {
+                background-color: #dc2626 !important;
             }
             .jellyseerr-button-group .jellyseerr-button-partially-available ~ .jellyseerr-split-arrow {
                 background-color: #4ca46c !important;
@@ -659,7 +677,7 @@
     // ================================
 
     /**
-     * Updates the Jellyseerr icon in the search field based on current state.
+     * Updates the Seerr icon in the search field based on current state.
      * @param {boolean} isJellyseerrActive - If the server is reachable.
      * @param {boolean} jellyseerrUserFound - If the current user is linked.
      * @param {boolean} isJellyseerrOnlyMode - If the results are filtered.
@@ -676,7 +694,7 @@
             icon = document.createElement('img');
             icon.id = 'jellyseerr-search-icon';
             icon.className = 'jellyseerr-icon';
-            icon.src = 'https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyseerr.svg';
+            icon.src = 'https://cdn.jsdelivr.net/gh/n00bcodr/jellyfish/logos/favicon.ico';
             icon.alt = 'Jellyseerr';
 
             let tapCount = 0;
@@ -756,7 +774,7 @@
     }
 
     /**
-     * Renders Jellyseerr search results into the search page with improved placement logic.
+     * Renders Seerr search results into the search page with improved placement logic.
      * @param {Array} results - Array of search result items.
      * @param {string} query - The search query that generated these results.
      * @param {boolean} isJellyseerrOnlyMode - Whether the filter is active.
@@ -764,7 +782,6 @@
      * @param {boolean} jellyseerrUserFound - If the current user is linked.
      */
     ui.renderJellyseerrResults = function(results, query, isJellyseerrOnlyMode, isJellyseerrActive, jellyseerrUserFound) {
-        console.log(`${logPrefix} Rendering results for query: "${query}"`);
         const searchPage = document.querySelector('#searchPage');
         if (!searchPage) {
             console.warn(`${logPrefix} #searchPage not found. Cannot render results.`);
@@ -778,24 +795,17 @@
 
         const primarySectionKeywords = ['movies', 'shows', 'film', 'serier', 'filme', 'serien', 'películas', 'series', 'films', 'séries', 'serie tv'];
 
-        let attempts = 0;
-        const maxAttempts = 75; // ~15 seconds
-
-        const injectionInterval = setInterval(() => {
-            attempts++;
+        function injectSection() {
             const noResultsMessage = searchPage.querySelector('.noItemsMessage');
             const allSections = Array.from(searchPage.querySelectorAll('.verticalSection:not(.jellyseerr-section)'));
-            const hasContent = allSections.length > 0;
 
-            if ((hasContent || noResultsMessage) || attempts >= maxAttempts) {
-                clearInterval(injectionInterval);
+            if (noResultsMessage) {
+                noResultsMessage.textContent = JE.t('jellyseerr_no_results_jellyfin', { query });
+                noResultsMessage.parentElement.insertBefore(sectionToInject, noResultsMessage.nextSibling);
+                return true;
+            }
 
-                if (noResultsMessage) {
-                    noResultsMessage.textContent = JE.t('jellyseerr_no_results_jellyfin', { query });
-                    noResultsMessage.parentElement.insertBefore(sectionToInject, noResultsMessage.nextSibling);
-                    return;
-                }
-
+            if (allSections.length > 0) {
                 let lastPrimarySection = null;
                 for (let i = allSections.length - 1; i >= 0; i--) {
                     const section = allSections[i];
@@ -813,15 +823,36 @@
                     if (resultsContainer) {
                         resultsContainer.prepend(sectionToInject);
                     } else {
-                        searchPage.appendChild(sectionToInject); // Fallback
+                        searchPage.appendChild(sectionToInject);
                     }
                 }
+                return true;
             }
-        }, 200);
+
+            return false;
+        }
+
+        // Try immediate injection first
+        if (!injectSection()) {
+            // Use MutationObserver for faster detection than polling
+            let observer = null;
+            const timeoutId = setTimeout(() => {
+                if (observer) observer.disconnect();
+                injectSection(); // Force inject after timeout
+            }, 3000);
+
+            observer = new MutationObserver(() => {
+                if (injectSection()) {
+                    observer.disconnect();
+                    clearTimeout(timeoutId);
+                }
+            });
+            observer.observe(searchPage, { childList: true, subtree: true });
+        }
     };
 
     /**
-     * Creates the main Jellyseerr results section.
+     * Creates the main Seerr results section.
      * @param {Array} results - Array of search result items.
      * @param {boolean} isJellyseerrOnlyMode - Whether the filter is active.
      * @param {boolean} isJellyseerrActive - If the server is reachable.
@@ -921,7 +952,7 @@
             status = item.mediaInfo.status || 1;
         }
 
-        // Status codes: 1=Unknown, 2=Pending, 3=Processing/Requested, 4=Partially Available, 5=Available, 6=Rejected/Declined, 7=Requested
+        // MediaStatus: 1=Unknown, 2=Pending, 3=Processing, 4=Partially Available, 5=Available, 6=Blocklisted, 7=Deleted
         let icon = '';
         let statusClass = '';
 
@@ -934,7 +965,7 @@
                 icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M5.25 9a6.75 6.75 0 0113.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 01-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 11-7.48 0 24.585 24.585 0 01-4.831-1.244.75.75 0 01-.298-1.205A8.217 8.217 0 005.25 9.75V9zm4.502 8.9a2.25 2.25 0 104.496 0 25.057 25.057 0 01-4.496 0z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-pending';
                 break;
-            case 3: // Status 3 can be either Processing (with downloads) or Requested (without downloads)
+            case 3: // Processing (with downloads) or Requested (without downloads)
                 // Check if there are active downloads to differentiate
                 if (item.mediaInfo?.downloadStatus?.length > 0 || item.mediaInfo?.downloadStatus4k?.length > 0) {
                     // Processing - spinner icon with animation
@@ -946,17 +977,17 @@
                     statusClass = 'status-requested';
                 }
                 break;
-            case 7: // Requested (clock icon)
-                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd"></path></svg>';
-                statusClass = 'status-requested';
-                break;
             case 4: // Partially Available
                 icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM6.75 9.25a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clip-rule="evenodd" /></svg>';
                 statusClass = 'status-partially-available';
                 break;
-            case 6: // Rejected
+            case 6: // Blocklisted
                 icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd" /></svg>';
-                statusClass = 'status-rejected';
+                statusClass = 'status-blocklisted';
+                break;
+            case 7: // Deleted
+                icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clip-rule="evenodd" /></svg>';
+                statusClass = 'status-deleted';
                 break;
             default:
                 // Unknown status - hide badge
@@ -967,11 +998,20 @@
         badge.innerHTML = icon;
         badge.className = `jellyseerr-status-badge ${statusClass}`;
         badge.style.display = 'flex';
+
+        // Add hover tooltip for Partially Available TV shows with active downloads
+        if (status === 4 && item.mediaType === 'tv') {
+            const hasDownloads = (item.mediaInfo?.downloadStatus?.length > 0 || item.mediaInfo?.downloadStatus4k?.length > 0);
+            if (hasDownloads) {
+                badge.style.cursor = 'pointer';
+                addDownloadProgressHover(badge, item);
+            }
+        }
     }
 
     /**
-     * Creates an individual Jellyseerr result card.
-     * @param {Object} item - Search result item from Jellyseerr API.
+     * Creates an individual Seerr result card.
+     * @param {Object} item - Search result item from Seerr API.
      * @param {boolean} isJellyseerrActive - If the server is reachable.
      * @param {boolean} jellyseerrUserFound - If the current user is linked.
      * @returns {HTMLElement} - Card element.
@@ -980,16 +1020,26 @@
         const year = item.releaseDate?.substring(0, 4) || item.firstAirDate?.substring(0, 4) || 'N/A';
         const posterUrl = item.posterPath ? `https://image.tmdb.org/t/p/w400${item.posterPath}` : 'https://i.ibb.co/fdbkXQdP/jellyseerr-poster-not-found.png';
         const rating = item.voteAverage ? item.voteAverage.toFixed(1) : 'N/A';
-        const titleText = item.title || item.name;
-        // Resolve Jellyseerr URL based on mappings or fallback to base URL
+        // Escape API-sourced values before interpolation into search card HTML
+        const titleText = escapeHtml(item.title || item.name);
+        // Resolve Seerr URL based on mappings or fallback to base URL
         const base = JE.jellyseerrAPI?.resolveJellyseerrBaseUrl() || '';
         const jellyseerrUrl = base ? `${base}/${item.mediaType}/${item.id}` : null;
         const useMoreInfoModal = !!(JE.pluginConfig && JE.pluginConfig.JellyseerrUseMoreInfoModal);
 
-        // Check if item is available in Jellyfin via Jellyseerr metadata
-        const jellyfinMediaId = item.mediaInfo?.jellyfinMediaId || null;
+        // Treat as "in library" only when Jellyfin exposes a media id
+        const jellyfinMediaId = item.mediaInfo?.jellyfinMediaId || item.mediaInfo?.jellyfinMediaId4k || null;
         const jellyfinHref = jellyfinMediaId ? `#!/details?id=${jellyfinMediaId}` : null;
-        const isAvailable = jellyfinMediaId || item.mediaInfo?.status || item.mediaInfo?.status4k;
+        const isAvailable = Boolean(jellyfinMediaId);
+        const usesExternalTitleLink = !jellyfinHref && !useMoreInfoModal && !!jellyseerrUrl;
+        const titleLinkIsAttribute = usesExternalTitleLink ? '' : 'is="emby-linkbutton"';
+        const titleHrefAttribute = jellyfinHref ?
+            `href="${jellyfinHref}"` :
+            (useMoreInfoModal ?
+                'href="#"' :
+                (jellyseerrUrl ?
+                    `href="${jellyseerrUrl}" target="_blank" rel="noopener noreferrer"` :
+                    'href="#"'));
 
         const card = document.createElement('div');
         card.className = `card overflowPortraitCard card-hoverable card-withuserdata jellyseerr-card${isAvailable ? ' jellyseerr-card-in-library' : ''}`;
@@ -1005,15 +1055,15 @@
                     <div class="cardOverlayContainer" data-action="link"></div>
                 </div>
                 <div class="cardText cardTextCentered cardText-first">
-                    <a is="emby-linkbutton"
-                       ${useMoreInfoModal ? 'href="#"' : (jellyfinHref ? `href="${jellyfinHref}"` : (jellyseerrUrl ? `href="${jellyseerrUrl}" target="_blank" rel="noopener noreferrer"` : 'href="#"'))}
+                    <a ${titleLinkIsAttribute}
+                       ${titleHrefAttribute}
                        class="jellyseerr-more-info-link"
                        data-tmdb-id="${item.id}"
                        data-media-type="${item.mediaType}"
-                       title="${useMoreInfoModal ? titleText : (jellyfinHref ? titleText : (jellyseerrUrl ? (JE.t('jellyseerr_card_view_on_jellyseerr') || 'View on Jellyseerr') : titleText))}"><bdi>${titleText}</bdi></a>
+                       title="${jellyfinHref ? titleText : (useMoreInfoModal ? titleText : (jellyseerrUrl ? (JE.t('jellyseerr_card_view_on_jellyseerr') || 'View on Jellyseerr') : titleText))}"><bdi>${titleText}</bdi></a>
                 </div>
                 <div class="cardText cardTextCentered cardText-secondary jellyseerr-meta">
-                    <img src="https://cdn.jsdelivr.net/gh/selfhst/icons/svg/jellyseerr.svg" class="jellyseerr-icon-on-card" alt="Jellyseerr"/>
+                    <img src="https://cdn.jsdelivr.net/gh/n00bcodr/jellyfish/logos/favicon.ico" class="jellyseerr-icon-on-card" alt="Jellyseerr"/>
                     <bdi>${year}</bdi>
                     <div class="jellyseerr-rating">${icons.star}<span>${rating}</span></div>
                 </div>
@@ -1044,7 +1094,7 @@
                 overview.className = 'jellyseerr-overview';
                 overview.style.cursor = 'pointer';
                 overview.innerHTML = `
-                    <div class="content">${((item.overview || JE.t('jellyseerr_card_no_info')).slice(0, 500))}</div>
+                    <div class="content">${escapeHtml((item.overview || JE.t('jellyseerr_card_no_info')).slice(0, 500))}</div>
                     <button type="button" class="jellyseerr-request-button" data-tmdb-id="${item.id}" data-media-type="${item.mediaType}"></button>
                 `;
 
@@ -1060,7 +1110,9 @@
                     e.preventDefault();
                     e.stopPropagation();
 
-                    if (useMoreInfoModal && JE.jellyseerrMoreInfo) {
+                    if (item.mediaType === 'collection') {
+                        ui.showCollectionRequestModal(item.id, item.name || item.title, item);
+                    } else if (useMoreInfoModal && JE.jellyseerrMoreInfo) {
                         const tmdbId = parseInt(item.id);
                         const mediaType = item.mediaType;
                         if (tmdbId && mediaType) {
@@ -1176,9 +1228,18 @@
                 // Check if this is a library item (href already set to jellyfin item)
                 const href = moreInfoLink.getAttribute('href');
                 const isLibraryLink = href && href.startsWith('#!/details?id=');
+                const isExternalJellyseerrLink = href && /^https?:\/\//i.test(href);
 
                 if (isLibraryLink) {
                     // Allow default behavior for library links
+                    return;
+                }
+
+                // If collection, open collection modal
+                if (item.mediaType === 'collection') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    ui.showCollectionRequestModal(item.id, item.name || item.title, item);
                     return;
                 }
 
@@ -1191,19 +1252,110 @@
                     if (tmdbId && mediaType) {
                         JE.jellyseerrMoreInfo.open(tmdbId, mediaType);
                     }
+                    return;
                 }
-            });
+
+                // For plain external links, bypass Jellyfin's hash router and open in a new tab.
+                const isPlainLeftClick = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+                if (isExternalJellyseerrLink && isPlainLeftClick) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.stopImmediatePropagation) {
+                        e.stopImmediatePropagation();
+                    }
+                    window.open(href, '_blank', 'noopener,noreferrer');
+                }
+            }, true);
         }
 
         if (JE.pluginConfig.ShowElsewhereOnJellyseerr && JE.pluginConfig.TmdbEnabled && item.mediaType !== 'collection') {
             fetchProviderIcons(card.querySelector('.jellyseerr-elsewhere-icons'), item.id, item.mediaType);
         }
+
+        // Add hide button for hidden content feature
+        if (JE.hiddenContent && JE.hiddenContent.getSettings().enabled && JE.hiddenContent.getSettings().showHideButtons !== false && JE.hiddenContent.getSettings().showButtonJellyseerr !== false) {
+            const cardBox = card.querySelector('.cardBox');
+            if (cardBox) {
+                const hideBtn = document.createElement('button');
+                const hiddenLabel = JE.t('hidden_content_already_hidden') !== 'hidden_content_already_hidden' ? JE.t('hidden_content_already_hidden') : 'Hidden';
+                const unhideLabel = JE.t('hidden_content_unhide') !== 'hidden_content_unhide' ? JE.t('hidden_content_unhide') : 'Unhide';
+                const hideLabel = JE.t('hidden_content_hide_button') !== 'hidden_content_hide_button' ? JE.t('hidden_content_hide_button') : 'Hide';
+                const unhideKey = jellyfinMediaId || `tmdb-${item.id}`;
+
+                /**
+                 * Replaces the hide button's content with a material icon.
+                 * @param {string} iconName - Material icon name (e.g. 'visibility', 'visibility_off').
+                 */
+                function renderHideIcon(iconName) {
+                    hideBtn.replaceChildren();
+                    const icon = document.createElement('span');
+                    icon.className = 'material-icons';
+                    icon.setAttribute('aria-hidden', 'true');
+                    icon.textContent = iconName || 'visibility';
+                    hideBtn.appendChild(icon);
+                }
+
+                /**
+                 * Switches the hide button to "already hidden" state with unhide-on-click behaviour.
+                 */
+                function setHiddenState() {
+                    hideBtn.className = 'je-hide-btn je-already-hidden';
+                    hideBtn.title = hiddenLabel;
+                    renderHideIcon('visibility_off');
+                    hideBtn.onmouseenter = () => {
+                        hideBtn.title = unhideLabel;
+                    };
+                    hideBtn.onmouseleave = () => {
+                        hideBtn.title = hiddenLabel;
+                    };
+                    hideBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        JE.hiddenContent.unhideItem(unhideKey);
+                        setHideState();
+                    };
+                }
+
+                /**
+                 * Switches the hide button to the default "hide" state with confirm-and-hide-on-click behaviour.
+                 */
+                function setHideState() {
+                    hideBtn.className = 'je-hide-btn';
+                    hideBtn.title = hideLabel;
+                    renderHideIcon('visibility');
+                    hideBtn.onmouseenter = null;
+                    hideBtn.onmouseleave = null;
+                    hideBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        JE.hiddenContent.confirmAndHide({
+                            itemId: jellyfinMediaId || '',
+                            name: titleText,
+                            type: item.mediaType === 'tv' ? 'Series' : 'Movie',
+                            tmdbId: item.id,
+                            posterPath: item.posterPath || ''
+                        }, () => {
+                            card.style.display = 'none';
+                        });
+                    };
+                }
+
+                if (JE.hiddenContent.isHiddenByTmdbId(item.id)) {
+                    setHiddenState();
+                } else {
+                    setHideState();
+                }
+                cardBox.style.position = 'relative';
+                cardBox.appendChild(hideBtn);
+            }
+        }
+
         return card;
     }
 
     /**
-     * Fetches streaming provider icons from the TMDB API and adds them to a specified container element on a Jellyseerr poster.
-     * This function is called only if the "Show Elsewhere on Jellyseerr" setting is enabled and a TMDB API key is present.
+     * Fetches streaming provider icons from the TMDB API and adds them to a specified container element on a Seerr poster.
+     * This function is called only if the "Show Elsewhere on Seerr" setting is enabled and a TMDB API key is present.
      * It retrieves providers based on the default region and filters configured in the Elsewhere plugin settings.
      *
      * @async
@@ -1215,6 +1367,11 @@
      */
     async function fetchProviderIcons(container, tmdbId, mediaType) {
         if (!container || !tmdbId || !mediaType) return;
+
+        // Early exit if TMDB is not configured - prevents slow/failing API calls
+        if (!JE.pluginConfig?.TmdbEnabled) {
+            return;
+        }
 
         const url = ApiClient.getUrl(`/JellyfinEnhanced/tmdb/${mediaType}/${tmdbId}/watch/providers`);
         const DEFAULT_REGION = JE.pluginConfig.DEFAULT_REGION || 'US';
@@ -1310,6 +1467,7 @@
      */
     function configureCollectionButton(button, item) {
         button.dataset.searchResultItem = JSON.stringify(item);
+        button.dataset.mediaType = 'collection';
         button.dataset.collectionId = item.id;
         button.innerHTML = `${icons.request}<span>${JE.t('jellyseerr_modal_request_collection')}</span>`;
         button.className = 'jellyseerr-request-button jellyseerr-button-request jellyseerr-button-collection';
@@ -1321,8 +1479,9 @@
      * @param {HTMLElement} button - Button element.
      * @param {number} overallStatus - Calculated overall status.
      * @param {Object|null} seasonAnalysis - Season analysis results.
+     * @param {Object} item - Media item data.
      */
-    function configureTvShowButton(button, overallStatus, seasonAnalysis) {
+    function configureTvShowButton(button, overallStatus, seasonAnalysis, item) {
         const setButton = (text, icon, className, disabled = false, summary = seasonAnalysis?.statusSummary) => {
             button.innerHTML = `${icon || ''}<span>${text}</span>`;
             if (summary) button.innerHTML += `<div class="jellyseerr-season-summary">${summary}</div>`;
@@ -1332,10 +1491,16 @@
         switch (overallStatus) {
             case 2: setButton(JE.t('jellyseerr_btn_pending'), icons.pending, 'jellyseerr-button-pending'); break;
             case 3: setButton(JE.t('jellyseerr_btn_request_more'), icons.request, 'jellyseerr-button-request'); break;
-            case 7: setButton(JE.t('jellyseerr_btn_view_status'), icons.requested, 'jellyseerr-button-pending'); break;
-            case 4: setButton(JE.t('jellyseerr_btn_request_missing'), icons.request, 'jellyseerr-button-partially-available'); break;
+            case 7: setButton(JE.t('jellyseerr_btn_request_more'), icons.request, 'jellyseerr-button-request'); break;
+            case 4:
+                setButton(JE.t('jellyseerr_btn_request_missing'), icons.request, 'jellyseerr-button-partially-available');
+                // Add download progress hover if there are active downloads
+                if (item?.mediaInfo?.downloadStatus?.length > 0 || item?.mediaInfo?.downloadStatus4k?.length > 0) {
+                    addDownloadProgressHover(button, item);
+                }
+                break;
             case 5: setButton(JE.t('jellyseerr_btn_available'), icons.available, 'jellyseerr-button-available', true, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_all_seasons', { count: seasonAnalysis.total }) : null); break;
-            case 6: setButton(JE.t('jellyseerr_btn_rejected'), icons.cancel, 'jellyseerr-button-rejected', true); break;
+            case 6: setButton(JE.t('jellyseerr_btn_blocklisted'), icons.cancel, 'jellyseerr-button-blocklisted', true); break;
             default: setButton(JE.t('jellyseerr_btn_request'), icons.request, 'jellyseerr-button-request', false, seasonAnalysis?.total > 1 ? JE.t('jellyseerr_seasons_available', { count: seasonAnalysis.total }) : null); break;
         }
     }
@@ -1399,10 +1564,15 @@
                     mainButtonDisabled = true;
                 }
             } else if (status === 6) {
-                mainButtonText = JE.t('jellyseerr_btn_rejected');
+                mainButtonText = JE.t('jellyseerr_btn_blocklisted');
                 mainButtonIcon = icons.cancel;
-                mainButtonClass = 'jellyseerr-button-rejected';
+                mainButtonClass = 'jellyseerr-button-blocklisted';
                 mainButtonDisabled = true;
+            } else if (status === 7) {
+                mainButtonText = JE.t('jellyseerr_btn_request');
+                mainButtonIcon = icons.request;
+                mainButtonClass = 'jellyseerr-button-request';
+                mainButtonDisabled = false;
             } else {
                 mainButtonText = JE.t('jellyseerr_btn_request');
                 mainButtonIcon = icons.request;
@@ -1457,7 +1627,7 @@
                         mainButton.disabled = true;
                         mainButton.innerHTML = `<span>${JE.t('jellyseerr_btn_requesting')}</span><span class="jellyseerr-button-spinner"></span>`;
                         try {
-                            const response = await JE.jellyseerrAPI.requestMedia(item.id, 'movie', {}, false, item);
+                            await JE.jellyseerrAPI.requestMedia(item.id, 'movie', {}, false, item);
                             if (!item.mediaInfo) item.mediaInfo = {};
                             item.mediaInfo.status = 3;
                             mainButton.innerHTML = `<span>${JE.t('jellyseerr_btn_requested')}</span>${icons.requested}`;
@@ -1471,7 +1641,8 @@
                             } else if (error.responseJSON?.message) {
                                 errorMessage = error.responseJSON.message;
                             }
-                            mainButton.innerHTML = `<span>${errorMessage}</span>${icons.error}`;
+                            // Escape API-sourced error message before inserting into HTML
+                            mainButton.innerHTML = `<span>${escapeHtml(errorMessage)}</span>${icons.error}`;
                             mainButton.classList.add('jellyseerr-button-error');
                         }
                     }
@@ -1514,7 +1685,8 @@
                     setButton(JE.t('jellyseerr_btn_available'), icons.available, 'jellyseerr-button-available', true);
                 }
                 break;
-            case 6: setButton(JE.t('jellyseerr_btn_rejected'), icons.cancel, 'jellyseerr-button-rejected', true); break;
+            case 6: setButton(JE.t('jellyseerr_btn_blocklisted'), icons.cancel, 'jellyseerr-button-blocklisted', true); break;
+            case 7: setButton(JE.t('jellyseerr_btn_request'), icons.request, 'jellyseerr-button-request'); break;
             default: setButton(JE.t('jellyseerr_btn_request'), icons.request, 'jellyseerr-button-request'); break;
         }
 
@@ -1529,7 +1701,7 @@
                     button.disabled = true;
                     button.innerHTML = `<span>${JE.t('jellyseerr_btn_requesting')}</span><span class="jellyseerr-button-spinner"></span>`;
                     try {
-                        const response = await JE.jellyseerrAPI.requestMedia(item.id, 'movie', {}, false, item);
+                        await JE.jellyseerrAPI.requestMedia(item.id, 'movie', {}, false, item);
                         if (!item.mediaInfo) item.mediaInfo = {};
                         item.mediaInfo.status = 3;
                         button.innerHTML = `<span>${JE.t('jellyseerr_btn_requested')}</span>${icons.requested}`;
@@ -1543,7 +1715,7 @@
                         } else if (error.responseJSON?.message) {
                             errorMessage = error.responseJSON.message;
                         }
-                        button.innerHTML = `<span>${errorMessage}</span>${icons.error}`;
+                        button.innerHTML = `<span>${escapeHtml(errorMessage)}</span>${icons.error}`;
                         button.classList.add('jellyseerr-button-error');
                     }
                 }
@@ -1638,7 +1810,7 @@
         if (!imageContainer) return;
         const badge = document.createElement('div');
         badge.className = 'jellyseerr-collection-badge';
-        badge.innerHTML = `<span class="material-icons">collections</span><span>${item.collection.name || JE.t('jellyseerr_card_badge_collection')}</span>`;
+        badge.innerHTML = `<span class="material-icons">collections</span><span>${escapeHtml(item.collection.name) || JE.t('jellyseerr_card_badge_collection')}</span>`; // collection name escaped
         badge.title = `Part of ${item.collection.name || 'collection'}`;
         badge.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1656,10 +1828,10 @@
      */
     ui.showMovieRequestModal = async function(tmdbId, title, searchResultItem, is4k = false) {
         const { create, createAdvancedOptionsHTML, populateAdvancedOptions } = JE.jellyseerrModal;
-        const { requestMedia, fetchAdvancedRequestData, fetchMovieDetails } = JE.jellyseerrAPI;
+        const { requestMedia, fetchAdvancedRequestData } = JE.jellyseerrAPI;
 
         const bodyHtml = createAdvancedOptionsHTML('movie');
-        const { modalElement, show, close } = create({
+        const { modalElement, show } = create({
             title: JE.t('jellyseerr_modal_title_movie'),
             subtitle: title,
             bodyHtml,
@@ -1784,8 +1956,17 @@
                         await requestTvSeasons(tmdbId, selectedSeasons, settings, searchResultItem);
                         JE.toast(JE.t('jellyseerr_modal_toast_request_success', { count: selectedSeasons.length, title: showTitle }), 4000);
                     } else {
-                        // Partial requests disabled: request all seasons
-                        await requestMedia(tmdbId, 'tv', settings, false, searchResultItem);
+                        // Partial requests disabled: request all non-special seasons to avoid locking specials
+                        const allSeasons = (tvDetails?.seasons || [])
+                            .map(season => season.seasonNumber)
+                            .filter(seasonNumber => Number.isFinite(seasonNumber) && seasonNumber > 0);
+
+                        if (allSeasons.length > 0) {
+                            await requestTvSeasons(tmdbId, allSeasons, settings, searchResultItem);
+                        } else {
+                            await requestMedia(tmdbId, 'tv', settings, false, searchResultItem);
+                        }
+
                         JE.toast(JE.t('jellyseerr_modal_toast_request_success', { count: 'all', title: showTitle }), 4000);
                     }
                     // Notify any listening modals that TV was requested
@@ -1801,7 +1982,7 @@
                         if (query) {
                             const mainController = JE.jellyseerr;
                             if (mainController) {
-                                mainController.fetchAndRenderResults(query);
+                                mainController.fetchAndRenderResults(query, { skipCache: true });
                             }
                         }
                     }, 1000);
@@ -1882,7 +2063,12 @@
         tvDetails.mediaInfo?.seasons?.forEach(s => { seasonStatusMap[s.seasonNumber] = s.status; });
         tvDetails.mediaInfo?.requests?.forEach(r => r.seasons?.forEach(sr => { seasonStatusMap[sr.seasonNumber] = sr.status; }));
 
-        tvDetails.seasons.filter(s => s.seasonNumber > 0).forEach(season => {
+        // Filter out seasons with no episodes, except for Season 0 (Specials)
+        const seasons = (tvDetails.seasons || [])
+            .filter(s => s.seasonNumber === 0 || (s.episodeCount && s.episodeCount > 0))
+            .slice()
+            .sort((a, b) => (a.seasonNumber || 0) - (b.seasonNumber || 0));
+        seasons.forEach(season => {
             const seasonNumber = season.seasonNumber;
             let seasonItem = seasonListElement.querySelector(`.jellyseerr-season-item[data-season-number="${seasonNumber}"]`);
 
@@ -1917,13 +2103,13 @@
             const checkboxDisabled = !partialRequestsEnabled || !canRequest;
 
             seasonItem.innerHTML = `
-                <input type="checkbox" class="jellyseerr-season-checkbox" data-season-number="${seasonNumber}" ${checkboxDisabled ? 'disabled' : ''} style="${!partialRequestsEnabled ? 'cursor: not-allowed;' : ''}">
+                <input type="checkbox" class="jellyseerr-season-checkbox" data-season-number="${escapeHtml(seasonNumber)}" ${checkboxDisabled ? 'disabled' : ''} style="${!partialRequestsEnabled ? 'cursor: not-allowed;' : ''}">
                 <div class="jellyseerr-season-info">
-                    <div class="jellyseerr-season-name">${season.name || `Season ${seasonNumber}`}</div>
-                    <div class="jellyseerr-season-meta">${season.airDate ? season.airDate.substring(0, 4) : ''}</div>
+                    <div class="jellyseerr-season-name">${escapeHtml(season.name || `Season ${seasonNumber}`)}</div>
+                    <div class="jellyseerr-season-meta">${escapeHtml(season.airDate ? season.airDate.substring(0, 4) : '')}</div>
                 </div>
-                <div class="jellyseerr-season-episodes">${season.episodeCount || 0} ep</div>
-                <div class="jellyseerr-season-status jellyseerr-season-status-${statusClass}">${statusText}</div>
+                <div class="jellyseerr-season-episodes">${escapeHtml(season.episodeCount || 0)} ep</div>
+                <div class="jellyseerr-season-status jellyseerr-season-status-${escapeHtml(statusClass)}">${escapeHtml(statusText)}</div>
             `;
 
             if (existingCheckbox) {
@@ -1979,28 +2165,33 @@
 
         // Create checkbox list of movies in the collection with posters and status badges
         const movieListHtml = collectionDetails.parts.map(movie => {
-            const status = movie.mediaInfo?.status || 1; // 1 = not available
+            const status = movie.mediaInfo?.status || 1; // 1 = not available, 2 = requested, 3 = pending/processing, 4 = partially available, 5 = available
+            const downloads = movie.mediaInfo?.downloadStatus || [];
+            const hasActiveDownloads = downloads && downloads.length > 0;
             const isAvailable = status === 5;
             const isRequested = status === 2 || status === 3;
-            const isProcessing = status === 3;
-            const isPartiallyAvailable = status === 4;
             const isDisabled = isAvailable || isRequested;
 
             let statusClass = 'not-requested';
             let statusText = JE.t('jellyseerr_season_status_not_requested') || 'Not Requested';
 
-            if (isAvailable) {
+            if (status === 5) {
                 statusClass = 'available';
-                statusText = JE.t('jellyseerr_season_status_available') || 'Available';
-            } else if (isProcessing) {
-                statusClass = 'processing';
-                statusText = JE.t('jellyseerr_season_status_processing') || 'Processing';
-            } else if (isRequested) {
-                statusClass = 'pending';
-                statusText = JE.t('jellyseerr_season_status_pending') || 'Pending';
-            } else if (isPartiallyAvailable) {
+                statusText = JE.t('jellyseerr_btn_available') || 'Available';
+            } else if (status === 4) {
                 statusClass = 'partially-available';
-                statusText = JE.t('jellyseerr_season_status_partially_available') || 'Partially Available';
+                statusText = JE.t('jellyseerr_btn_partially_available') || 'Partially Available';
+            } else if (status === 3) {
+                if (hasActiveDownloads) {
+                    statusClass = 'processing';
+                    statusText = JE.t('jellyseerr_btn_processing') || 'Processing';
+                } else {
+                    statusClass = 'pending';
+                    statusText = JE.t('jellyseerr_btn_requested') || 'Requested';
+                }
+            } else if (status === 2) {
+                statusClass = 'pending';
+                statusText = JE.t('jellyseerr_btn_pending') || 'Pending';
             }
 
             const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
@@ -2012,15 +2203,15 @@
                 <div class="jellyseerr-collection-movie-row">
                     <input type="checkbox"
                            class="jellyseerr-collection-checkbox"
-                           id="movie-${movie.id}"
-                           data-tmdb-id="${movie.id}"
+                           id="movie-${escapeHtml(movie.id)}"
+                           data-tmdb-id="${escapeHtml(movie.id)}"
                            ${isDisabled ? 'disabled' : 'checked'}>
-                    <img src="${poster}" alt="${movie.title}" class="jellyseerr-collection-movie-poster">
+                    <img src="${escapeHtml(poster)}" alt="${escapeHtml(movie.title)}" class="jellyseerr-collection-movie-poster">
                     <div class="jellyseerr-collection-movie-details">
-                        <div class="title">${movie.title}</div>
-                        <div class="year">${year}</div>
+                        <div class="title">${escapeHtml(movie.title)}</div>
+                        <div class="year">${escapeHtml(year)}</div>
                     </div>
-                    <div class="jellyseerr-season-status jellyseerr-season-status-${statusClass}">${statusText}</div>
+                    <div class="jellyseerr-season-status jellyseerr-season-status-${escapeHtml(statusClass)}">${escapeHtml(statusText)}</div>
                 </div>
             `;
         }).join('');
@@ -2146,7 +2337,7 @@
     };
 
     /**
-     * Updates existing Jellyseerr results in the DOM with fresh data.
+     * Updates existing Seerr results in the DOM with fresh data.
      * @param {Array} newResults - The new array of result items from the API.
      * @param {boolean} isJellyseerrActive - If the server is reachable.
      * @param {boolean} jellyseerrUserFound - If the current user is linked.
@@ -2167,14 +2358,12 @@
             const oldMediaInfo = JSON.parse(oldItemJSON).mediaInfo;
             const newMediaInfo = newItem.mediaInfo;
             if (JSON.stringify(oldMediaInfo) !== JSON.stringify(newMediaInfo)) {
-                console.log(`${logPrefix} Status change detected for TMDB ID ${tmdbId}. Updating button.`);
                 configureRequestButton(button, newItem, isJellyseerrActive, jellyseerrUserFound);
 
                 // If the popover for this item is currently visible, update it
                 if (jellyseerrHoverPopover
                     && jellyseerrHoverPopover.classList.contains('show')
                     && jellyseerrHoverPopover.dataset.tmdbId === tmdbId) {
-                    console.log(`${logPrefix} Active popover found for TMDB ID ${tmdbId}. Refreshing content.`);
                     const popoverContent = fillHoverPopover(newItem);
                     if (popoverContent) {
                         const { clientX, clientY } = jellyseerrHoverPopover.dataset;
@@ -2192,4 +2381,10 @@
     ui.createJellyseerrCard = createJellyseerrCard;
     ui.formatEtaText = formatEtaText;
     JE.jellyseerrUI = ui;
+
+    // Inject styles immediately on module load so all self-initializing Jellyseerr
+    // sub-modules (item-details, discovery pages, issue reporter, etc.) get CSS
+    // regardless of whether the search module is enabled.
+    ui.addMainStyles();
+    ui.addSeasonModalStyles();
 })(window.JellyfinEnhanced);

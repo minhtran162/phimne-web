@@ -6,8 +6,11 @@
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks HeaderTabs]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks HeaderTabs]', ...args);
+
+    ;
 
     const SUPPORTED_PAGES = ['home', 'home.html', 'tv', 'tv.html', 'movies', 'movies.html', 'music', 'music.html', 'livetv', 'livetv.html'];
 
@@ -51,6 +54,7 @@
         if (tabParam) {
             const tabIndex = parseInt(tabParam, 10);
             if (!isNaN(tabIndex) && tabIndex >= 0) {
+                ;
                 return tabIndex;
             }
         }
@@ -65,12 +69,14 @@
     // landingKey can be either a parentId (e.g., "f137a2dd21bbc1b99aa5c0f6bf02a805") or a page name (e.g., "livetv")
     async function getTabFromDisplayPreferences(landingKey) {
         if (!landingKey || !window.ApiClient) {
+            ;
             return null;
         }
 
         try {
             const userId = window.ApiClient.getCurrentUserId();
             if (!userId) {
+                ;
                 return null;
             }
 
@@ -79,6 +85,7 @@
                 const accessToken = window.ApiClient.accessToken();
 
                 if (!serverAddress || !accessToken) {
+                    ;
                     return null;
                 }
 
@@ -97,6 +104,7 @@
                 }
 
                 _userDisplayPreferences = await response.json();
+                ;
             }
 
             const customPrefs = _userDisplayPreferences.CustomPrefs || {};
@@ -106,24 +114,31 @@
             const landingValue = customPrefs[fullLandingKey];
 
             if (!landingValue) {
+                ;
                 return null;
             }
+
+            ;
 
             // Find the tab button whose inner div text matches the landing value
             const headerTabs = document.querySelector('.headerTabs');
             if (!headerTabs) {
+                ;
                 return null;
             }
 
-            const buttons = headerTabs.querySelectorAll('.emby-tab-button');
-            for (const button of buttons) {
-                const div = button.querySelector('div');
-                if (div && div.innerText && div.innerText.replace(/\s+/g, '').trim().toLowerCase() === landingValue.replace(/\s+/g, '').trim().toLowerCase()) {
-                    const tabIndex = parseInt(button.getAttribute('data-index') || '0', 10);
-                    return tabIndex;
-                }
+        const buttons = headerTabs.querySelectorAll('.emby-tab-button');
+        for (let i = 0, len = buttons.length; i < len; i++) {
+            const button = buttons[i];
+            const div = button.querySelector('div');
+            if (div && div.innerText && div.innerText.replace(/\s+/g, '').trim().toLowerCase() === landingValue.replace(/\s+/g, '').trim().toLowerCase()) {
+                const tabIndex = parseInt(button.getAttribute('data-index') || '0', 10);
+                ;
+                return tabIndex;
             }
+        }
 
+            ;
             return null;
         } catch (error) {
             ERR('Error fetching display preferences:', error);
@@ -182,6 +197,7 @@
         // Replace history entry instead of adding new one
         const newUrl = window.location.origin + window.location.pathname + '#' + newHash.substring(1);
         window.history.replaceState(null, '', newUrl);
+        ;
     }
 
     // Handle tab button clicks
@@ -207,12 +223,14 @@
                 const targetContent = libraryPage.querySelector(`.pageTabContent[data-index="${tabIndex}"]`);
                 if (targetContent) {
                     targetContent.classList.add('is-active');
+                    ;
                 } else {
                     WARN('Target tab content not found for index:', tabIndex);
                 }
             }
 
             window.scrollTo(0, 0);
+            ;
         }
     }
 
@@ -230,6 +248,7 @@
 
             if (parentId) {
                 // Try to get landing preference using parentId
+                ;
                 matchedTab = await getTabFromDisplayPreferences(parentId);
             } else {
                 // No parentId, try to get landing preference using page name (e.g., "livetv", "home")
@@ -237,6 +256,7 @@
                 if (currentPage) {
                     // Remove .html extension if present for the landing key
                     const pageName = currentPage.replace('.html', '');
+                    ;
                     matchedTab = await getTabFromDisplayPreferences(pageName);
                 }
             }
@@ -247,6 +267,7 @@
                 updateUrlWithTab(matchedTab);
             } else {
                 // No match found, use tab 0 for active state but don't update URL
+                ;
                 currentTabFromUrl = 0;
             }
         }
@@ -277,6 +298,7 @@
             const targetContent = document.querySelector(`.libraryPage:not(.hide) .pageTabContent[data-index="${currentTabFromUrl}"]`);
             if (targetContent) {
                 targetContent.classList.add('is-active');
+                ;
             }
         }
 
@@ -297,6 +319,7 @@
 
         if (correctButton) {
             correctButton.classList.add('emby-tab-button-active');
+            ;
         }
     }
 
@@ -353,12 +376,15 @@
                                     button.dataset.kefin = 'true';
                                 }
                             });
+                            ;
                         } else {
                             // Wait for custom tabs using MutationObserver
+                            ;
                             const observer = new MutationObserver((mutations, obs) => {
                                 if (checkAllTabsPresent()) {
                                     // All custom tabs are now present
                                     obs.disconnect();
+                                    ;
                                     syncActiveTabState();
 
                                     // Add click listeners to all buttons including the new custom tabs
@@ -381,11 +407,15 @@
                             // Set a timeout to disconnect observer after a reasonable time (e.g., 10 seconds)
                             setTimeout(() => {
                                 observer.disconnect();
+                                ;
                             }, 10000);
                         }
+                        ;
                     }
                 }
             }
+
+            ;
         }
     }
 
@@ -406,6 +436,7 @@
 
         // Register onViewPage handler to sync active tab state
         window.KefinTweaksUtils.onViewPage((view, element) => {
+            ;
             addClickListeners();
             // Sync active tab state when page view changes
             syncActiveTabState().catch(err => {
@@ -414,6 +445,8 @@
         }, {
             pages: SUPPORTED_PAGES // Only trigger for supported pages
         });
+        ;
+        ;
     }
 
     initialize();

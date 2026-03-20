@@ -110,9 +110,13 @@ import browser from 'scripts/browser';
     function createElement(tagName, className = '', attributes = {}, textContent = '') {
         const element = document.createElement(tagName);
         if (className) element.className = className;
-        Object.entries(attributes).forEach(([key, value]) => {
-            element.setAttribute(key, value);
-        });
+        
+        const keys = Object.keys(attributes);
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            element.setAttribute(key, attributes[key]);
+        }
+        
         if (textContent) element.textContent = textContent;
         return element;
     }
@@ -163,14 +167,20 @@ import browser from 'scripts/browser';
      * @returns {HTMLElement} - Card indicators container
      */
     function createCardIndicators(indicators = []) {
-        if (indicators.length === 0) return null;
+        const len = indicators.length;
+        if (len === 0) return null;
 
         const container = createElement('div', 'cardIndicators');
-        indicators.forEach(html => {
+        const fragment = document.createDocumentFragment();
+        
+        for (let i = 0; i < len; i++) {
             const temp = document.createElement('div');
-            temp.innerHTML = html;
-            container.appendChild(temp.firstChild);
-        });
+            temp.innerHTML = indicators[i];
+            if (temp.firstChild) {
+                fragment.appendChild(temp.firstChild);
+            }
+        }
+        container.appendChild(fragment);
         return container;
     }
 
@@ -1607,5 +1617,5 @@ import browser from 'scripts/browser';
     // Expose the cardBuilder to the global window object
     window.cardBuilder = cardBuilder;
 
-    console.log('[KefinTweaks CardBuilder] Module loaded and available at window.cardBuilder');
+    ;
 })();

@@ -116,6 +116,7 @@
             }
 
             // Default fallback
+
             this.activeTheme = { key: 'default', ...this.supportedThemes.default };
             return this.activeTheme;
         },

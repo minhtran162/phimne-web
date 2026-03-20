@@ -119,7 +119,7 @@ const UserNew = () => {
             userInput.Name = (page.querySelector('#txtUsername') as HTMLInputElement).value.trim();
             userInput.Password = (page.querySelector('#txtPassword') as HTMLInputElement).value;
 
-            window.ApiClient.createUser(userInput).then(function (user) {
+            window.ApiClient.createUser(userInput).then(function (user: any) {
                 if (!user.Id || !user.Policy) {
                     throw new Error('Unexpected null user id or policy');
                 }
@@ -151,7 +151,7 @@ const UserNew = () => {
                         .catch(err => {
                             console.error('[usernew] failed to navigate to edit user page', err);
                         });
-                }).catch(err => {
+                }).catch((err: any) => {
                     console.error('[usernew] failed to update user policy', err);
                 });
             }, function () {

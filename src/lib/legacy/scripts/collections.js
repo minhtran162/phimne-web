@@ -173,41 +173,54 @@
             return;
         }
 
-        const cards = Array.from(itemsContainer.querySelectorAll('.card'));
-        if (cards.length === 0) {
+        const cards = itemsContainer.querySelectorAll('.card');
+        const cardsLen = cards.length;
+        if (cardsLen === 0) {
             WARN('No cards found in container');
             return;
         }
 
         // Create a map of item ID to card element
         const cardMap = new Map();
-        cards.forEach(card => {
+        const currentOrder = new Array(cardsLen);
+        for (let i = 0; i < cardsLen; i++) {
+            const card = cards[i];
             const itemId = card.getAttribute('data-id');
             if (itemId) {
                 cardMap.set(itemId, card);
+                currentOrder[i] = itemId;
             }
-        });
+        }
 
-        // Check if reordering is needed by comparing current order with desired order
-        const currentOrder = cards.map(card => card.getAttribute('data-id'));
-        const desiredOrder = sortedItems.map(item => item.Id);
+        // Check if reordering is needed
+        const sortedLen = sortedItems.length;
+        let needsReorder = cardsLen !== sortedLen;
+        
+        if (!needsReorder) {
+            for (let i = 0; i < sortedLen; i++) {
+                if (currentOrder[i] !== sortedItems[i].Id) {
+                    needsReorder = true;
+                    break;
+                }
+            }
+        }
 
-        // If order matches, no need to reorder
-        if (currentOrder.length === desiredOrder.length
-            && currentOrder.every((id, index) => id === desiredOrder[index])) {
+        if (!needsReorder) {
             return;
         }
 
-        // Remove all cards from DOM (but keep references in cardMap)
-        cards.forEach(card => card.remove());
-
-        // Reorder cards based on sorted items and append in correct order
-        sortedItems.forEach((item) => {
-            const card = cardMap.get(item.Id);
+        // Reorder cards using fragment for performance
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < sortedLen; i++) {
+            const card = cardMap.get(sortedItems[i].Id);
             if (card) {
-                itemsContainer.appendChild(card);
+                fragment.appendChild(card);
             }
-        });
+        }
+        
+        // Clearing container and appending fragment is faster than individual removals/appends
+        itemsContainer.innerHTML = '';
+        itemsContainer.appendChild(fragment);
     }
 
     /**
@@ -224,6 +237,8 @@
 
         const sortKey = getCurrentSort(collectionId, defaultSort);
         const direction = getCurrentSortDirection(collectionId, sortKey);
+
+        ;
 
         // Sort items
         const sortedItems = sortItems(data.items, sortKey, direction);
@@ -313,6 +328,8 @@
             content: sortOptionsContent,
             onOpen: (modalInstance) => {
                 // Set current selection
+                const currentRadio = modalInstance.dialog.querySelector(`input[value="${currentSort}"]`);
+                const currentDirectionRadio = modalInstance.dialog.querySelector(`input[value="${currentDirection}"]`);
                 if (currentRadio) {
                     currentRadio.checked = true;
                 }
@@ -321,9 +338,13 @@
                 }
 
                 // Add event listeners for radio button changes
+                const sortOptions = modalInstance.dialog.querySelectorAll('input[name="sortOption"]');
+                const sortDirections = modalInstance.dialog.querySelectorAll('input[name="sortDirection"]');
 
                 // Apply changes immediately when radio buttons change
                 const applyChanges = () => {
+                    const selectedOption = modalInstance.dialog.querySelector('input[name="sortOption"]:checked');
+                    const selectedDirection = modalInstance.dialog.querySelector('input[name="sortDirection"]:checked');
                     if (selectedOption) {
                         const direction = selectedDirection ? selectedDirection.value : getCurrentSortDirection(collectionId, selectedOption.value);
                         saveSortPreference(collectionId, selectedOption.value, direction);
@@ -432,6 +453,7 @@
         // Check if sort button exists, if not add it
         const sortButton = sectionTitle.querySelector('.kt-collections-sort-btn');
         if (!sortButton) {
+            ;
             addSortButton(sectionTitle, collectionId, defaultSort);
         }
 
@@ -490,6 +512,7 @@
                 // Debounce to avoid multiple rapid re-applications
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
+                    ;
                     reapplyCollectionSorting(collectionId, collectionItemsContainer, defaultSort);
                 }, 300); // 300ms debounce
             }
@@ -500,6 +523,8 @@
             childList: true,
             subtree: true
         });
+
+        ;
     }
 
     /**
@@ -547,6 +572,8 @@
             return;
         }
 
+        ;
+
         // Fetch collection children
         const children = await fetchCollectionChildren(collectionId);
         if (children.length === 0) {
@@ -589,6 +616,8 @@
             return;
         }
 
+        ;
+
         window.KefinTweaksUtils.onViewPage(
             async (view, element, hash, itemPromise) => {
                 // Only handle details pages
@@ -609,6 +638,8 @@
                 pages: ['details']
             }
         );
+
+        ;
     }
 
     /**
@@ -631,5 +662,7 @@
     } else {
         initialize();
     }
+
+    ;
 })();
 

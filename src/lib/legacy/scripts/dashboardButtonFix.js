@@ -17,6 +17,8 @@
                 e.stopImmediatePropagation();
                 e.preventDefault();
 
+                ;
+
                 // Changes this to the page you'd like to return to by default
                 const homeUrl = ApiClient.serverVersion().split('.')[1] > 10 ? 'home' : 'home.html';
                 Dashboard.navigate(`/${homeUrl}`);

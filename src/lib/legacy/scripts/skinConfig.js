@@ -735,7 +735,7 @@
                         ]
                     }
                 ],
-                optionalIncludes: [
+                optionalIncludes: [,
                     {
                         name: 'Dark',
                         url: 'https://cdn.jsdelivr.net/gh/CTalvio/Ultrachromic/type/dark.css'
@@ -870,5 +870,7 @@
     // ============================================================================
     // Make default skin configuration available to scripts
     window.KefinTweaksDefaultSkinsConfig = KEFIN_TWEAKS_DEFAULT_SKINS_CONFIG;
+
+    ;
 })();
 

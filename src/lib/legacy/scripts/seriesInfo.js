@@ -113,6 +113,7 @@
                     }
                 });
 
+                ;
                 return totalMinutes;
             }
 
@@ -212,12 +213,14 @@
     function addSeriesInfo(item, miscInfoContainer) {
         // Check if already added
         if (miscInfoContainer.querySelector('.kt-series-info')) {
+            ;
             return;
         }
 
         const infoContainer = document.createElement('div');
         infoContainer.className = 'kt-series-info';
         infoContainer.style.display = 'flex';
+        infoContainer.style.margin = '0 1em 0 0';
 
         // Seasons count (only show if more than 1 season)
         const childCount = item.ChildCount || 0;
@@ -252,6 +255,7 @@
         // Append to miscInfoContainer
         if (infoContainer.children.length > 0) {
             miscInfoContainer.appendChild(infoContainer);
+            ;
         }
     }
 
@@ -265,10 +269,12 @@
         // Remove hide class if present
         if (miscInfoContainer.classList.contains('hide')) {
             miscInfoContainer.classList.remove('hide');
+            ;
         }
 
         // Check if already added
         if (miscInfoContainer.querySelector('.kt-season-info')) {
+            ;
             return;
         }
 
@@ -300,6 +306,7 @@
         // Append to miscInfoContainer
         if (infoContainer.children.length > 0) {
             miscInfoContainer.appendChild(infoContainer);
+            ;
         }
     }
 
@@ -325,6 +332,8 @@
             return;
         }
 
+        ;
+
         if (item.Type === 'Series') {
             addSeriesInfo(item, miscInfoContainer);
         } else if (item.Type === 'Season') {
@@ -341,6 +350,8 @@
             setTimeout(initializeSeriesInfoHook, 1000);
             return;
         }
+
+        ;
 
         window.KefinTweaksUtils.onViewPage(
             async (view, element, hash, itemPromise) => {
@@ -360,9 +371,13 @@
                 pages: ['details']
             }
         );
+
+        ;
     }
 
     // Initialize the hook when the script loads
     initializeSeriesInfoHook();
+
+    ;
 })();
 

@@ -7,8 +7,11 @@
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks CustomMenuLinks]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks CustomMenuLinks]', ...args);
+
+    ;
 
     // Get custom menu links configuration
     function getCustomMenuLinksConfig() {
@@ -20,8 +23,11 @@
         const customMenuLinks = getCustomMenuLinksConfig();
 
         if (!Array.isArray(customMenuLinks) || customMenuLinks.length === 0) {
+            ;
             return;
         }
+
+        ;
 
         // Check if utils is available
         if (!window.KefinTweaksUtils || !window.KefinTweaksUtils.addCustomMenuLink) {
@@ -45,6 +51,8 @@
                     openInNewTab = false
                 } = linkConfig;
 
+                ;
+
                 const success = await window.KefinTweaksUtils.addCustomMenuLink(
                     name,
                     icon,
@@ -53,6 +61,7 @@
                 );
 
                 if (success) {
+                    ;
                 } else {
                     WARN(`Failed to add custom menu link: ${name}`);
                 }
@@ -66,20 +75,31 @@
 
         // Wait for all links to be processed
         const results = await Promise.all(addPromises);
-        const successCount = results.filter(Boolean).length;
+        let successCount = 0;
+        for (let i = 0, len = results.length; i < len; i++) {
+            if (results[i]) {
+                successCount++;
+            }
+        }
+
+        ;
     }
 
     // Wait for utils to be available and then initialize
     function waitForUtilsAndInitialize() {
         if (window.KefinTweaksUtils && window.KefinTweaksUtils.addCustomMenuLink) {
+            ;
             initializeCustomMenuLinks();
             return;
         }
+
+        ;
 
         // Poll for utils availability
         const checkInterval = setInterval(() => {
             if (window.KefinTweaksUtils && window.KefinTweaksUtils.addCustomMenuLink) {
                 clearInterval(checkInterval);
+                ;
                 initializeCustomMenuLinks();
             }
         }, 100);
@@ -93,4 +113,6 @@
 
     // Start initialization
     waitForUtilsAndInitialize();
+
+    ;
 })();

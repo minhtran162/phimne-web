@@ -237,6 +237,7 @@
             if (hasPositionTicks) {
                 JE.state.isContinueWatchingContext = true;
                 JE.state.currentContextItemId = itemElement.dataset.id;
+
                 return;
             }
 

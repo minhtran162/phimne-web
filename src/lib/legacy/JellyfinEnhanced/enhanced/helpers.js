@@ -2,7 +2,7 @@
  * @file Centralized helper utilities for Jellyfin Enhanced
  * Provides standardized functionality for hooking into page views and managing MutationObservers
  */
-(function (JE) {
+(function(JE) {
     'use strict';
 
     // Store the original onViewShow function
@@ -14,47 +14,89 @@
     // Active observers registry for lifecycle management
     const activeObservers = new Map();
 
-    // Cache for current view information
-    let cachedItem = null;
-    let cachedItemId = null;
-    let fetchInProgress = null;
+    // Shared cache for item payloads to deduplicate cross-module ApiClient.getItem calls
+    const itemCache = new Map();
+    const ITEM_CACHE_TTL_MS = 5000;
 
     /**
-     * Converts PascalCase object keys to camelCase recursively.
-     * @param {object} obj - The object to convert.
-     * @returns {object} - A new object with camelCase keys.
+     * Deduplicated item fetch with short TTL cache.
+     * Prevents multiple modules from requesting the same item concurrently on detail page navigation.
+     * @param {string} itemId
+     * @param {Object} [options]
+     * @param {string} [options.userId]
+     * @param {number} [options.ttlMs]
+     * @param {boolean} [options.forceRefresh]
+     * @returns {Promise<object|null>}
      */
-    function toCamelCase(obj) {
-        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
-            return obj; // Return primitives and arrays as-is
-        }
-        const camelCased = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-                camelCased[camelKey] = toCamelCase(obj[key]); // Recursive for nested objects
+    async function getItemCached(itemId, options = {}) {
+        if (!itemId) return null;
+
+        const ttlMs = Number.isFinite(options.ttlMs) ? options.ttlMs : ITEM_CACHE_TTL_MS;
+        const userId = options.userId || ApiClient.getCurrentUserId();
+        const key = `${userId}:${itemId}`;
+        const now = Date.now();
+        const entry = itemCache.get(key);
+
+        if (!options.forceRefresh && entry) {
+            if (entry.promise) {
+                return entry.promise;
+            }
+            if (entry.item && (now - entry.ts) < ttlMs) {
+                return entry.item;
             }
         }
-        return camelCased;
+
+        const promise = ApiClient.getItem(userId, itemId)
+            .then((item) => {
+                itemCache.set(key, { item, ts: Date.now(), promise: null });
+                return item;
+            })
+            .catch((err) => {
+                itemCache.delete(key);
+                throw err;
+            });
+
+        itemCache.set(key, { item: null, ts: now, promise });
+        return promise;
     }
 
     /**
-     * Converts object keys from camelCase to PascalCase (recursively).
-     * @param {object} obj - The object to convert.
-     * @returns {object} - A new object with PascalCase keys.
+     * Patch history.pushState / history.replaceState to emit a 'je:navigate' event.
+     * Jellyfin's SPA router calls pushState for some transitions without changing
+     * location.hash, so hashchange/popstate are never fired for those navigations.
+     * This single patch lets all modules listen to one synthetic event instead of polling.
      */
-    function toPascalCase(obj) {
-        if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) {
-            return obj; // Return primitives and arrays as-is
-        }
-        const pascalCased = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                const pascalKey = key.charAt(0).toUpperCase() + key.slice(1);
-                pascalCased[pascalKey] = toPascalCase(obj[key]); // Recursive for nested objects
-            }
-        }
-        return pascalCased;
+    function patchNavigationEvents() {
+        if (history.__jePushed) return; // only patch once
+        history.__jePushed = true;
+
+        const _push = history.pushState.bind(history);
+        const _replace = history.replaceState.bind(history);
+
+        history.pushState = function(...args) {
+            _push(...args);
+            window.dispatchEvent(new Event('je:navigate'));
+        };
+        history.replaceState = function(...args) {
+            _replace(...args);
+            window.dispatchEvent(new Event('je:navigate'));
+        };
+    }
+
+    /**
+     * Subscribe to all navigation events: pushState, replaceState, hashchange, popstate.
+     * @param {Function} callback - Called on every navigation.
+     * @returns {Function} Unsubscribe function.
+     */
+    function onNavigate(callback) {
+        window.addEventListener('je:navigate', callback);
+        window.addEventListener('hashchange', callback);
+        window.addEventListener('popstate', callback);
+        return () => {
+            window.removeEventListener('je:navigate', callback);
+            window.removeEventListener('hashchange', callback);
+            window.removeEventListener('popstate', callback);
+        };
     }
 
     /**
@@ -67,11 +109,14 @@
             return;
         }
 
+        // Patch navigation history methods so pushState fires je:navigate
+        patchNavigationEvents();
+
         // Store original onViewShow if it exists
         originalOnViewShow = window.Emby.Page.onViewShow;
 
         // Override onViewShow to intercept page view changes
-        window.Emby.Page.onViewShow = function (view, element, hash) {
+        window.Emby.Page.onViewShow = function(view, element, hash) {
             // Call original handler first
             if (originalOnViewShow) {
                 try {
@@ -127,31 +172,9 @@
             const itemId = params.get('id');
 
             if (!itemId) return null;
-
-            // Return cached item if same ID
-            if (cachedItemId === itemId && cachedItem) {
-                return cachedItem;
-            }
-
-            // If fetch is in progress for this item, reuse it
-            if (fetchInProgress && cachedItemId === itemId) {
-                return fetchInProgress;
-            }
-
-            const userId = ApiClient.getCurrentUserId();
-            cachedItemId = itemId;
-
-            fetchInProgress = ApiClient.getItem(userId, itemId);
-            const item = await fetchInProgress;
-
-            cachedItem = item;
-            fetchInProgress = null;
-
-            return item;
+            return await getItemCached(itemId);
         } catch (err) {
             console.error('🪼 Jellyfin Enhanced: Error fetching item:', err);
-            cachedItem = null;
-            fetchInProgress = null;
             return null;
         }
     }
@@ -215,9 +238,9 @@
 
         // Try to get view from data attributes or id
         return visiblePage.dataset.type
-            || visiblePage.id
-            || visiblePage.getAttribute('data-role')
-            || null;
+               || visiblePage.id
+               || visiblePage.getAttribute('data-role')
+               || null;
     }
 
     /**
@@ -254,6 +277,7 @@
             const observer = activeObservers.get(id);
             observer.disconnect();
             activeObservers.delete(id);
+
             return true;
         }
         return false;
@@ -320,10 +344,10 @@
         let timeout;
         return function executedFunction(...args) {
             const later = () => {
-                clearTimeout(timeout);
-                func(...args);
+                timeout = null;
+                func.apply(this, args);
             };
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
             timeout = setTimeout(later, wait);
         };
     }
@@ -336,7 +360,7 @@
      */
     function throttle(func, limit) {
         let inThrottle;
-        return function (...args) {
+        return function(...args) {
             if (!inThrottle) {
                 func.apply(this, args);
                 inThrottle = true;
@@ -449,6 +473,7 @@
         const existing = document.getElementById(id);
         if (existing) {
             existing.remove();
+
             return true;
         }
         return false;
@@ -469,8 +494,9 @@
     // Expose helpers
     JE.helpers = {
         onViewPage,
+        onNavigate,
+        getItemCached,
         getCurrentView,
-        notifyHandlers,
         createObserver,
         disconnectObserver,
         disconnectAllObservers,
@@ -482,8 +508,6 @@
         isElementVisible,
         addCSS,
         removeCSS,
-        toPascalCase,
-        toCamelCase,
         getHandlerCount: () => handlers.length,
         getObserverCount: () => activeObservers.size
     };

@@ -36,10 +36,10 @@ const UserProfiles = () => {
 
     const loadData = () => {
         loading.show();
-        window.ApiClient.getUsers().then(function (result) {
+        window.ApiClient.getUsers().then(function (result: any[]) {
             setUsers(result);
             loading.hide();
-        }).catch(err => {
+        }).catch((err: any) => {
             console.error('[userprofiles] failed to fetch users', err);
         });
     };
@@ -144,7 +144,7 @@ const UserProfiles = () => {
                 loading.show();
                 window.ApiClient.deleteUser(id).then(function () {
                     loadData();
-                }).catch(err => {
+                }).catch((err: any) => {
                     console.error('[userprofiles] failed to delete user', err);
                 });
             }).catch(() => {

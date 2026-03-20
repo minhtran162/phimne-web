@@ -6,6 +6,7 @@
     'use strict';
 
     // Common logging function
+
     const WARN = (...args) => console.warn('[KefinTweaks LocalStorageCache]', ...args);
     const ERR = (...args) => console.error('[KefinTweaks LocalStorageCache]', ...args);
 
@@ -67,6 +68,7 @@
 
             try {
                 localStorage.setItem(key, JSON.stringify(payload));
+                ;
                 return true;
             } catch (error) {
                 WARN('Failed to store data:', error);
@@ -78,15 +80,23 @@
         clear(cacheName, userId = null) {
             const key = this.getCacheKey(cacheName, userId);
             localStorage.removeItem(key);
+            ;
         }
 
         // Clear all caches for current user
         clearAll(userId = null) {
             const user = userId || window.ApiClient?.getCurrentUserId() || 'anonymous';
-            const keys = Object.keys(localStorage).filter(key =>
-                key.startsWith(this.prefix) && key.endsWith(`_${user}`)
-            );
-            keys.forEach(key => localStorage.removeItem(key));
+            const suffix = `_${user}`;
+            const prefix = this.prefix;
+            
+            const keys = Object.keys(localStorage);
+            for (let i = 0, len = keys.length; i < len; i++) {
+                const key = keys[i];
+                if (key.startsWith(prefix) && key.endsWith(suffix)) {
+                    localStorage.removeItem(key);
+                }
+            }
+            ;
         }
 
         // Get cache age in hours
@@ -113,10 +123,18 @@
         // Get all cache names for current user
         getAllCacheNames(userId = null) {
             const user = userId || window.ApiClient?.getCurrentUserId() || 'anonymous';
-            const keys = Object.keys(localStorage).filter(key =>
-                key.startsWith(this.prefix) && key.endsWith(`_${user}`)
-            );
-            return keys.map(key => key.replace(this.prefix, '').replace(`_${user}`, ''));
+            const suffix = `_${user}`;
+            const prefix = this.prefix;
+            const keys = Object.keys(localStorage);
+            const results = [];
+            
+            for (let i = 0, len = keys.length; i < len; i++) {
+                const key = keys[i];
+                if (key.startsWith(prefix) && key.endsWith(suffix)) {
+                    results.push(key.replace(prefix, '').replace(suffix, ''));
+                }
+            }
+            return results;
         }
 
         // Chunked storage methods for large datasets
@@ -127,12 +145,15 @@
             }
 
             if (data.length === 0) {
+                ;
                 return true;
             }
 
             try {
                 const chunks = this.chunkArray(data, this.chunkSize);
                 const chunkCount = chunks.length;
+
+                ;
 
                 // Store each chunk
                 for (let i = 0; i < chunks.length; i++) {
@@ -163,6 +184,7 @@
                     return false;
                 }
 
+                ;
                 return true;
             } catch (error) {
                 ERR(`Error storing chunked data for ${cacheName}:`, error);
@@ -175,10 +197,12 @@
             try {
                 const meta = this.get(`${cacheName}_meta`, userId);
                 if (!meta) {
+                    ;
                     return null;
                 }
 
                 if (!this.isCacheValid(`${cacheName}_meta`, userId)) {
+                    ;
                     return null;
                 }
 
@@ -205,6 +229,7 @@
                     return null;
                 }
 
+                ;
                 return allData;
             } catch (error) {
                 ERR(`Error loading chunked data for ${cacheName}:`, error);
@@ -223,7 +248,9 @@
                     }
                     // Clear metadata
                     this.clear(`${cacheName}_meta`, userId);
+                    ;
                 } else {
+                    ;
                 }
             } catch (error) {
                 ERR(`Error clearing chunked cache ${cacheName}:`, error);
@@ -248,4 +275,6 @@
 
     // Create global instance
     window.LocalStorageCache = LocalStorageCache;
+
+    ;
 })();

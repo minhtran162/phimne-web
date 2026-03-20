@@ -6,8 +6,11 @@
     'use strict';
 
     // Logging functions
+
     const WARN = (...args) => console.warn('[DeviceManager]', ...args);
     const ERR = (...args) => console.error('[DeviceManager]', ...args);
+
+    ;
 
     // Polling interval references
     let pollingInterval = null;
@@ -19,6 +22,7 @@
 
         while (Date.now() - startTime < maxWaitTime) {
             if (window.KefinTweaksUtils && window.KefinTweaksUtils.onViewPage) {
+                ;
                 return true;
             }
 
@@ -58,11 +62,15 @@
                 return;
             }
 
+            ;
+
             // Start polling for activeDevicesContainer
             initializeDashboard();
         }, {
             pages: ['dashboard', 'dashboardPage']
         });
+
+        ;
     }
 
     // Check if ApiClient is available
@@ -83,6 +91,8 @@
             if (!sessions || !Array.isArray(sessions)) {
                 throw new Error('Failed to get sessions or sessions is not an array');
             }
+
+            ;
 
             // Filter sessions to find the one matching our session ID
             const sessionData = sessions.find(session => session.Id === sessionId);
@@ -111,6 +121,8 @@
                 throw new Error('Access token not available');
             }
 
+            ;
+
             const serverAddress = window.ApiClient.serverAddress();
             if (!serverAddress) {
                 throw new Error('Server address not available');
@@ -128,6 +140,7 @@
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
+            ;
             return true;
         } catch (error) {
             ERR('Error removing device:', error);
@@ -198,6 +211,7 @@
         // Check if button already exists
         const existingButton = container.querySelector('.btnSessionRemoveDevice');
         if (existingButton) {
+            ;
             return;
         }
 
@@ -214,6 +228,8 @@
             return;
         }
 
+        ;
+
         // Find the sessionCardButtons container
         const buttonsContainer = container.querySelector('.sessionCardButtons');
         if (!buttonsContainer) {
@@ -229,10 +245,13 @@
         }
 
         const deviceId = sessionData.DeviceId;
+        ;
 
         // Create and add remove device button
         const removeButton = createRemoveDeviceButton(deviceId);
         buttonsContainer.appendChild(removeButton);
+
+        ;
     }
 
     // Process all active session containers on the dashboard
@@ -248,6 +267,7 @@
         }
 
         const activeSessions = activeDevicesContainer.querySelectorAll('.activeSession');
+        ;
 
         if (activeSessions.length === 0) {
             return;
@@ -290,6 +310,7 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(pollingInterval);
                     pollingInterval = null;
+                    ;
                 }
                 return;
             }
@@ -299,6 +320,7 @@
                 if (attempts >= maxAttempts) {
                     clearInterval(pollingInterval);
                     pollingInterval = null;
+                    ;
                 }
                 return;
             }
@@ -306,15 +328,19 @@
             // Found the container, check for active sessions
             clearInterval(pollingInterval);
             pollingInterval = null;
+            ;
 
             // Check if there are any active session containers
             const activeSessions = activeDevicesContainer.querySelectorAll('.activeSession');
 
             if (activeSessions.length > 0) {
+                ;
+
                 // Process all existing sessions
                 await processActiveSessions();
 
                 // Stop polling once we've found and processed sessions
+                ;
                 return;
             }
 
@@ -338,12 +364,16 @@
 
                     const currentActiveSessions = currentActiveDevicesContainer.querySelectorAll('.activeSession');
                     if (currentActiveSessions.length > 0) {
+                        ;
+
                         // Stop continuous polling
                         clearInterval(continuousPollingInterval);
                         continuousPollingInterval = null;
 
                         // Process all sessions
                         await processActiveSessions();
+
+                        ;
                     }
                 }, interval * 2); // Poll less frequently after initial find
             }

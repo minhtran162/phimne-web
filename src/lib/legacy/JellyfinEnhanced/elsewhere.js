@@ -31,10 +31,12 @@
         let availableProviders = [];
 
         // Load regions and providers from GitHub repo
-        function loadRegionsAndProviders() {
-            fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/regions.txt')
-                .then(response => response.ok ? response.text() : Promise.reject())
-                .then(text => {
+        async function loadRegionsAndProviders() {
+            try {
+                // Load regions
+                const regionsResponse = await fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/regions.txt');
+                if (regionsResponse.ok) {
+                    const text = await regionsResponse.text();
                     const lines = text.trim().split('\n');
                     lines.forEach(line => {
                         if (line.startsWith('#')) return;
@@ -43,8 +45,7 @@
                             availableRegions[code] = name;
                         }
                     });
-                })
-                .catch(() => {
+                } else {
                     // Fallback to hardcoded regions
                     availableRegions = {
                         'US': 'United States', 'GB': 'United Kingdom', 'IN': 'India', 'CA': 'Canada',
@@ -53,23 +54,39 @@
                         'ES': 'Spain', 'NL': 'Netherlands', 'SE': 'Sweden', 'NO': 'Norway',
                         'DK': 'Denmark', 'FI': 'Finland'
                     };
-                });
+                }
 
-            // Load providers
-            fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/providers.txt')
-                .then(response => response.ok ? response.text() : Promise.reject())
-                .then(text => {
+                // Load providers
+                const providersResponse = await fetch('https://cdn.jsdelivr.net/gh/n00bcodr/Jellyfin-Elsewhere/resources/providers.txt');
+                if (providersResponse.ok) {
+                    const text = await providersResponse.text();
                     availableProviders = text.trim().split('\n')
                         .filter(line => !line.startsWith('#') && line.trim() !== '');
-                })
-                .catch(() => {
+                } else {
+                    // Fallback to hardcoded providers
                     availableProviders = [
                         // Fallback to hardcoded providers
                         'Netflix', 'Amazon Prime Video', 'Disney Plus', 'HBO Max',
                         'Hulu', 'Apple TV Plus', 'Paramount Plus', 'Peacock',
                         'JioCinema', 'Disney+ Hotstar', 'ZEE5', 'SonyLIV'
                     ];
-                });
+                }
+            } catch (error) {
+                // Fallback to hardcoded values on any error
+                availableRegions = {
+                    'US': 'United States', 'GB': 'United Kingdom', 'IN': 'India', 'CA': 'Canada',
+                    'DE': 'Germany', 'FR': 'France', 'JP': 'Japan', 'AU': 'Australia',
+                    'BR': 'Brazil', 'MX': 'Mexico', 'IE': 'Ireland', 'IT': 'Italy',
+                    'ES': 'Spain', 'NL': 'Netherlands', 'SE': 'Sweden', 'NO': 'Norway',
+                    'DK': 'Denmark', 'FI': 'Finland'
+                };
+                availableProviders = [
+                    // Fallback to hardcoded providers
+                    'Netflix', 'Amazon Prime Video', 'Disney Plus', 'HBO Max',
+                    'Hulu', 'Apple TV Plus', 'Paramount Plus', 'Peacock',
+                    'JioCinema', 'Disney+ Hotstar', 'ZEE5', 'SonyLIV'
+                ];
+            }
         }
 
         function createMaterialIcon(iconName, size = '18px') {
