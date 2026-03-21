@@ -230,10 +230,14 @@
               font-size: 0.9rem;
               opacity: .9;
               display: flex;
+              white-space: nowrap;
             }
             #pause-screen-progress-meta span::before {
               content: '•';
-              margin: 1em;
+              margin: 0 1em 0 0.5em;
+            }
+            #pause-screen-progress-meta .progress-time::before {
+              margin: 0 1em 0 0;
             }
             #pause-screen-progress-meta .progress-ends-at::after {
               content: '•';

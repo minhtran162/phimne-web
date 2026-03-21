@@ -47,18 +47,23 @@
     display: none;
 }
 
-.layout-mobile  .listItemBody {
+.layout-mobile .listItemBody {
     background-color: #00000045;
     border-radius: 4px;
     width: 100%;
     display: flex;
 }
+
 .layout-mobile .listItemBody>.listItemBodyText:not(.secondary) {
     -webkit-line-clamp: 1 !important;
 }
 
 .layout-mobile .listItemBodyText {
     max-width: unset !important;
+}
+
+.mediaInfoOfficialRating {
+    padding: 0 0.4em;
 }
 
 @media only screen and (max-width: 767px) and (orientation: portrait) {
