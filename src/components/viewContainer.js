@@ -185,7 +185,7 @@ export function setOnBeforeChange(fn) {
 }
 
 export function tryRestoreView(options) {
-    console.debug('[viewContainer] tryRestoreView', options);
+    // console.debug('[viewContainer] tryRestoreView', options);
     const url = options.url;
     const index = currentUrls.indexOf(url);
 
@@ -231,7 +231,7 @@ function triggerDestroy(view) {
 }
 
 export function reset() {
-    console.debug('[viewContainer] resetting view cache');
+    // console.debug('[viewContainer] resetting view cache');
     allPages = [];
     currentUrls = [];
     const mainAnimatedPages = getMainAnimatedPages();

@@ -531,7 +531,7 @@ const ensureTranslationsLoaded = async () => {
     try {
         if (userSettings.language() === null) return;
         await loadCoreDictionary();
-        console.log('[KefinTweaks] Core translations loaded');
+        // console.log('[KefinTweaks] Core translations loaded');
         return true;
     } catch (error) {
         console.warn('[KefinTweaks] Translation loading failed, using fallbacks', error);
@@ -600,7 +600,7 @@ class LoadingManager {
             // Load script
             if (scriptImports[scriptDef.name]) {
                 await scriptImports[scriptDef.name]();
-                console.log(`[KefinTweaks] ✓ ${scriptDef.name}`);
+                // console.log(`[KefinTweaks] ✓ ${scriptDef.name}`);
             }
         } catch (err) {
             console.error(`[KefinTweaks] ✗ ${scriptDef.name}`, err);
@@ -610,7 +610,7 @@ class LoadingManager {
 
     // Load scripts by tier with throttling
     async loadTier(tier: string, scripts: ScriptDefinition[], maxConcurrent = 3): Promise<void> {
-        console.log(`[KefinTweaks] Loading ${tier} tier (${scripts.length} scripts)`);
+        // console.log(`[KefinTweaks] Loading ${tier} tier (${scripts.length} scripts)`);
 
         // Process in batches to avoid overwhelming slow devices
         for (let i = 0; i < scripts.length; i += maxConcurrent) {
@@ -640,7 +640,7 @@ const initializeJellyfinEnhanced = async () => {
         return;
     }
 
-    console.log('[KefinTweaks] Initializing Jellyfin Enhanced (optimized)...');
+    // console.log('[KefinTweaks] Initializing Jellyfin Enhanced (optimized)...');
 
     const loadTranslations = async () => {
         const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -868,7 +868,7 @@ const initializeJellyfinEnhanced = async () => {
                 // Hide splash after core init
                 if (typeof JE.hideSplashScreen === 'function') JE.hideSplashScreen();
 
-                console.log('[KefinTweaks] JE core initialized');
+                // console.log('[KefinTweaks] JE core initialized');
             };
 
             loadJEScripts();
@@ -923,7 +923,7 @@ const KefinTweaksLoader: React.FC = () => {
                 const lang = userSettings.language();
                 // Check if lang is present
                 if (lang !== null) {
-                    console.log('[KefinTweaks] Language detected:', lang);
+                    // console.log('[KefinTweaks] Language detected:', lang);
                     setUserLanguage(lang);
                     setLanguageReady(true);
                     stopped = true;
@@ -968,7 +968,7 @@ const KefinTweaksLoader: React.FC = () => {
         initialized.current = true;
 
         const init = async () => {
-            console.log('[KefinTweaks] Initializing (optimized for slow devices)...');
+            // console.log('[KefinTweaks] Initializing (optimized for slow devices)...');
 
             // FIRST: Ensure translations are loaded
             await ensureTranslationsLoaded();
@@ -1028,7 +1028,7 @@ const KefinTweaksLoader: React.FC = () => {
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await loadingManager.loadTier('low', lowScripts, 1);
 
-                    console.log('[KefinTweaks] Core loading complete');
+                    // console.log('[KefinTweaks] Core loading complete');
 
                     document.dispatchEvent(new CustomEvent('kefinTweaksLoaded', {
                         detail: {
@@ -1043,7 +1043,7 @@ const KefinTweaksLoader: React.FC = () => {
                     lazyLoadScheduled.current = true;
 
                     const loadLazyScripts = async () => {
-                        console.log('[KefinTweaks] Loading lazy scripts...');
+                        // console.log('[KefinTweaks] Loading lazy scripts...');
                         await loadingManager.loadTier('lazy', lazyScripts, 1);
                     };
 
@@ -1070,7 +1070,7 @@ const KefinTweaksLoader: React.FC = () => {
 
         const start = async () => {
             try {
-                console.log('[KefinTweaks] Starting init because user Language is loaded');
+                // console.log('[KefinTweaks] Starting init because user Language is loaded');
                 await init();
             } catch (err) {
                 console.error('[KefinTweaks] init failed', err);

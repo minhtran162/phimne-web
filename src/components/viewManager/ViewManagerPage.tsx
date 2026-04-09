@@ -108,15 +108,15 @@ const ViewManagerPage: FunctionComponent<ViewManagerPageProps> = ({
             };
 
             if (navigationType !== Action.Pop) {
-                console.debug('[ViewManagerPage] loading view [%s]', view);
+                // console.debug('[ViewManagerPage] loading view [%s]', view);
                 return loadView(appType, controller, view, viewOptions);
             }
 
-            console.debug('[ViewManagerPage] restoring view [%s]', view);
+            // console.debug('[ViewManagerPage] restoring view [%s]', view);
             return viewManager.tryRestoreView(viewOptions)
                 .catch(async (result?: RestoreViewFailResponse) => {
                     if (!result?.cancelled) {
-                        console.debug('[ViewManagerPage] restore failed; loading view [%s]', view);
+                        // console.debug('[ViewManagerPage] restore failed; loading view [%s]', view);
                         return loadView(appType, controller, view, viewOptions);
                     }
                 });

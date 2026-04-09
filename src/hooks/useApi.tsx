@@ -31,7 +31,7 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
         const currentApiClient = ServerConnections.currentApiClient();
 
         if (currentApiClient && currentApiClient.isLoggedIn()) {
-            console.log('currentApiClient.getCurrentUser()', currentApiClient.getCurrentUser());
+            // console.log('currentApiClient.getCurrentUser()', currentApiClient.getCurrentUser());
             currentApiClient.getCurrentUser()
                 .then(newUser => {
                     if (newUser) {
@@ -46,7 +46,7 @@ export const ApiProvider: FC<PropsWithChildren<unknown>> = ({ children }) => {
                     resetApiUser();
                 });
         } else {
-            console.info('[ApiProvider] No authenticated session available');
+            // console.info('[ApiProvider] No authenticated session available');
         }
 
         const updateApiUser = (_e: Event | undefined, newUser: UserDto) => {

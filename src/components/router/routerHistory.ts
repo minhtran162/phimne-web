@@ -14,7 +14,7 @@ export class RouterHistory implements History {
         this._router = router;
 
         this._router.subscribe(state => {
-            console.debug('[RouterHistory] history update', state);
+            // console.debug('[RouterHistory] history update', state);
             Events.trigger(document, HISTORY_UPDATE_EVENT, [ state ]);
         });
 

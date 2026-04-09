@@ -30,7 +30,7 @@ export function enable() {
         activeElement = e.target;
     });
 
-    console.debug('AutoFocuser enabled');
+    // console.debug('AutoFocuser enabled');
 }
 
 /**

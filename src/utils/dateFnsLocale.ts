@@ -78,9 +78,9 @@ export function normalizeLocale(localeName: string) {
 }
 
 export async function updateLocale(newLocale: string) {
-    console.debug('[dateFnsLocale] updating date-fns locale', newLocale);
+    // console.debug('[dateFnsLocale] updating date-fns locale', newLocale);
     localeString = normalizeLocale(newLocale);
-    console.debug('[dateFnsLocale] mapped to date-fns locale', localeString);
+    // console.debug('[dateFnsLocale] mapped to date-fns locale', localeString);
     locale = await fetchLocale(localeString);
 }
 

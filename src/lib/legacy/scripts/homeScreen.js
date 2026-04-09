@@ -5040,7 +5040,14 @@ import globalize from '../../globalize';
             discoveryWheelHandler = null;
         }
         if (discoveryKeyDownHandler) {
-            window.removeEventListener('keydown', discoveryKeyDownHandler);
+            // Remove from container, not window
+            const container = document.querySelector('.libraryPage:not(.hide) .homeSectionsContainer');
+            if (container) {
+                container.removeEventListener('command', discoveryKeyDownHandler);
+            } else {
+                // If container isn't found, try to remove from document or window as fallback
+                document.removeEventListener('command', discoveryKeyDownHandler);
+            }
             discoveryKeyDownHandler = null;
         }
         if (discoveryTouchStartHandler) {
@@ -5131,8 +5138,8 @@ import globalize from '../../globalize';
         discoveryWheelHandler = handleWheel;
         window.addEventListener('wheel', handleWheel, { passive: true });
 
-        // TV Remote support: trigger when user presses down/right/page down keys while focused on last item
-        const handleKeyDown = (event) => {
+        // TV Remote support: Listen for command events from inputManager
+        const handleCommand = (event) => {
             // Ensure we're on the home page before proceeding
             const currentView = window.KefinTweaksUtils?.getCurrentView();
             const isHomePage = currentView === 'home' || currentView === 'home.html';
@@ -5144,53 +5151,131 @@ import globalize from '../../globalize';
 
             if (isRenderingDiscoveryGroup) return;
 
-            // Only react to ArrowDown, ArrowRight, or PageDown keys
-            if (!['ArrowDown', 'ArrowRight', 'PageDown'].includes(event.key)) return;
+            // Get the command from the event detail
+            const command = event.detail?.command;
+            
+            // Only react to down and right commands
+            if (!['down', 'right'].includes(command)) return;
 
-            // Check if focus is on the last focusable item in the container
-            const focusableItems = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-            if (focusableItems.length === 0) return;
+            // console.debug('[KefinTweaks HomeScreen] Command received:', command);
 
-            const lastItem = focusableItems[focusableItems.length - 1];
-            if (document.activeElement !== lastItem) return;
+            // Re-calculate sections array at the time of command execution to ensure we have up-to-date DOM elements
+            // Since discovery sections can be preloaded but hidden, we need to check which sections currently have focusable content
+            // This handles the issue where sections exist in DOM but aren't navigable until content is revealed
+            const allSections = Array.from(container.querySelectorAll('.verticalSection, .emby-scroller-container'));
+            
+            // Only consider sections that currently have focusable content that the user can navigate to
+            const sections = allSections.filter(section => {
+                // Check if the section has focusable elements that indicate it's ready for navigation
+                const hasFocusableContent = section.querySelector('.card, button, a, input, [tabindex]:not([tabindex="-1"])');
+                const hasVisibleContent = section.querySelector('.itemsContainer, .emby-itemscontainer, .emby-scroller, .sectionTitleContainer, .sectionTitle');
+                
+                // Include sections that have actual content that can be navigated to
+                return hasFocusableContent || hasVisibleContent;
+            });
+            
+            if (sections.length === 0) {
+                // console.debug('[KefinTweaks HomeScreen] No content sections found');
+                return;
+            }
 
-            // Prevent default behavior to allow our custom scroll logic to trigger
-            if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const windowHeight = window.innerHeight;
-                const documentHeight = document.documentElement.scrollHeight;
-                const atBottom = scrollTop + windowHeight >= documentHeight - 20; // 20px buffer for remote nav
+            // Get the last content section that has actual content
+            const lastSection = sections[sections.length - 1];
+            
+            // Check if the currently focused element is within the last section OR the second-to-last section
+            // (for down command, we want to trigger when trying to move down from second-to-last to last)
+            const activeElement = document.activeElement;
+            if (!activeElement) {
+                // console.debug('[KefinTweaks HomeScreen] No active element');
+                return;
+            }
 
-                if (atBottom) {
-                    event.preventDefault();
-                    if (scrollTimeout) {
-                        clearTimeout(scrollTimeout);
-                    }
-                    scrollTimeout = setTimeout(async () => {
-                        await renderNextDiscoveryGroup(container);
-                    }, 200);
-                }
-            } else if (event.key === 'ArrowRight') {
-                // If on last item of a row, potentially trigger load more if at bottom
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const windowHeight = window.innerHeight;
-                const documentHeight = document.documentElement.scrollHeight;
-                const atBottom = scrollTop + windowHeight >= documentHeight - 20;
-
-                if (atBottom) {
-                    if (scrollTimeout) {
-                        clearTimeout(scrollTimeout);
-                    }
-                    scrollTimeout = setTimeout(async () => {
-                        await renderNextDiscoveryGroup(container);
-                    }, 200);
+            // Find which section contains the active element
+            let activeSectionIndex = -1;
+            for (let i = 0; i < sections.length; i++) {
+                if (sections[i].contains(activeElement)) {
+                    activeSectionIndex = i;
+                    break;
                 }
             }
+
+            if (activeSectionIndex === -1) {
+                // console.debug('[KefinTweaks HomeScreen] Active element not in any content section');
+                return;
+            }
+
+            // console.debug('[KefinTweaks HomeScreen] Active section index:', activeSectionIndex, 'Total navigable sections:', sections.length);
+
+            // For down command: trigger if we're in the last 6 sections
+            // For right command: trigger only if we're in the last 4 sections
+            const isInLast6Sections = activeSectionIndex >= sections.length - 6;
+            const isInLast4Sections = activeSectionIndex >= sections.length - 4;
+
+            if (command === 'down') {
+                // For down, we want to trigger when in last 6 sections
+                if (!isInLast6Sections) {
+                    // console.debug('[KefinTweaks HomeScreen] Not in last 6 sections for down command. Active index:', activeSectionIndex, 'Total:', sections.length);
+                    return;
+                }
+
+                // Also check if we're at the bottom of the page to ensure we're truly at the end
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // Calculate if we're at the bottom of the page (within 300px tolerance for lenient trigger)
+                const pixelsFromBottom = documentHeight - (scrollTop + windowHeight);
+                const atBottom = pixelsFromBottom <= 300; 
+                
+                if (!atBottom) {
+                    // console.debug('[KefinTweaks HomeScreen] Not at bottom of page. Pixels from bottom:', pixelsFromBottom);
+                    return;
+                }
+            } else if (command === 'right') {
+                // For right, trigger if in the last 4 sections
+                if (!isInLast4Sections) {
+                    // console.debug('[KefinTweaks HomeScreen] Not in last 4 sections for right command. Active index:', activeSectionIndex, 'Total:', sections.length);
+                    return;
+                }
+
+                // Check if we're near the end of the horizontal scroller
+                const itemsContainer = lastSection.querySelector('.itemsContainer, .focuscontainer-x');
+                if (!itemsContainer) {
+                    // console.debug('[KefinTweaks HomeScreen] No items container found in last section');
+                    return;
+                }
+
+                const focusableItemsInLastSection = itemsContainer.querySelectorAll('.card, .itemAction, button:not(.emby-scrollerbutton), a[href]');
+                if (focusableItemsInLastSection.length === 0) {
+                    // console.debug('[KefinTweaks HomeScreen] No focusable items in last section');
+                    return;
+                }
+
+                // Check if we're on the last item or very close to it (within last 5 items for better UX)
+                const activeIndex = Array.from(focusableItemsInLastSection).indexOf(activeElement);
+                const isNearEnd = activeIndex >= 0 && activeIndex >= focusableItemsInLastSection.length - 8; // Increased tolerance
+
+                if (!isNearEnd) {
+                    // console.debug('[KefinTweaks HomeScreen] Not near end of row. Active index:', activeIndex, 'Total items:', focusableItemsInLastSection.length);
+                    return;
+                }
+            }
+
+            // Trigger infinite scroll load
+            // console.log('[KefinTweaks HomeScreen] Triggering infinite scroll load');
+
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = setTimeout(async () => {
+                await renderNextDiscoveryGroup(container);
+            }, 300);
         };
 
-        // Store handler reference and add keydown listener
-        discoveryKeyDownHandler = handleKeyDown;
-        window.addEventListener('keydown', handleKeyDown, { passive: true });
+        // Store handler reference and add command listener
+        discoveryKeyDownHandler = handleCommand;
+        container.addEventListener('command', handleCommand, { passive: true });
+        // console.log('[KefinTweaks HomeScreen] Command listener attached to container');
 
         // Touch support: trigger when user swipes up (scroll down) while already at bottom
         const handleTouchStart = (event) => {
@@ -6188,7 +6273,7 @@ import globalize from '../../globalize';
             seriesGroups[series].push(episode);
         });
 
-        return episodes;
+        return seriesGroups;
     };
 
     // Function to test deduplication logic with sample data

@@ -55,7 +55,7 @@ class ServerConnections extends ConnectionManager {
     }
 
     initApiClient(server) {
-        console.debug('creating ApiClient singleton');
+        // console.debug('creating ApiClient singleton');
 
         const apiClient = new ApiClient(
             server,
@@ -72,7 +72,7 @@ class ServerConnections extends ConnectionManager {
 
         this.setLocalApiClient(apiClient);
 
-        console.debug('loaded ApiClient singleton');
+        // console.debug('loaded ApiClient singleton');
     }
 
     connect(options) {

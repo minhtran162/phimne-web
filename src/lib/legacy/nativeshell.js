@@ -3,7 +3,7 @@ import appSettings from '@/scripts/settings/appSettings';
 
 export {};
 
-console.log('[NativeBridge] NativeInterface attached:', typeof window.NativeInterface);
+// console.log('[NativeBridge] NativeInterface attached:', typeof window.NativeInterface);
 
 const features = [];
 const plugins = [];

@@ -396,7 +396,7 @@ const scrollerFactory = function (frame, options) {
             currentEnd = currentStart - frameSize;
         }
 
-        console.debug('offset:' + offset + ' currentStart:' + currentStart + ' currentEnd:' + currentEnd);
+        // console.debug('offset:' + offset + ' currentStart:' + currentStart + ' currentEnd:' + currentEnd);
         const isVisible = offset >= Math.min(currentStart, currentEnd)
             && (globalize.getIsRTL() ? (offset - size) : (offset + size)) <= Math.max(currentStart, currentEnd);
 
