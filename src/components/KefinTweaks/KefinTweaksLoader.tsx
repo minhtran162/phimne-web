@@ -116,7 +116,7 @@ const jeScriptImports: Record<string, () => Promise<any>> = {
 const DEFAULT_ENABLED_SCRIPTS: Record<string, boolean> = {
     config: true,
     watchlist: true,
-    homeScreen: true,
+    homeScreen: !browser.tizen,
     search: true,
     headerTabs: true,
     customMenuLinks: true,
@@ -133,7 +133,7 @@ const DEFAULT_ENABLED_SCRIPTS: Record<string, boolean> = {
     seriesInfo: true,
     collections: true,
     settings: true,
-    skinManager: !browser.tizen
+    skinManager: true
 };
 
 const DEFAULT_ENABLED_JELLYFIN_ENHANCED_SETTINGS = {
@@ -887,12 +887,12 @@ const resolveDependencies = (
     const toProcess = Object.keys(resolved).filter(k => resolved[k]);
     const processed = new Set<string>();
 
-    // Simple breadth-first resolution (faster than while loop)
+    // Simple breadth-first resolution
     while (toProcess.length > 0) {
         const current = toProcess.shift()!;
         if (processed.has(current)) continue;
         processed.add(current);
-
+        
         const script = SCRIPT_DEFINITIONS.find(s => s.name === current);
         if (script) {
             for (const dep of script.dependencies) {
@@ -985,7 +985,12 @@ const KefinTweaksLoader: React.FC = () => {
                     const config = JSON.parse(storedFullConfig);
                     window.KefinTweaksConfig = config;
                     if (config.scripts) {
-                        enabledScriptsMap = { ...enabledScriptsMap, ...config.scripts };
+                        // Only use localStorage values for keys not defined in DEFAULT_ENABLED_SCRIPTS
+                        for (const [key, value] of Object.entries(config.scripts)) {
+                            if (!(key in DEFAULT_ENABLED_SCRIPTS)) {
+                                enabledScriptsMap[key] = value as boolean;
+                            }
+                        }
                     }
                 } catch (e) {
                     console.error('[KefinTweaks] Config parse error', e);
