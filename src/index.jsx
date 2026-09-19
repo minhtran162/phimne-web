@@ -4,6 +4,9 @@ import 'lib/legacy';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
+// Initialize NGINX Basic Auth before anything else
+import { init as initBootstrapper } from 'utils/bootstrapper';
+
 // NOTE: We need to import this first to initialize the connection
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
@@ -22,6 +25,7 @@ import { getPlugins } from './scripts/settings/webSettings';
 import taskButton from './scripts/taskbutton';
 import { pageClassOn, serverAddress } from './utils/dashboard';
 import Events from './utils/events';
+import { initializeServerConnections } from './scripts/serverNotifications';
 
 import RootApp from './RootApp';
 
@@ -37,7 +41,6 @@ import './components/themeMediaPlayer';
 import './scripts/autoThemes';
 import './scripts/mouseManager';
 import './scripts/screensavermanager';
-import './scripts/serverNotifications';
 
 // Import site styles
 import './styles/site.scss';
@@ -47,6 +50,9 @@ import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
 async function init() {
+    // Initialize NGINX Basic Auth credentials first
+    await initBootstrapper();
+
     // Register globals used in plugins
     window.Events = Events;
     window.TaskButton = taskButton;
@@ -58,6 +64,9 @@ async function init() {
     pageClassOn('viewhide', 'standalonePage', function () {
         document.querySelector('.skinHeader').classList.remove('noHeaderRight');
     });
+
+    // Initialize app host
+    await appHost.init();
 
     // Initialize the api client
     const serverUrl = await serverAddress();
@@ -99,6 +108,9 @@ async function init() {
         Events.off(apiClient, 'requestfail', appRouter.onRequestFail);
         Events.on(apiClient, 'requestfail', appRouter.onRequestFail);
     });
+
+    // Start server notifications
+    initializeServerConnections();
 
     // Render the app
     await renderApp();

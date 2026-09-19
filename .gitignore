@@ -21,6 +21,7 @@ config.json
 .direnv/
 
 # environment related
+.env
 .envrc
 .DS_Store
 config.json
