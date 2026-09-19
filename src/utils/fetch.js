@@ -1,8 +1,16 @@
+import { getAuthHeader, shouldInjectAuth } from 'utils/bootstrapper';
+
 export function getFetchPromise(request) {
     const headers = request.headers || {};
 
     if (request.dataType === 'json') {
         headers.accept = 'application/json';
+    }
+
+    // Inject NGINX Basic Auth header if configured
+    const authHeader = getAuthHeader();
+    if (authHeader && shouldInjectAuth(request.url)) {
+        headers['Authorization'] = authHeader;
     }
 
     const fetchRequest = {

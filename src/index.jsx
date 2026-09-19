@@ -4,6 +4,9 @@ import 'lib/legacy';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
+// Initialize NGINX Basic Auth before anything else
+import { init as initBootstrapper } from 'utils/bootstrapper';
+
 // NOTE: We need to import this first to initialize the connection
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
@@ -50,12 +53,15 @@ import './styles/detailtable.scss';
 import './styles/librarybrowser.scss';
 
 async function init() {
+
     // Log current version to console to help out with issue triage and debugging
     console.info(
         `[${__PACKAGE_JSON_NAME__}]
 version: ${__PACKAGE_JSON_VERSION__}
 commit: ${__COMMIT_SHA__}
 build: ${__JF_BUILD_VERSION__}`);
+
+    await initBootstrapper();
 
     // Register globals used in plugins
     window.Events = Events;

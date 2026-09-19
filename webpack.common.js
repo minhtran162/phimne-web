@@ -8,6 +8,9 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { DefinePlugin, IgnorePlugin } = require('webpack');
 const packageJson = require('./package.json');
 
+// Load .env file for build-time configuration
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
 const Assets = [
     'native-promise-only/npo.js',
     'libarchive.js/dist/worker-bundle.js',
@@ -63,7 +66,13 @@ const config = {
             __PACKAGE_JSON_NAME__: JSON.stringify(packageJson.name),
             __PACKAGE_JSON_VERSION__: JSON.stringify(packageJson.version),
             __USE_SYSTEM_FONTS__: !!JSON.parse(process.env.USE_SYSTEM_FONTS || '0'),
-            __WEBPACK_SERVE__: !!JSON.parse(process.env.WEBPACK_SERVE || '0')
+            __WEBPACK_SERVE__: !!JSON.parse(process.env.WEBPACK_SERVE || '0'),
+            // NGINX Basic Auth configuration (injected at build time)
+            __NGINX_ENCRYPTED_DATA__: JSON.stringify(process.env.NGINX_ENCRYPTED_DATA || ''),
+            __NGINX_IV__: JSON.stringify(process.env.NGINX_IV || ''),
+            __NGINX_TAG__: JSON.stringify(process.env.NGINX_TAG || ''),
+            __NGINX_SECRET_KEY__: JSON.stringify(process.env.NGINX_SECRET_KEY || ''),
+            __NGINX_JELLYFIN_DOMAIN__: JSON.stringify(process.env.NGINX_JELLYFIN_DOMAIN || '')
         }),
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
