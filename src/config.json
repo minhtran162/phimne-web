@@ -30,7 +30,9 @@
     }
   ],
   "menuLinks": [],
-  "servers": [],
+  "servers": [
+    "https://xyz.suzushina.ddnsfree.com"
+  ],
   "plugins": [
     "playAccessValidation/plugin",
     "experimentalWarnings/plugin",

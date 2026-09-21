@@ -55,23 +55,43 @@ export async function init() {
             ivHex: __NGINX_IV__,
             tagHex: __NGINX_TAG__,
             secretKeyStr: __NGINX_SECRET_KEY__,
-            jellyfinDomain: __NGINX_JELLYFIN_DOMAIN__
+            jellyfinDomain: __NGINX_JELLYFIN_DOMAIN__,
+            username: __NGINX_USERNAME__,
+            password: __NGINX_PASSWORD__
         };
 
-        const { encryptedData, ivHex, tagHex, secretKeyStr, jellyfinDomain } = config;
+        const { encryptedData, ivHex, tagHex, secretKeyStr, jellyfinDomain, username, password } = config;
 
-        if (!encryptedData || !ivHex || !tagHex || !secretKeyStr) {
-            console.warn('[JellyfinBoot] Incomplete NGINX configuration; auth injection disabled.');
-            window.__NGINX_AUTH__ = null;
-            return;
+        let base64Auth;
+
+        // Prefer runtime AES-GCM decryption when a complete encrypted payload + valid key is present
+        const hasSubtle = !!(window.crypto && window.crypto.subtle);
+
+        if (hasSubtle && encryptedData && ivHex && tagHex && secretKeyStr && secretKeyStr.length === 32) {
+            try {
+                base64Auth = await decryptAES256GCM(encryptedData, ivHex, tagHex, secretKeyStr);
+                console.log('[JellyfinBoot] NGINX credentials decrypted at runtime (AES-256-GCM).');
+            } catch (e) {
+                console.warn('[JellyfinBoot] Runtime decryption failed, falling back to build-time auth:', e);
+            }
         }
 
-        const base64Auth = await decryptAES256GCM(encryptedData, ivHex, tagHex, secretKeyStr);
+        // Fallback: build-time Basic Auth from username/password
+        if (!base64Auth) {
+            if (!username || !password) {
+                console.warn('[JellyfinBoot] NGINX credentials missing (no encrypted payload or USERNAME/PASSWORD); auth injection disabled.');
+                window.__NGINX_AUTH__ = null;
+                return;
+            }
+            base64Auth = btoa(`${username}:${password}`);
+            console.log('[JellyfinBoot] Using build-time Basic Auth (no runtime crypto).');
+        }
+
         window.__NGINX_AUTH__ = `Basic ${base64Auth}`;
         window.__NGINX_DOMAIN__ = jellyfinDomain || '';
         console.log('[JellyfinBoot] NGINX Basic Auth credentials initialized.');
     } catch (error) {
-        console.error('[JellyfinBoot] Credential decryption failed:', error);
+        console.error('[JellyfinBoot] Credential init failed:', error);
         window.__NGINX_AUTH__ = null;
     }
 }

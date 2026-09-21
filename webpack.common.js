@@ -72,7 +72,9 @@ const config = {
             __NGINX_IV__: JSON.stringify(process.env.NGINX_IV || ''),
             __NGINX_TAG__: JSON.stringify(process.env.NGINX_TAG || ''),
             __NGINX_SECRET_KEY__: JSON.stringify(process.env.NGINX_SECRET_KEY || ''),
-            __NGINX_JELLYFIN_DOMAIN__: JSON.stringify(process.env.NGINX_JELLYFIN_DOMAIN || '')
+            __NGINX_JELLYFIN_DOMAIN__: JSON.stringify(process.env.NGINX_JELLYFIN_DOMAIN || ''),
+            __NGINX_USERNAME__: JSON.stringify(process.env.NGINX_USERNAME || ''),
+            __NGINX_PASSWORD__: JSON.stringify(process.env.NGINX_PASSWORD || '')
         }),
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
